@@ -1,0 +1,51 @@
+{
+  "schema": "symphony-next-policy/v1",
+  "project": "symphony-next",
+  "delegation_decision": "owner-confirmed in conversation 2026-09-22",
+  "mode": "scoped_autonomous_release",
+  "resource_bindings_state": "requires_authoritative_provisioning",
+  "proposed_repository": "pupkinson/symphony-next",
+  "forbidden_repository": "pupkinson/dfassistant",
+  "github_actions_enabled": false,
+  "writer_slots": 1,
+  "new_product_parallel_projects_minimum": 2,
+  "bootstrap": {
+    "service_user": "symphony-next",
+    "port": 4327,
+    "bind": "127.0.0.1",
+    "cpu_quota_percent": 200,
+    "memory_max_bytes": 4294967296,
+    "tasks_max": 256,
+    "pilot_runtime_max_seconds": 1800,
+    "restart": "no",
+    "start_enabled": false
+  },
+  "retry": {
+    "transport_read": {
+      "max_attempts": 3,
+      "delays_seconds": [
+        10,
+        60
+      ]
+    },
+    "auth_permission": {
+      "max_attempts": 1
+    },
+    "unknown_write": {
+      "mode": "reconcile_before_retry"
+    },
+    "code_repair": {
+      "max_cycles": 2,
+      "max_profile_changes": 1
+    }
+  },
+  "release": {
+    "per_deploy_human_approval": false,
+    "requires_exact_head_checks": true,
+    "requires_independent_review": true,
+    "path": "merge_then_coolify_webhook",
+    "rollback": "known_schema_compatible_predecessor_only",
+    "policy_expansion_requires_owner": true
+  },
+  "secrets_in_package": false
+}

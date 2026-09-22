@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Symphony Next seed backlog",
+  "type": "object",
+  "required": [
+    "schema",
+    "version",
+    "project",
+    "spec_sha256",
+    "dispatch_enabled",
+    "tasks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "symphony-next-backlog/v1"
+    },
+    "version": {
+      "const": "0.5"
+    },
+    "dispatch_enabled": {
+      "type": "boolean"
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "depends_on",
+          "requirements",
+          "acceptance_ids",
+          "commands",
+          "test_path",
+          "fixture",
+          "acceptance_assertions",
+          "admitted"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SN-[0-9]{3}$"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^SN-[0-9]{3}$"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptance_ids": {
+            "type": "array",
+            "minItems": 1
+          },
+          "commands": {
+            "type": "array",
+            "minItems": 1
+          },
+          "admitted": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
