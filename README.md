@@ -1,41 +1,28 @@
-# Symphony
+# Symphony Next — пакет ТЗ и задач v0.5
 
-Symphony turns project work into isolated, autonomous implementation runs, allowing teams to manage
-work instead of supervising coding agents.
+Цель: самостоятельно размещённый на Coolify многопроектный оркестратор автономной разработки, с Authentik, собственным трекером, несколькими агентами/моделями, мобильным управлением и ChatGPT/MCP. Существующий DF Assistant не меняется.
 
-[![Symphony demo video preview](.github/media/symphony-demo-poster.jpg)](https://player.vimeo.com/video/1186371009?h=5626e4b899)
+## Состав
+- SPECIFICATION.md — полная согласованная редакция требований, включая голосовые решения об автономном release и диагностике.
+- TASKS.md — 44 задачи с зависимостями, fixtures, assertions, evidence и границами.
+- planning/backlog.json — канонический seed для импорта; dispatch/admission выключены.
+- planning/traceability.json — владельцы266 requirement references и96 критериев приёмки.
+- PROJECT_RULES.md, AGENTS.md, SKILLS_POLICY.md, docs/ROLE_CONTRACTS.md — правила и стадии исполнения.
+- BOOTSTRAP_PLAN.md, bootstrap/INSTALLATION_STATE.md и bootstrap/STATUS.json — установка, фактические проверки и оставшиеся gates.
+- bootstrap/WORKFLOW.github.example.md — неактивный пример pinned stock workflow; не копировать в live без проверки binding/auth/policy.
+- schemas/backlog.schema.json — схема seed; MANIFEST.sha256 — целостность текстовых материалов.
 
-_In this [demo video](https://player.vimeo.com/video/1186371009?h=5626e4b899), Symphony monitors a Linear board for work and spawns agents to handle the tasks. The agents complete the tasks and provide proof of work: CI status, PR review feedback, complexity analysis, and walkthrough videos. When accepted, the agents land the PR safely. Engineers do not need to supervise Codex; they can manage the work at a higher level._
+## Фактическая точка продолжения
+Owner installation под symphony-next UID/GID995 завершена; Git read, отдельный ChatGPT login и GitHub API read подтверждены датированными отчётами. Исходники и пакет опубликованы в pupkinson/SymphonyNext; PR #1 открыт. Последнее наблюдение службы — inactive/dead/disabled; новый worker не подтверждён как запущенный. Это не live health-check на момент будущего чтения.
 
-> [!WARNING]
-> Symphony is a low-key engineering preview for testing in trusted environments.
+Актуальные привязки и доказательства: bootstrap/RESOURCE_BINDINGS.json, STATUS.json и INSTALLATION_STATE.md. Исторические установочные формулировки в исходном TASKS.md описывают ранний снимок: создание repo/identity больше не является невыполненным owner шагом. Это не закрывает SN-001 или product tasks.
 
-## Running Symphony
+## Следующий пилот
+bootstrap/PILOT.json и PILOT_TASK.md описывают BOOT-P01: один stock worker, один файл отчёта, реальный Git/tool/PR путь, без product implementation, без повторения отклонённых операций. Admission выключен. 44 product tasks, SPECIFICATION.md и их acceptance не пересматриваются.
 
-### Requirements
+## Проверки и выпуск
+python3 -B -m unittest discover -s tests -p test_bootstrap_snapshot.py -v
 
-Symphony works best in codebases that have adopted
-[harness engineering](https://openai.com/index/harness-engineering/). Symphony is the next step --
-moving from managing coding agents to managing work that needs to get done.
+Narrow snapshot tests не означают готовность runtime или полный GREEN; детали в docs/QA_AND_LIMITATIONS.md. MANIFEST.sha256 обновляется вместе с изменёнными материалами; исходный архив v0.5 остаётся неизменным историческим артефактом.
 
-### Option 1. Make your own
-
-Tell your favorite coding agent to build Symphony in a programming language of your choice:
-
-> Implement Symphony according to the following spec:
-> https://github.com/openai/symphony/blob/main/SPEC.md
-
-### Option 2. Use our experimental reference implementation
-
-Check out [elixir/README.md](elixir/README.md) for instructions on how to set up your environment
-and run the Elixir-based Symphony implementation. You can also ask your favorite coding agent to
-help with the setup:
-
-> Set up Symphony for my repository based on
-> https://github.com/openai/symphony/blob/main/elixir/README.md
-
----
-
-## License
-
-This project is licensed under the [Apache License 2.0](LICENSE).
+Существующая делегация scoped auto-release сохранена. Нужны exact checks/review и привязанные Coolify ресурсы, а не повторное согласование каждого обычного deploy. Значения секретов не передавать в Git/чат. tools/validate_package.py и прежний seed_publication.py не реализуются этой правкой. Существующий DF Assistant вне работ.

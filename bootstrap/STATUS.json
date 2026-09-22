@@ -1,0 +1,104 @@
+{
+  "schema": "symphony-next-delivery-status/v1",
+  "date": "2026-09-22",
+  "spec": "0.5",
+  "documentation": "completed",
+  "task_count": 44,
+  "requirements_mapped": 266,
+  "product_acceptance_scenarios": 96,
+  "product_implementation": "not_started",
+  "new_agent_started": false,
+  "runtime": "owner_installed_stopped_last_observed_2026-09-22T15:17Z",
+  "symphony_version": "v0.0.3",
+  "upstream_commit": "1c0fb6c8e8ef9031a2c861e62af5f9e66cee39cb",
+  "symphony_sha256": "ea35a04a54a6d37c0cafe3f195da871e47614a8c05765b90dbb4cac32e1435ee",
+  "codex_version": "0.155.1",
+  "runtime_files": 51,
+  "native_smoke": {
+    "http_status": 200,
+    "counts": {
+      "running": 0,
+      "blocked": 0,
+      "retrying": 0
+    },
+    "port_closed_after_probe": true,
+    "real_model_turn": false
+  },
+  "tests": {
+    "installer_and_preflight": {
+      "passed": 41,
+      "evidence": "historical targeted runs before owner installation; not repeated in binding update"
+    },
+    "server_package_validator": {
+      "expected_red": 12,
+      "implementation": "last_observed_absent; not rechecked by this update",
+      "blocker": "PUP-179",
+      "green": "NOT_RUN"
+    },
+    "product": "NOT_RUN"
+  },
+  "owner_install": {
+    "executed": true,
+    "sha256": "35ac227789aabc23d40c7dce3128cfaa837e5d0bdf1058b864dabeff61583041",
+    "status": "INSTALLED_STOPPED",
+    "command_in_package": false,
+    "uid": 995,
+    "gid": 995,
+    "installed_at": "2026-09-22T14:24:05.746309+00:00",
+    "independent_readback_at": "2026-09-22T14:25:46.007440+00:00"
+  },
+  "external_bindings": {
+    "file": "bootstrap/RESOURCE_BINDINGS.json",
+    "github_repository": "private_identity_and_initial_branches_verified",
+    "coolify": "project_owner_reported_resources_unverified",
+    "authentik": "existing_IdP_owner_reported_new_app_not_configured",
+    "model_auth": "ChatGPT_login_confirmed_in_owner_access_report_no_model_turn"
+  },
+  "tracking": [
+    "PUP-250",
+    "PUP-179",
+    "PUP-37"
+  ],
+  "old_df": "not_modified; actual old stock process state UNKNOWN",
+  "runtime_manifest_sha256": "3b2d871c8cb13bcbf4049b6f6a7cfb3dd44da7df60b66346e49f3844974e54d9",
+  "systemd_static_check": {
+    "exit_code": 0,
+    "exec_path": "staged_runtime",
+    "unit_started": false,
+    "unrelated_host_warnings": true
+  },
+  "source_changes": "initial_package_published_PR1_open; binding_followup_does_not_run_worker",
+  "git": {
+    "repository": "pupkinson/SymphonyNext",
+    "initial_head": "2e68d041c2de03450a4735c3a560e1a8c165f342",
+    "branch": "docs/specification-v0.5",
+    "pr": 1,
+    "merge": "NOT_RUN",
+    "source": "coordinator GitHub readback; current HEAD is obtained from Git, not this snapshot"
+  },
+  "snapshot_revision": "0.5-bindings.1",
+  "last_runtime_observation": {
+    "captured_at": "2026-09-22T15:17:00.471788+00:00",
+    "active_state": "inactive",
+    "sub_state": "dead",
+    "unit_file_state": "disabled",
+    "main_pid": 0,
+    "fresh_for_future_activation": false
+  },
+  "history": {
+    "original_package_commit": "2e68d041c2de03450a4735c3a560e1a8c165f342",
+    "original_status_path": "bootstrap/STATUS.json",
+    "platform_refusals": "UNRESOLVED",
+    "note": "Later owner installation/publication do not prove recovery of the earlier denied tool operations. Preserve their exact scope; do not replay them."
+  },
+  "readiness": {
+    "live_workflow_installed": false,
+    "ready_marker_created_by_this_change": false,
+    "admission": false,
+    "first_operational_pilot": "bootstrap/PILOT.json",
+    "effective_sandbox": "NOT_TESTED_UNDER_SERVICE",
+    "trusted_release_checks": "NOT_CONFIGURED",
+    "independent_review": "REQUIRED",
+    "old_df_changes_by_this_update": false
+  }
+}

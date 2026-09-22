@@ -1,0 +1,66 @@
+{
+  "schema": "symphony-next-resource-bindings/v1",
+  "snapshot_date": "2026-09-22",
+  "live_activation_authorized_by_this_file": false,
+  "repository": {
+    "full_name": "pupkinson/SymphonyNext",
+    "id": 1381693716,
+    "visibility": "private",
+    "evidence_level": "GITHUB_READBACK"
+  },
+  "initial_publication": {
+    "base": "1c0fb6c8e8ef9031a2c861e62af5f9e66cee39cb",
+    "head": "2e68d041c2de03450a4735c3a560e1a8c165f342",
+    "tree": "67ea84f72855fc79bfa02366fec6e07be6e1a4d3",
+    "pr_number": 1,
+    "scope": "owner Git publication; PR created by coordinator, not by stock worker"
+  },
+  "github_actions": {
+    "enabled": false,
+    "evidence_level": "OWNER_REPORTED",
+    "administrative_api_readback": false
+  },
+  "service": {
+    "host": "1c-db",
+    "name": "symphony-next-bootstrap.service",
+    "user": "symphony-next",
+    "uid": 995,
+    "gid": 995,
+    "home": "/var/lib/symphony-next-bootstrap",
+    "evidence_at": "2026-09-22T15:17:00.471788+00:00"
+  },
+  "runtime_root": "/opt/symphony-next-bootstrap/runtime",
+  "codex_home": "/var/lib/symphony-next-bootstrap/codex-home",
+  "git_profile": "/etc/symphony-next-bootstrap/gitconfig",
+  "github_api_token_env": "GITHUB_TOKEN",
+  "credential_values_in_file": false,
+  "access": {
+    "report_at": "2026-09-22T15:13:21.280737+00:00",
+    "git_read": "PASS",
+    "owner_git_publication": "VERIFIED",
+    "worker_git_write": "NOT_TESTED",
+    "codex_login": "ChatGPT_CONFIRMED_NO_MODEL_TURN",
+    "server_github_api_read": "PASS",
+    "server_github_api_write": "NOT_TESTED",
+    "token_scope": "NOT_ATTESTED_BY_API_READ"
+  },
+  "coolify": {
+    "project_name": "SymphonyNext",
+    "project_uuid": "o1l7c2rybr9r2asqipcbedps",
+    "evidence_level": "OWNER_REPORTED",
+    "live_readback_verified": false,
+    "application_uuid": null,
+    "server_uuid": null,
+    "destination_uuid": null,
+    "domain": null,
+    "environments_verified": false,
+    "github_app_access_verified": false,
+    "webhook_verified": false
+  },
+  "authentik": {
+    "existing_infrastructure": "OWNER_REPORTED",
+    "new_application_configured": false,
+    "issuer_verified": false
+  },
+  "deployment_scope": "only this new project after exact resource binding and release gates; not yet operational"
+}

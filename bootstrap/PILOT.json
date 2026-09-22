@@ -1,0 +1,45 @@
+{
+  "schema": "symphony-next-operational-pilot/v1",
+  "id": "BOOT-P01",
+  "title": "One stock worker: verified Git/tool/report/PR round trip",
+  "admission": false,
+  "product_backlog_changed": false,
+  "completes_SN_001": false,
+  "contract": "bootstrap/PILOT_TASK.md",
+  "repository": "pupkinson/SymphonyNext",
+  "required_label": "symphony-next-ready",
+  "writer_slots": 1,
+  "max_turns": 8,
+  "max_runtime_seconds": 1800,
+  "restart": "no",
+  "source_requirement": "accepted exact source containing these project rules; main after PR1 acceptance",
+  "model_turn": "NOT_RUN",
+  "model_profile_and_budget": "must be verified before admission",
+  "allowed_output_files": [
+    "docs/pilots/BOOT-P01-report.md"
+  ],
+  "excluded_paths": [
+    "tools/validate_package.py",
+    "seed_publication.py",
+    "bootstrap/owner_install.py",
+    "planning/backlog.json",
+    "/home/programmer",
+    "/etc/symphony-next-bootstrap",
+    "/srv/rdc-workspace"
+  ],
+  "external_writes": [
+    "own workpad comment",
+    "non-force push of one feature branch",
+    "one draft PR",
+    "remove own admission label"
+  ],
+  "runtime_mutations": false,
+  "requires_before_admission": [
+    "accepted exact source",
+    "effective sandbox under UID995 including exact .git write roots",
+    "one issue and no prior worker",
+    "GitHub tool permissions and sanitized error handling",
+    "bounded approved model profile"
+  ],
+  "acceptance": "one real worker report + exact commit/PR + admission removal readback; no product completion claim"
+}
