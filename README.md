@@ -12,13 +12,17 @@
 - bootstrap/WORKFLOW.github.example.md — неактивный пример pinned stock workflow; не копировать в live без проверки binding/auth/policy.
 - schemas/backlog.schema.json — схема seed; MANIFEST.sha256 — целостность текстовых материалов.
 
-## Что сделано сейчас
-Отдельный pinned runtime уже физически установлен в engineering staging на1c-db и проверен нативным smoke. Системная identity/служба требуют owner adoption, разработка не запущена. Сами будущие UI/tracker/runners не реализованы.
+## Фактическая точка продолжения
+Owner installation под symphony-next UID/GID995 завершена; Git read, отдельный ChatGPT login и GitHub API read подтверждены датированными отчётами. Исходники и пакет опубликованы в pupkinson/SymphonyNext; PR #1 открыт. Последнее наблюдение службы — inactive/dead/disabled; новый worker не подтверждён как запущенный. Это не live health-check на момент будущего чтения.
 
-## Запуск
-Начать с BOOTSTRAP_PLAN.md. Обычный deploy внутри нового project delegation уже разрешён, повторно согласовывать его не нужно. GitHub/Authentik/Coolify/model secrets не передаются в чат или Git.
+Актуальные привязки и доказательства: bootstrap/RESOURCE_BINDINGS.json, STATUS.json и INSTALLATION_STATE.md. Исторические установочные формулировки в исходном TASKS.md описывают ранний снимок: создание repo/identity больше не является невыполненным owner шагом. Это не закрывает SN-001 или product tasks.
 
-## Блокировки
-PUP-250: create-repository capability; PUP-179: конкретная отклонённая запись серверного валидатора; PUP-37: отсутствующие в текущей беседе Coolify actions. Не обходить отказ другой identity/tool/delegation. Эти записи относятся к управлению интеграциями, а не создают обязательную зависимость нового продукта от Linear.
+## Следующий пилот
+bootstrap/PILOT.json и PILOT_TASK.md описывают BOOT-P01: один stock worker, один файл отчёта, реальный Git/tool/PR путь, без product implementation, без повторения отклонённых операций. Admission выключен. 44 product tasks, SPECIFICATION.md и их acceptance не пересматриваются.
 
-Проверку документов не путать с product acceptance. Все96 AC — требования к будущему испытанию; сейчас они NOT_RUN. Подробности в docs/QA_AND_LIMITATIONS.md.
+## Проверки и выпуск
+python3 -B -m unittest discover -s tests -p test_bootstrap_snapshot.py -v
+
+Narrow snapshot tests не означают готовность runtime или полный GREEN; детали в docs/QA_AND_LIMITATIONS.md. MANIFEST.sha256 обновляется вместе с изменёнными материалами; исходный архив v0.5 остаётся неизменным историческим артефактом.
+
+Существующая делегация scoped auto-release сохранена. Нужны exact checks/review и привязанные Coolify ресурсы, а не повторное согласование каждого обычного deploy. Значения секретов не передавать в Git/чат. tools/validate_package.py и прежний seed_publication.py не реализуются этой правкой. Существующий DF Assistant вне работ.

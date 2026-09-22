@@ -3,8 +3,7 @@
   "project": "symphony-next",
   "delegation_decision": "owner-confirmed in conversation 2026-09-22",
   "mode": "scoped_autonomous_release",
-  "resource_bindings_state": "requires_authoritative_provisioning",
-  "proposed_repository": "pupkinson/symphony-next",
+  "resource_bindings_state": "git_verified_coolify_owner_reported_not_deploy_ready",
   "forbidden_repository": "pupkinson/dfassistant",
   "github_actions_enabled": false,
   "writer_slots": 1,
@@ -47,5 +46,8 @@
     "rollback": "known_schema_compatible_predecessor_only",
     "policy_expansion_requires_owner": true
   },
-  "secrets_in_package": false
+  "secrets_in_package": false,
+  "repository": "pupkinson/SymphonyNext",
+  "repository_id": 1381693716,
+  "resource_bindings_file": "bootstrap/RESOURCE_BINDINGS.json"
 }

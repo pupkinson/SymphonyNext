@@ -1,6 +1,6 @@
 # Agent entry point — Symphony Next
 
-Read PROJECT_RULES.md first, then SPECIFICATION.md and the exact assigned task in planning/backlog.json. Do not work from chat memory or an earlier specification.
+Read PROJECT_RULES.md first, then SPECIFICATION.md and the exact assigned task in planning/backlog.json. The only explicit operational exception is BOOT-P01: read bootstrap/PILOT.json and bootstrap/PILOT_TASK.md for that issue. It is not completion of SN-001 and does not bypass its blocker. Do not work from chat memory or an earlier specification.
 
 For every run publish one ACCEPTED record with task, spec/policy versions, exact source base, branch/worktree and allowed delta before changing files. Find existing workpad/branch/PR first. Do not discard another attempt's unfinished work.
 

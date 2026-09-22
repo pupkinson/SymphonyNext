@@ -1,15 +1,20 @@
-# Проверка пакета и граница доказательств
+# Проверки и границы доказательств — binding follow-up
 
-22.09.2026: независимая read-only проверка документов стандартными jsonschema и graphlib подтвердила JSON schema, уникальность44 task IDs, отсутствие циклов/неизвестных dependencies, соответствие digest полного ТЗ и seed, покрытие266 requirement references и96 AC. Admission выключен для всех seed tasks. Проверка относится к документам, не к целевому продукту.
+## Унаследованные результаты
+Первоначальный пакет v0.5 был проверен на 44 task IDs, 266 requirement references, 96 AC и отсутствие циклов. Это historical document validation, не product acceptance. Все product AC остаются NOT_RUN. Исходный пакет и манифест доступны на commit 2e68d041c2de03450a4735c3a560e1a8c165f342.
 
-Серверный tools/validate_package.py отсутствует: его запись отклонена платформой (PUP-179). 12 заранее созданных RED-тестов остаются незавершённой работой. Код этой отклонённой реализации не переносился другим инструментом и не включён в архив как готовый validator. Команды валидатора в карточках — будущий acceptance target, не доступная команда этого пакета.
+41 targeted preflight/installer test и native empty-memory smoke были выполнены ранее. Owner installation и доступы позже подтверждены датированными отчётами в bootstrap/STATUS.json. Эти шаги не повторялись при обновлении bindings и не объявляются новым model turn.
 
-41 проверка preflight/runtime-installer/owner-installer выполнена отдельно и прошла. Эти результаты не обозначают зелёный полный suite после добавления RED-тестов валидатора. Native Symphony smoke поднял пустой memory tracker на4327, HTTP200 и0 workers; процесс завершился штатно, порт закрыт. Никаких auth credentials или model calls этот smoke не использовал.
+## Узкие проверки этой правки
+Команда: python3 -B -m unittest discover -s tests -p test_bootstrap_snapshot.py -v
 
-Не подтверждены: privileged owner adoption, новый GitHub repository, scoped credentials, paid model turn, feature push/PR, non-Actions CI, Coolify/Authentik provisioning, production acceptance. Exact resources/account capabilities устанавливаются перед запуском; неизвестные IDs не подставлены из DF Assistant.
+Она проверяет только статические значения repo/token/profile, синтаксис clone hook без его исполнения, датированный installation snapshot, границы OWNER_REPORTED для Coolify, неизменность лимитов и отсутствие admission/секретов. Это отдельные regression tests документации, не реализация ранее отклонённого tools/validate_package.py и не замена его acceptance.
 
-Готовый документ не даёт агенту доступ к root/Docker/API. Физическая установка bytes отдельно от запуска с новыми credentials и отдельно от приёмки всего продукта. Существующий DF не изменялся; недоступность его старого loopback endpoint не доказывает, что весь сервис остановлен.
+Полные YAML parse, bash -n, JSON parse и sha256sum выполняются дополнительно в локальной среде координатора; это не проверка stock parser, GitHub write или sandbox на 1c-db. Перед публикацией сравниваются изменённые файлы и неизменный SPECIFICATION.md. Результат конкретного запуска/HEAD записывается в PR, не предполагается из наличия команды.
 
-Systemd static verify с фактически установленным staging ExecStart завершился exit0; службу команда не запускала. Диагностика содержала предупреждения о чужих host units (netplan permissions/snapd RestartMode), не об этом candidate. Проверка под конечной identity после owner adoption остаётся отдельной.
+## Не завершено
+12 RED-тестов исторического серверного валидатора не устранены этой правкой. Полный suite не объявляется GREEN. Нужны independent review/trusted checks, effective service sandbox, фактический worker model turn/Git/API write, готовый runtime workflow и первый результат BOOT-P01.
 
-Позднее также отклонена запись owner installation command через RDC. Исполняемая команда удалена из доставляемого пакета; служба под новой identity не установлена и не запущена. Подготовленный ранее installer сохраняется на сервере, но не выдаётся как обход отказа.
+Coolify project и отключение Actions — сведения владельца; live resource/IdP/webhook acceptance не получены. Поздние owner install/publication не являются доказательством восстановления первоначальных отказов PUP-179. Их записи в истории сохраняются.
+
+Приложение, native tracker и runners целевого продукта не созданы этой правкой. DF Assistant, systemd, READY, секреты, GitHub Actions и production не изменялись.
