@@ -64,8 +64,8 @@ class IntegrationTests(unittest.TestCase):
         funcs=lambda tree:{n.name:ast.dump(n,include_attributes=False) for n in tree.body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
         a,b=funcs(old),funcs(new)
         changed={name for name in a if a[name]!=b[name]}
-        self.assertEqual(changed,{'observer','launch','result_readback'})
-        for name in ('guard','claim_once','validate_api','workflow_text','codex_args','admit','dropin_text'):
+        self.assertEqual(changed,{'observer','launch','result_readback','dropin_text'})
+        for name in ('guard','claim_once','validate_api','workflow_text','codex_args','admit'):
             self.assertEqual(a[name],b[name])
 
     def test_python310_syntax(self):
@@ -150,8 +150,19 @@ class IntegrationTests(unittest.TestCase):
         (c.RUN/'agent-started').touch()
         if not interrupt:(c.RUN/'worker-finished').touch()
         commands=[];active=[False]
-        c.run=lambda args,**kw:(commands.append(args),active.__setitem__(0,True if 'start' in args else False if 'stop' in args else active[0]),'')[2]
-        c.unit_state=lambda:service(active[0])
+        def full_state():
+            d=service(active[0]);d.update(Id=c.UNIT,Type='simple',Restart='no',RuntimeMaxUSec='30min',TimeoutStartUSec='45s',TimeoutStopUSec='45s',KillMode='control-group',SendSIGKILL='yes',Job='0',DropInPaths=str(c.DROP));return d
+        def fake_run(args,**kw):
+            commands.append(args)
+            if 'show' in args:return '\n'.join(k+'='+v for k,v in full_state().items())
+            if 'start' in args:
+                active[0]=True
+                with patch.object(c.os,'getuid',return_value=995),patch.object(c.os,'getgid',return_value=995),patch.object(c.socket,'gethostname',return_value='1c-db'),patch.dict(c.os.environ,{'INVOCATION_ID':INVOCATION}):
+                    c.record_start_witness()
+            if 'stop' in args:active[0]=False
+            return ''
+        c.run=fake_run
+        c.unit_state=full_state
         c.admit=lambda api:None;c.remove_admission=lambda api:'already_absent';c.result_readback=lambda api:artifact()
         c.atomic_bytes=lambda p,b,*args,**kw:Path(p).write_bytes(b)
         c.create_file=lambda p,b,*args,**kw:Path(p).write_bytes(b)

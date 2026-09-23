@@ -113,6 +113,9 @@ def build_candidate(source):
     original = source.decode('utf-8')
     module = Path(__file__).with_name('pilot_observer.py').read_text(encoding='utf-8')
     # The observer is inlined: -I host entry points do not depend on sys.path/imports.
+    ownership = Path(__file__).with_name('start_ownership.py').read_text(encoding='utf-8')
+    ast.parse(ownership, feature_version=(3, 10))
+    module += '\n\n' + ownership
     ast.parse(module, feature_version=(3, 10))
     tree = ast.parse(original)
     node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'observer')
@@ -127,7 +130,7 @@ def build_candidate(source):
     candidate = replace_once(candidate, "        start_intent=True\n        run(['/usr/bin/systemctl','start',UNIT],seconds=40)\n        reason,obs=observer()",
         "        start_intent=True\n        monitor.start_requested()\n"+
         "        run(['/usr/bin/systemctl','start',UNIT],seconds=40)\n"+
-        "        monitor.service_started(unit_state().get('InvocationID'))\n"+
+        "        reconcile_start_ownership(start_ticket,monitor)\n"+
         "        reason,obs=observer(monitor,api)")
     candidate = replace_once(candidate,
         "    except (Stop,OSError,ValueError) as exc:\n        error=str(exc) if isinstance(exc,Stop) else type(exc).__name__\n    finally:",
@@ -144,12 +147,14 @@ def build_candidate(source):
         "        obs=monitor.snapshot()\n"+anchor)
     candidate = replace_once(candidate,
         "                run(['/usr/bin/systemctl','stop',UNIT],seconds=45)\n                st=unit_state()",
-        "                current=unit_state()\n"+
+        "                current=reconcile_start_ownership(start_ticket,monitor)\n"+
         "                if current.get('ActiveState') not in ('inactive','failed'):\n"+
         "                    expected=monitor.state.get('invocation_id')\n"+
         "                    if not expected or current.get('InvocationID')!=expected:\n"+
         "                        raise Stop('service_owner_changed_no_stop')\n"+
-        "                    run(['/usr/bin/systemctl','stop',UNIT],seconds=45)\n"+
+        "                    if unit_state().get('InvocationID')!=expected:\n"+
+        "                        raise Stop('service_owner_changed_no_stop')\n"+
+        "                    run(['/usr/bin/systemctl','stop',UNIT],seconds=50)\n"+
         "                st=unit_state()")
     candidate = replace_once(candidate, "reason=='worker_finished'", "reason=='worker_finished_awaiting_acceptance'")
     candidate = replace_once(candidate, "        atomic_json(RECORD/'result.json',summary)\n",
@@ -157,6 +162,26 @@ def build_candidate(source):
     candidate = replace_once(candidate,
         'except (Stop,OSError,ValueError,KeyError,subprocess.TimeoutExpired) as exc:',
         'except (Stop,ObserverError,OSError,ValueError,KeyError,subprocess.TimeoutExpired) as exc:')
+    # Bind every possible start (including a lost acknowledgement) before ExecStart.
+    candidate = replace_once(candidate, "'ExecCondition=/usr/bin/test -f '+str(CONF/'BOOT_P01_WINDOW')+'\\n')",
+        "'ExecCondition=/usr/bin/test -f '+str(CONF/'BOOT_P01_WINDOW')+'\\n'\n"
+        "        'RuntimeMaxSec=1800\\nTimeoutStartSec=45\\nTimeoutStopSec=45\\nRestart=no\\n'\n"
+        "        'KillMode=control-group\\nSendSIGKILL=yes\\n'\n"
+        "        'ExecStartPre=/usr/bin/python3 -I -B '+str(DRIVER)+' start-witness\\n')")
+    candidate = replace_once(candidate, "window=b'BOOT-P01-v1\\n'",
+        "window=(json.dumps(dict(unit=UNIT,operation=RECORD.name,nonce=os.urandom(16).hex()))+'\\n').encode()")
+    candidate = replace_once(candidate, "        admission_intent=True;admit(api)",
+        "        verify_manager_deadline(start_guard_state())\n"
+        "        monitor.state['manager_deadline_verified']=True;monitor._save()\n"
+        "        admission_intent=True;admit(api)")
+    candidate = replace_once(candidate, "        atomic_json(RECORD/'start-intent.json',dict(time=utc(),unit=UNIT))",
+        "        start_ticket=make_start_ticket(window)\n"
+        "        atomic_json(RECORD/'start-intent.json',start_ticket)")
+    candidate = replace_once(candidate, "        candidate=(not error and not cleanup",
+        "        obs=monitor.snapshot()\n        candidate=(not error and not cleanup")
+    candidate = replace_once(candidate, "        elif mode in ('before','agent','after'): guard(mode)",
+        "        elif mode=='start-witness': record_start_witness()\n"
+        "        elif mode in ('before','agent','after'): guard(mode)")
     ast.parse(candidate, feature_version=(3, 10))
     return candidate.encode('utf-8')
 
