@@ -1,0 +1,71 @@
+{
+  "schema": "symphony-next-spec-composition/v1",
+  "revision": "0.5+MCP-SN031-r1",
+  "status": "review_candidate_not_runtime_ready",
+  "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
+  "dispatch_enabled": false,
+  "base_files": [
+    {
+      "path": "SPECIFICATION.md",
+      "sha256": "b107299574b8717e45d9fc58e8f204b37b441344c8c559e5e65a8113d10238a6"
+    },
+    {
+      "path": "TASKS.md",
+      "sha256": "4ddfbeabf36a43064bfc84c6385be2bb6bd4bb58441d09556651d660b710fa11"
+    },
+    {
+      "path": "planning/backlog.json",
+      "sha256": "c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0"
+    },
+    {
+      "path": "planning/traceability.json",
+      "sha256": "007c010ff71c37e6b21249a76ef8409f210fcdfbd8b2490c0f1270c6329eabe9"
+    }
+  ],
+  "required_addenda": [
+    {
+      "path": "docs/superpowers/specs/2026-09-23-chatgpt-mcp-parity-design.md",
+      "sha256": "c98a9fd4d77cc48167836eaf982776e9186c076b4ff4b72ad1d31d6500d54cce",
+      "requirements": "MCP-07..MCP-26",
+      "acceptance": "AC-MCP-01..AC-MCP-20",
+      "owner": "SN-031"
+    }
+  ],
+  "task_refinements": [
+    {
+      "path": "planning/mcp-execution.json",
+      "sha256": "d76298cac3346611fe12edaaf1f778a6c886607bcfc6b7ea803b26edb4849ade",
+      "supersedes": "Only SN-031 decomposition and the explicit SN-032 dependency edge; proposal section 6 of the MCP addendum is refined by this checked graph.",
+      "schema": "schemas/task-refinement.schema.json",
+      "schema_sha256": "4417704abc135cbc90ffd73de102097bd91aad777fb5a8dc30698a8e0c5c425a"
+    }
+  ],
+  "implementation_plans": [
+    {
+      "path": "docs/superpowers/plans/2026-09-23-chatgpt-mcp-execution.md",
+      "sha256": "831d5088a0e7f0b8716a2a043d4288576fd200c8c23ae276602c573961cb4e27",
+      "state": "written_not_executed"
+    }
+  ],
+  "composition_rules": [
+    "Verify exact hashes and expected dependency preconditions before assembly.",
+    "Preserve all base requirements and AC; add the required MCP source, never replace or silently omit it.",
+    "SN-031 is aggregate_only; paid dispatch only of separately admitted children with accepted prerequisites.",
+    "Apply only task_overrides after checking expected_depends_on; every other task field/dependency/status is inherited unchanged.",
+    "Interpret this as one versioned planning source, not a second queue or a completed native importer.",
+    "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
+    "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance."
+  ],
+  "related_pending_sources": [
+    {
+      "pr": 3,
+      "head": "b0dd6324c2b5c1a26a79a453e6238d0854dd5af3",
+      "topic": "health/recovery architecture",
+      "integrated": false,
+      "note": "No claim of accepted implementation. Full recovery tools require its accepted domain capability; do not import unknown SN-045..049 silently."
+    }
+  ],
+  "implementation_state": "NOT_IMPLEMENTED",
+  "cloud_client_acceptance": "NOT_RUN",
+  "runtime_changes": "NONE"
+}

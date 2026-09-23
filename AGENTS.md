@@ -2,6 +2,8 @@
 
 Read PROJECT_RULES.md first, then SPECIFICATION.md and the exact assigned task in planning/backlog.json. The only explicit operational exception is BOOT-P01: read bootstrap/PILOT.json and bootstrap/PILOT_TASK.md for that issue. It is not completion of SN-001 and does not bypass its blocker. Do not work from chat memory or an earlier specification.
 
+Planning also requires planning/spec-index.json when present. Verify its source hashes and load its required additions and task refinement; baseline v0.5 alone is not the complete MCP scope. For SN-031 and affected dependencies, read planning/mcp-execution.json and its implementation plan. SN-031 is an aggregate, never a second executable job alongside its children. If the planning importer cannot represent the refinement, stop with unsupported_task_refinement; never silently drop the full-parity acceptance barrier. A planning source or draft branch does not grant scheduler admission or claim implementation.
+
 For every run publish one ACCEPTED record with task, spec/policy versions, exact source base, branch/worktree and allowed delta before changing files. Find existing workpad/branch/PR first. Do not discard another attempt's unfinished work.
 
 Roles are planner, implementer, independent read-only reviewer and release verifier. The bootstrap has one writer. Never start extra agents or promote generated subtasks without scheduler admission. Use already approved skills only; SKILLS_POLICY.md controls provenance and trust.
