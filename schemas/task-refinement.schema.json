@@ -17,7 +17,7 @@
       "const": "symphony-next-task-refinement/v1"
     },
     "revision": {
-      "const": "SN-031-r1"
+      "const": "SN-031-r2"
     },
     "base_backlog": {
       "const": "planning/backlog.json"
@@ -52,8 +52,74 @@
           },
           "depends_on": {
             "$ref": "#/$defs/dependencies"
+          },
+          "expected_interfaces_consumes": {
+            "$ref": "#/$defs/consumes"
+          },
+          "interfaces_consumes": {
+            "$ref": "#/$defs/consumes"
+          },
+          "execution_kind": {
+            "const": "aggregate_only"
+          },
+          "admitted": {
+            "const": false
+          },
+          "requirements_add": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptance_ids_add": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "id": {
+                  "const": "SN-032"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "then": {
+              "required": [
+                "expected_interfaces_consumes",
+                "interfaces_consumes"
+              ]
+            },
+            "else": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "expected_interfaces_consumes"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "interfaces_consumes"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
       }
     },
     "tasks": {
@@ -147,6 +213,29 @@
       "items": {
         "type": "string",
         "pattern": "^SN-[0-9]{3}(?:\\.W[0-9]{2}(?:\\.[0-9]{2})?)?$"
+      }
+    },
+    "consumes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task",
+          "contract"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "pattern": "^SN-[0-9]{3}(?:\\.W[0-9]{2}(?:\\.[0-9]{2})?)?$"
+          },
+          "contract": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     }
   }

@@ -32,7 +32,7 @@
 
 Base main: `30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8`. Backlog SHA256: `c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0`.
 
-После принятия exact source planner проверяет hashes и expected_depends_on, добавляет 14 дочерних карточек и применяет только две явные поправки. SN-031 становится aggregate_only и ждёт W06; все первоначальные prerequisites SN-005/SN-014/SN-029 перенесены на W01. SN-032 ждёт W02.02 вместо полного SN-031. Все остальные baseline edges/statuses/admission сохраняются.
+После принятия exact source planner проверяет hashes, expected_depends_on и expected_interfaces_consumes, добавляет 14 дочерних карточек и применяет только две явные поправки. SN-031 становится aggregate_only и ждёт W06; все первоначальные prerequisites SN-005/SN-014/SN-029 перенесены на W01. SN-032 ждёт W02.02 вместо полного SN-031: одновременно заменяются depends_on и interfaces.consumes. Старый список consumes сверяется целиком через expected_interfaces_consumes; оставшиеся inputs SN-006/SN-014 и все produces сохраняются. Все остальные baseline edges/statuses/admission сохраняются.
 
 Без поправки возникает цикл SN-031 → W06 → W04.05 → SN-034 → SN-033 → SN-032 → SN-031. Исправленный граф содержит 58 узлов, включая агрегат; 57 потенциально исполнимых leaf nodes. Количество узлов не означает готовность к запуску. SN-042/043/044 транзитивно ждут полной MCP-приёмки.
 
@@ -314,3 +314,17 @@ node --test test/contracts/mcp-client-evidence.test.mjs
 Сверены 23.09.2026: OpenAI Build an MCP server — https://developers.openai.com/plugins/build/mcp-server ; Authentication — https://developers.openai.com/plugins/build/auth ; MCP transports — https://modelcontextprotocol.io/specification/2025-11-25/basic/transports ; authorization — https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization . Это основания механизма, не evidence нашей реализации. Конкретный version pin принимается по реальному compatibility test в W02.02.
 
 План подготовлен к независимому review вместе с `planning/mcp-execution.json`. Исполнение сохраняет выбранный путь: отдельный Symphony, один writer, explicit admission и отдельное предупреждение перед реальным запуском в tmux.
+
+## Исправление review от 23.09.2026 — контракт входов SN-032
+
+Отчёт независимого review SHA256 `154ae22e36420d9f450fc93a169417dd9a5be2dd90aecccfcbb7acde5a405272` обнаружил, что одного изменения depends_on недостаточно. В refinement r2 явный override проверяет весь исходный interfaces.consumes и заменяет его одновременно с depends_on. Нельзя сохранять требование accepted полного SN-031, когда планировщик объявляет достаточным W02.02. Неизвестное поле override или несовпадение expected списка даёт planning hold, не игнорирование.
+
+Семантический граф проверки включает объединение depends_on и task references из эффективных interfaces.consumes. Каждый consume обязан ссылаться на существующий prerequisite (прямой либо транзитивный), а не на будущего dependent. Проверять только формальные depends_on недостаточно. Все исходные поля, кроме явно разрешённых replacements/additions, сохраняются; полный SN-031/W06 по-прежнему блокирует приёмку SN-042/043/044.
+
+Регрессия пакета (не реализация native importer):
+
+```sh
+python3 -B -m unittest discover -s tests -p test_mcp_input_contracts.py -v
+```
+
+Для проверки JSON Schema тест использует `jsonschema` из среды проверяющего; новую зависимость runtime продукта эта правка не устанавливает. Сценарии проверяют прежний скрытый цикл, точный expected контракт, отказ при изменённом baseline, обязательность обоих полей override, сохранность прочих полей и финальной полной приёмки.

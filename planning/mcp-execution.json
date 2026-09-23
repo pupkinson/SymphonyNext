@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-task-refinement/v1",
-  "revision": "SN-031-r1",
+  "revision": "SN-031-r2",
   "base_backlog": "planning/backlog.json",
   "base_backlog_sha256": "c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
@@ -79,7 +79,35 @@
         "SN-014",
         "SN-031.W02.02"
       ],
-      "reason": "Provisioning needs the MCP command/auth substrate, not its own future MCP tools. Break SN-031 -> W04.04 -> SN-032 -> SN-031 cycle without dropping final acceptance."
+      "reason": "Provisioning needs the MCP command/auth substrate, not its own future MCP tools. Break SN-031 -> W04.04 -> SN-032 -> SN-031 cycle without dropping final acceptance. Both depends_on and interfaces.consumes are replaced together after exact baseline preconditions, preventing a semantic input-contract cycle.",
+      "expected_interfaces_consumes": [
+        {
+          "task": "SN-006",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-014",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-031",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        }
+      ],
+      "interfaces_consumes": [
+        {
+          "task": "SN-006",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-014",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-031.W02.02",
+          "contract": "accepted MCP command/auth transport substrate and exact-version evidence from SN-031.W02.02; includes authenticated typed commands, idempotent operation receipt and authoritative readback; full SN-031/W06 business-operation parity is not an input to provisioning and remains mandatory for final milestones"
+        }
+      ]
     }
   ],
   "external_acceptance_gates": [

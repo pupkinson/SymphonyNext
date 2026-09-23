@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-spec-composition/v1",
-  "revision": "0.5+MCP-SN031-r1",
+  "revision": "0.5+MCP-SN031-r2",
   "status": "review_candidate_not_runtime_ready",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
   "dispatch_enabled": false,
@@ -34,16 +34,16 @@
   "task_refinements": [
     {
       "path": "planning/mcp-execution.json",
-      "sha256": "d76298cac3346611fe12edaaf1f778a6c886607bcfc6b7ea803b26edb4849ade",
-      "supersedes": "Only SN-031 decomposition and the explicit SN-032 dependency edge; proposal section 6 of the MCP addendum is refined by this checked graph.",
+      "sha256": "41d08997853a09131fc6d02e57887a87fc7e3fd8a6b050c6bc386f01ac948caf",
+      "supersedes": "Only SN-031 decomposition and explicit paired SN-032 depends_on/interfaces.consumes replacement; all expected baseline values must match.",
       "schema": "schemas/task-refinement.schema.json",
-      "schema_sha256": "4417704abc135cbc90ffd73de102097bd91aad777fb5a8dc30698a8e0c5c425a"
+      "schema_sha256": "7500456e723f72c4ee5e422a29e95481863b063bc7147dd089e3abde52be70ad"
     }
   ],
   "implementation_plans": [
     {
       "path": "docs/superpowers/plans/2026-09-23-chatgpt-mcp-execution.md",
-      "sha256": "831d5088a0e7f0b8716a2a043d4288576fd200c8c23ae276602c573961cb4e27",
+      "sha256": "976837613c941df6ad1a9f2f25fbd7e52cbf98b4aac0989dd384ba3d03282299",
       "state": "written_not_executed"
     }
   ],
@@ -51,10 +51,11 @@
     "Verify exact hashes and expected dependency preconditions before assembly.",
     "Preserve all base requirements and AC; add the required MCP source, never replace or silently omit it.",
     "SN-031 is aggregate_only; paid dispatch only of separately admitted children with accepted prerequisites.",
-    "Apply only task_overrides after checking expected_depends_on; every other task field/dependency/status is inherited unchanged.",
+    "Apply only explicit task_overrides after checking expected_depends_on and, for SN-032, exact expected_interfaces_consumes; replace depends_on and interfaces.consumes together. Preserve every unspecified field, including produces, and all existing controls.",
     "Interpret this as one versioned planning source, not a second queue or a completed native importer.",
     "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
-    "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance."
+    "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance.",
+    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them."
   ],
   "related_pending_sources": [
     {
