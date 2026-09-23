@@ -1,6 +1,7 @@
 """Exact candidate lifecycle with inert systemd; no host/model execution."""
 import ast
 import contextlib
+import errno
 import importlib.util
 import io
 import json
@@ -15,9 +16,12 @@ def load(p,name):
     spec=importlib.util.spec_from_file_location(name,p);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 
 class StartBoundaryTests(unittest.TestCase):
-    def case(self,fault,foreign=False,delay_witness=False,unsafe_limit=False,missing_witness=False):
+    def case(self,fault,foreign=False,delay_witness=False,unsafe_limit=False,missing_witness=False,
+             persistence_fault=None, after_observation=False, replace_before_stop=False,
+             result_write_failure=False, details=False):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);clock=Clock();commands=[];active=[False];seen=[0];read_fault=[False]
+            started=[False];persistence_armed=[False];persistence_calls=[];cleanup_calls=[]
             builder=load(ROOT/'bootstrap/build_observer_candidate.py','start_builder')
             source=builder.build_candidate((ROOT/'tests/fixtures/boot_p01_launcher_v1.txt').read_bytes())
             path=root/'candidate.py';path.write_bytes(source);c=load(path,'start_candidate')
@@ -33,7 +37,15 @@ class StartBoundaryTests(unittest.TestCase):
             c.create_file=lambda p,b,*a,**k:Path(p).write_bytes(b)
             c.atomic_bytes=lambda p,b,*a,**k:Path(p).write_bytes(b)
             c.read_file=lambda p,*a,**k:Path(p).read_bytes()
-            c.admit=lambda api:None;c.remove_admission=lambda api:'already_absent';c.result_readback=lambda api:artifact()
+            c.admit=lambda api:None
+            c.remove_admission=lambda api:(cleanup_calls.append('label'),'already_absent')[1]
+            c.result_readback=lambda api:(cleanup_calls.append('readback'),artifact())[1]
+            saved_atomic_json=c.atomic_json
+            def write_report(p,data):
+                if result_write_failure and p==c.RECORD/'result.json':
+                    raise OSError(errno.ENOSPC,'fixture_result_disk_full')
+                return saved_atomic_json(p,data)
+            c.atomic_json=write_report
             def witness():
                 if hasattr(c,'record_start_witness') and not missing_witness:
                     with patch.object(c.os,'getuid',return_value=995),patch.object(c.os,'getgid',return_value=995),patch.object(c.socket,'gethostname',return_value='1c-db'),patch.dict(c.os.environ,{'INVOCATION_ID':INVOCATION}):
@@ -53,22 +65,47 @@ class StartBoundaryTests(unittest.TestCase):
                         raise c.Stop('operator_interrupted' if fault=='bind_interrupt' else 'local_command_timeout_systemctl')
                     return '\n'.join(k+'='+v for k,v in state().items())
                 if 'start' in args:
-                    active[0]=True
+                    active[0]=True;started[0]=True
                     if not delay_witness:witness()
                     if fault=='timeout':raise c.Stop('local_command_timeout_systemctl')
                     if fault=='interrupt':raise c.Stop('operator_interrupted')
                 if 'stop' in args:active[0]=False
                 return ''
-            c.run=run;c.unit_state=state
+            c.run=run
+            def final_state():
+                d=state()
+                if replace_before_stop and active[0]:d['InvocationID']='f'*32
+                return d
+            c.unit_state=final_state
             old_class=c.PilotObserver
+            original_save=old_class._save
+            def fail_checkpoint(monitor):
+                if persistence_fault and started[0] and (not after_observation or monitor.state.get('session_observed')):
+                    persistence_armed[0]=True
+                if persistence_armed[0]:
+                    persistence_calls.append('save_failed')
+                    if persistence_fault=='ObserverError':raise c.ObserverError('fixture_checkpoint_error')
+                    raise OSError(errno.ENOSPC,'fixture_checkpoint_disk_full')
+                return original_save(monitor)
             c.PilotObserver=lambda p,**kw:old_class(p,operation=kw['operation'],source=kw['source'],clock=clock.mono,wall=clock.wall,idle_grace=6,startup_limit=12,wall_limit=120)
             c.observer_runtime_read=lambda:runtime(clock,clock.n==0)
             c.observer_worker_alive=lambda:clock.n==0
             exec(code,c.__dict__)
-            with patch.object(c.time,'monotonic',clock.mono),patch.object(c.time,'sleep',clock.advance),patch.object(c.signal,'signal'),contextlib.redirect_stdout(io.StringIO()):
+            printed=io.StringIO();escaped=None
+            with patch.object(old_class,'_save',fail_checkpoint),patch.object(c.time,'monotonic',clock.mono),patch.object(c.time,'sleep',clock.advance),patch.object(c.signal,'signal'),contextlib.redirect_stdout(printed):
                 try:c.fixture_lifecycle()
                 except SystemExit:pass
-            result=json.loads((c.RECORD/'result.json').read_text())
+                except (OSError,c.ObserverError) as exc:
+                    if not details:raise
+                    escaped=type(exc).__name__
+            result_path=c.RECORD/'result.json'
+            result=json.loads(result_path.read_text()) if result_path.exists() else None
+            if details:
+                return dict(result=result,commands=commands,active=active[0],elapsed=clock.n,
+                    escaped=escaped,persistence_calls=len(persistence_calls),cleanup_calls=cleanup_calls,
+                    workflow_restored=c.WORKFLOW.read_bytes()==b'disabled workflow',
+                    ready_present=c.READY.exists(),window_present=(c.CONF/'BOOT_P01_WINDOW').exists(),
+                    dropin_present=c.DROP.exists(),printed=printed.getvalue())
             return result,commands,active[0],clock.n
 
     def test_interrupt_after_start_reconciles_and_stops_own_service(self):

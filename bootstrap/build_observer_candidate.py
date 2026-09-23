@@ -130,7 +130,8 @@ def build_candidate(source):
     candidate = replace_once(candidate, "        start_intent=True\n        run(['/usr/bin/systemctl','start',UNIT],seconds=40)\n        reason,obs=observer()",
         "        start_intent=True\n        monitor.start_requested()\n"+
         "        run(['/usr/bin/systemctl','start',UNIT],seconds=40)\n"+
-        "        reconcile_start_ownership(start_ticket,monitor)\n"+
+        "        current=reconcile_start_ownership(start_ticket,monitor)\n"+
+        "        record_reconciled_start(current,monitor)\n"+
         "        reason,obs=observer(monitor,api)")
     candidate = replace_once(candidate,
         "    except (Stop,OSError,ValueError) as exc:\n        error=str(exc) if isinstance(exc,Stop) else type(exc).__name__\n    finally:",
@@ -142,14 +143,22 @@ def build_candidate(source):
         "        try:\n"+
         "            ended=error or monitor.state['termination_reason'] or ('start_outcome_unknown' if start_intent else 'not_started')\n"+
         "            monitor.finish(ended)\n"+
-        "        except (ObserverError,OSError): cleanup.append('observer_checkpoint_failed')\n"+
+        "        except (ObserverError,OSError):\n"+
+        "            monitor.state['persistence_error']=True\n"+
+        "            cleanup.append('observer_checkpoint_failed')\n"+
         "        reason=monitor.state['termination_reason'] or 'observer_error'\n"+
         "        obs=monitor.snapshot()\n"+anchor)
     candidate = replace_once(candidate,
         "                run(['/usr/bin/systemctl','stop',UNIT],seconds=45)\n                st=unit_state()",
         "                current=reconcile_start_ownership(start_ticket,monitor)\n"+
+        "                # Diagnostic storage cannot veto the independently verified stop.\n"+
+        "                try: record_reconciled_start(current,monitor)\n"+
+        "                except (ObserverError,OSError):\n"+
+        "                    monitor.state['persistence_error']=True\n"+
+        "                    if 'observer_checkpoint_failed' not in cleanup:\n"+
+        "                        cleanup.append('observer_checkpoint_failed')\n"+
         "                if current.get('ActiveState') not in ('inactive','failed'):\n"+
-        "                    expected=monitor.state.get('invocation_id')\n"+
+        "                    expected=current.get('InvocationID')\n"+
         "                    if not expected or current.get('InvocationID')!=expected:\n"+
         "                        raise Stop('service_owner_changed_no_stop')\n"+
         "                    if unit_state().get('InvocationID')!=expected:\n"+
@@ -158,7 +167,13 @@ def build_candidate(source):
         "                st=unit_state()")
     candidate = replace_once(candidate, "reason=='worker_finished'", "reason=='worker_finished_awaiting_acceptance'")
     candidate = replace_once(candidate, "        atomic_json(RECORD/'result.json',summary)\n",
-        "        atomic_json(RECORD/'result.json',summary)\n        monitor.close()\n")
+        "        try: atomic_json(RECORD/'result.json',summary)\n"+
+        "        except OSError:\n"+
+        "            cleanup.append('result_persistence_failed')\n"+
+        "            summary['status']='STOP'\n"+
+        "            monitor.state['persistence_error']=True\n"+
+        "            summary['runtime_observations']=monitor.snapshot()\n"+
+        "        finally: monitor.close()\n")
     candidate = replace_once(candidate,
         'except (Stop,OSError,ValueError,KeyError,subprocess.TimeoutExpired) as exc:',
         'except (Stop,ObserverError,OSError,ValueError,KeyError,subprocess.TimeoutExpired) as exc:')

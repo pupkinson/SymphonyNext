@@ -71,7 +71,11 @@ def record_start_witness():
 
 
 def reconcile_start_ownership(ticket, monitor):
-    """At most three reads, at most 15s; no start or stop is issued here."""
+    """Verify ownership without writing diagnostics; at most three reads/15s.
+
+    Returning a verified state must not depend on checkpoint storage. The caller
+    records the observation separately and still rechecks identity before stop.
+    """
     deadline = time.monotonic()+15
     for delay in (0, 2, 3):
         if delay: time.sleep(min(delay, max(0, deadline-time.monotonic())))
@@ -80,7 +84,6 @@ def reconcile_start_ownership(ticket, monitor):
             state = start_guard_state()
             if state.get('ActiveState') in ('inactive','failed') and state.get('MainPID') == '0' and state.get('Job') == '0':
                 monitor.state['start_reconciliation'] = 'not_running_no_job'
-                monitor._save()
                 return state
             verify_manager_deadline(state)
             if hashlib.sha256(read_file(DROP)).hexdigest() != ticket['dropin_sha256']:
@@ -104,11 +107,22 @@ def reconcile_start_ownership(ticket, monitor):
                 or invocation != state.get('InvocationID')
                 or monitor.state.get('invocation_id') not in (None,invocation)):
             raise Stop('service_owner_changed_no_stop')
-        if not monitor.state.get('service_start_confirmed'): monitor.service_started(invocation)
         monitor.state['start_reconciliation'] = 'owned_invocation_witness'
-        if monitor.state.get('termination_reason'): monitor.state['phase'] = 'observation_ended'
-        monitor._save()
         return state
     monitor.state['start_reconciliation'] = 'unconfirmed_manager_deadline_retained'
-    monitor._save()
     raise Stop('start_ownership_unconfirmed_no_stop')
+
+
+def record_reconciled_start(state, monitor):
+    """Diagnostics only; never used as the authority to stop an invocation.
+
+    Call only with the state returned by reconcile_start_ownership. A write
+    failure must reach normal error finalization, but must not veto safe stop
+    from inside that finalization. No I/O failure is reclassified as success.
+    """
+    if (state.get('ActiveState') not in ('inactive', 'failed')
+            and not monitor.state.get('service_start_confirmed')):
+        monitor.service_started(state.get('InvocationID'))
+    if monitor.state.get('termination_reason'):
+        monitor.state['phase'] = 'observation_ended'
+    monitor._save()
