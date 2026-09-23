@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Symphony Next reviewed task refinement (not scheduler admission)",
+  "type": "object",
+  "required": [
+    "schema",
+    "revision",
+    "base_backlog",
+    "base_backlog_sha256",
+    "dispatch_enabled",
+    "task_overrides",
+    "tasks",
+    "external_acceptance_gates"
+  ],
+  "properties": {
+    "schema": {
+      "const": "symphony-next-task-refinement/v1"
+    },
+    "revision": {
+      "const": "SN-031-r2"
+    },
+    "base_backlog": {
+      "const": "planning/backlog.json"
+    },
+    "base_backlog_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dispatch_enabled": {
+      "const": false
+    },
+    "task_overrides": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "expected_depends_on",
+          "depends_on"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "SN-031",
+              "SN-032"
+            ]
+          },
+          "expected_depends_on": {
+            "$ref": "#/$defs/dependencies"
+          },
+          "depends_on": {
+            "$ref": "#/$defs/dependencies"
+          },
+          "expected_interfaces_consumes": {
+            "$ref": "#/$defs/consumes"
+          },
+          "interfaces_consumes": {
+            "$ref": "#/$defs/consumes"
+          },
+          "execution_kind": {
+            "const": "aggregate_only"
+          },
+          "admitted": {
+            "const": false
+          },
+          "requirements_add": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptance_ids_add": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "id": {
+                  "const": "SN-032"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "then": {
+              "required": [
+                "expected_interfaces_consumes",
+                "interfaces_consumes"
+              ]
+            },
+            "else": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "expected_interfaces_consumes"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "interfaces_consumes"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "parent",
+          "title",
+          "depends_on",
+          "requirements",
+          "acceptance_ids",
+          "implementation_paths",
+          "test_path",
+          "fixture",
+          "acceptance_assertions",
+          "commands",
+          "command_status",
+          "status",
+          "admitted",
+          "implementation_state",
+          "test_state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SN-031\\.W(?:01|05|06|02\\.0[12]|03\\.0[123]|04\\.0[1-6])$"
+          },
+          "parent": {
+            "const": "SN-031"
+          },
+          "depends_on": {
+            "$ref": "#/$defs/dependencies"
+          },
+          "requirements": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^MCP-[0-9]{2}$"
+            }
+          },
+          "acceptance_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^AC-(?:MCP-)?[0-9]{2}$"
+            }
+          },
+          "commands": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "admitted": {
+            "const": false
+          },
+          "status": {
+            "const": "planned"
+          },
+          "implementation_state": {
+            "const": "NOT_IMPLEMENTED"
+          },
+          "test_state": {
+            "const": "NOT_RUN"
+          },
+          "command_status": {
+            "const": "specified_not_run_for_product"
+          }
+        }
+      }
+    },
+    "external_acceptance_gates": {
+      "type": "array",
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^SN-[0-9]{3}(?:\\.W[0-9]{2}(?:\\.[0-9]{2})?)?$"
+      }
+    },
+    "consumes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task",
+          "contract"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "pattern": "^SN-[0-9]{3}(?:\\.W[0-9]{2}(?:\\.[0-9]{2})?)?$"
+          },
+          "contract": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
