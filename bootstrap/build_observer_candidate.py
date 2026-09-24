@@ -14,6 +14,54 @@ from pathlib import Path
 
 LEGACY_SHA256 = 'b5e58bb18b46330792b4922d6349bf25dd3f8b6c008efcb1e769b2484b12d518'
 
+GITHUB_ADAPTER = '''def github_diagnostic_emit(record):
+    print(json.dumps(record, sort_keys=True), flush=True)
+
+
+def github_http_transport(api, method, path, body, timeout):
+    conn = http.client.HTTPSConnection('api.github.com', timeout=timeout,
+                                      context=ssl.create_default_context())
+    try:
+        data = None if body is None else json.dumps(body).encode()
+        conn.request(method, path, body=data, headers={
+            'Authorization': 'Bearer ' + api.token,
+            'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json',
+            'User-Agent': 'SymphonyNext-BOOT-P01-owner-run'})
+        response = conn.getresponse()
+        return response.status, dict(response.getheaders()), response.read(2_000_001)
+    finally:
+        conn.close()
+
+
+def diagnostic_api_request(self, method, path, body=None):
+    validate_api(method, path)
+    # Only fixed routes / exact immutable SHAs are safe to include in evidence.
+    endpoint = path.split('?', 1)[0]
+    exact = {API, API+'/issues/2', API+'/git/ref/heads/main',
+             API+'/git/ref/heads/'+BRANCH, API+'/labels/'+LABEL,
+             API+'/labels', API+'/issues/2/labels', API+'/issues/2/labels/'+LABEL,
+             API+'/issues', API+'/pulls'}
+    if endpoint not in exact and not re.fullmatch(re.escape(API+'/compare/'+MAIN+'...') + '[0-9a-f]{40}', endpoint):
+        raise Stop('api_scope_refused')
+    # One deadline across this request's attempts. Later cleanup/reconciliation
+    # reads need their own budget, even after the worker's long-running session.
+    deadline = time.monotonic() + 120
+    expected = method == 'GET' and endpoint in {API+'/git/ref/heads/'+BRANCH, API+'/labels/'+LABEL}
+    try:
+        return github_request(method, endpoint,
+            lambda timeout: github_http_transport(self, method, path, body, timeout),
+            emit=github_diagnostic_emit, deadline=deadline,
+            clock=time.monotonic, sleep=time.sleep, wall=time.time, expected_404=expected)
+    except GithubDiagnosticError as exc:
+        # A distinct terminal code prevents the legacy observer from retrying
+        # an already exhausted three-attempt read. Unknown writes require readback.
+        raise Stop('github_' + exc.reason) from None
+
+
+# Explicit binding preserves the archival class definition and its get contract.
+Api.request = diagnostic_api_request
+'''
+
 ADAPTER = '''def observer_worker_alive():
     # UID995 is dedicated to this one bootstrap, not to DF Assistant.
     p = subprocess.run(['/usr/bin/ps', '-u', '995', '-o', 'comm='],
@@ -116,6 +164,8 @@ def build_candidate(source):
     ownership = Path(__file__).with_name('start_ownership.py').read_text(encoding='utf-8')
     ast.parse(ownership, feature_version=(3, 10))
     module += '\n\n' + ownership
+    diagnostics = Path(__file__).with_name('github_diagnostics.py').read_text(encoding='utf-8')
+    module += '\n\n' + diagnostics + '\n\n' + GITHUB_ADAPTER
     ast.parse(module, feature_version=(3, 10))
     tree = ast.parse(original)
     node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'observer')
