@@ -14,23 +14,185 @@ from pathlib import Path
 
 LEGACY_SHA256 = 'b5e58bb18b46330792b4922d6349bf25dd3f8b6c008efcb1e769b2484b12d518'
 
-GITHUB_ADAPTER = '''def github_diagnostic_emit(record):
+GITHUB_ADAPTER = '''import mmap
+import select
+import threading
+
+
+def github_diagnostic_emit(record):
     print(json.dumps(record, sort_keys=True), flush=True)
 
 
-def github_http_transport(api, method, path, body, timeout):
-    conn = http.client.HTTPSConnection('api.github.com', timeout=timeout,
-                                      context=ssl.create_default_context())
+def github_transport_child(api, method, path, body, timeout, deadline, shared):
+    # This child performs exactly one already-authorized HTTP attempt. It never
+    # executes a launcher, writes evidence, logs provider data, or retries.
+    # The kernel also ends this child at the deadline if its parent dies or is
+    # paused. This changes only the child, never the owner's signal handlers.
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGALRM})
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        return
+    signal.setitimer(signal.ITIMER_REAL, remaining)
+    conn = None
     try:
+        conn = http.client.HTTPSConnection('api.github.com', timeout=timeout,
+                                          context=ssl.create_default_context())
         data = None if body is None else json.dumps(body).encode()
         conn.request(method, path, body=data, headers={
             'Authorization': 'Bearer ' + api.token,
             'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json',
             'User-Agent': 'SymphonyNext-BOOT-P01-owner-run'})
         response = conn.getresponse()
-        return response.status, dict(response.getheaders()), response.read(2_000_001)
+        result = ['response', response.status,
+                  github_safe_headers(dict(response.getheaders())),
+                  response.read(2_000_001).hex()]
+    except BaseException as exc:
+        result = ['timeout' if isinstance(exc, TimeoutError) else 'network']
     finally:
-        conn.close()
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    payload = json.dumps(result).encode()
+    if len(payload) > len(shared) - 4:
+        payload = b'["network"]'
+    shared[4:4 + len(payload)] = payload
+    shared[:4] = len(payload).to_bytes(4, 'big')
+
+
+def github_reap_transport(pid, deadline, interrupt_signals=frozenset()):
+    while True:
+        if signal.sigpending() & interrupt_signals:
+            raise Stop('operator_interrupted')
+        waited, status = os.waitpid(pid, os.WNOHANG)
+        if waited:
+            return status
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        time.sleep(min(0.005, remaining))
+
+
+def github_http_transport(api, method, path, body, timeout, *, deadline):
+    # A socket timeout cannot bound DNS, TLS, headers and a trickling body as a
+    # whole. Supervise one disposable Unix child from the single-threaded owner.
+    # Anonymous bounded memory avoids unbounded pipe recv and temporary files.
+    if getattr(api, 'github_transport_cleanup_failed', False):
+        raise GithubDiagnosticError('transport_cleanup_unverified')
+    if (threading.active_count() != 1 or not hasattr(os, 'fork') or
+            not hasattr(os, 'pidfd_open') or not hasattr(signal, 'pidfd_send_signal') or
+            signal.getsignal(signal.SIGCHLD) != signal.SIG_DFL):
+        raise GithubDiagnosticError('transport_context_unsupported')
+    if time.monotonic() >= deadline:
+        raise TimeoutError()
+    # Read the old mask without changing it, before acquiring any resource.
+    # Enter the restoration try before blocking: even an interruption during
+    # mask installation cannot strand the caller with a modified mask.
+    old_mask = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+    blocked = signal.valid_signals() - {signal.SIGKILL, signal.SIGSTOP}
+    interrupt_signals = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP} - old_mask
+    try:
+        signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+        # Refuse an unsupported kernel before a child could perform HTTP.
+        try:
+            probe_fd = os.pidfd_open(os.getpid())
+        except OSError:
+            raise GithubDiagnosticError('transport_context_unsupported') from None
+        os.close(probe_fd)
+        with mmap.mmap(-1, 4_100_004) as shared:
+            read_fd, write_fd = os.pipe2(os.O_CLOEXEC)
+            pid = None
+            pidfd = None
+            reaped = False
+            try:
+                if signal.sigpending() & interrupt_signals:
+                    raise Stop('operator_interrupted')
+                pid = os.fork()
+                if pid == 0:
+                    try:
+                        os.close(read_fd)
+                        github_transport_child(api, method, path, body, timeout, deadline, shared)
+                    finally:
+                        # No inherited stream flush, atexit handlers, or parent flow.
+                        os._exit(0)
+                os.close(write_fd)
+                write_fd = None
+                pidfd = os.pidfd_open(pid)
+                # Keep asynchronous handlers deferred throughout ownership,
+                # including the transition into finally. Poll pending owner
+                # stops so blocking the handler does not delay operator stop
+                # until the HTTP deadline. Do not consume queued signals.
+                while True:
+                    if signal.sigpending() & interrupt_signals:
+                        raise Stop('operator_interrupted')
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError()
+                    ready = select.select([read_fd], [], [], min(0.05, remaining))
+                    if ready and ready[0]:
+                        break
+                status = github_reap_transport(pid, deadline, interrupt_signals)
+                if status is None:
+                    raise TimeoutError()
+                reaped = True
+                if time.monotonic() >= deadline:
+                    raise TimeoutError()
+                size = int.from_bytes(shared[:4], 'big')
+                if status != 0 or not 0 < size <= len(shared) - 4:
+                    raise OSError()
+                result = json.loads(shared[4:4 + size])
+                if result[0] == 'timeout':
+                    raise TimeoutError()
+                if result[0] != 'response':
+                    raise OSError()
+                return result[1], result[2], bytes.fromhex(result[3])
+            finally:
+                # Signals are already blocked; no unprotected cleanup entry.
+                try:
+                    if pid is not None and not reaped:
+                        try:
+                            if pidfd is not None:
+                                # The handle still identifies our child after waitpid
+                                # released its numeric PID. A recycled PID is unreachable.
+                                signal.pidfd_send_signal(pidfd, signal.SIGKILL)
+                            else:
+                                # Acquisition failed before any waitpid: this child
+                                # is still ours and its numeric PID cannot be recycled.
+                                os.kill(pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        except OSError:
+                            api.github_transport_cleanup_failed = True
+                            raise GithubDiagnosticError('transport_cleanup_unverified') from None
+                        try:
+                            status = github_reap_transport(pid, time.monotonic() + 1)
+                        except ChildProcessError:
+                            # An interruption may follow successful waitpid before
+                            # reaped=True. With our stable handle, ECHILD means it was
+                            # already reaped; preserve the original owner interruption.
+                            if pidfd is None:
+                                api.github_transport_cleanup_failed = True
+                                raise GithubDiagnosticError('transport_cleanup_unverified') from None
+                            status = 0
+                        if status is None:
+                            api.github_transport_cleanup_failed = True
+                            raise GithubDiagnosticError('transport_cleanup_unverified')
+                finally:
+                    try:
+                        if pidfd is not None:
+                            os.close(pidfd)
+                    finally:
+                        try:
+                            os.close(read_fd)
+                        finally:
+                            if write_fd is not None:
+                                os.close(write_fd)
+    finally:
+        # Child termination/reaping and descriptor/mmap cleanup precede delivery
+        # to the original handlers. Previously blocked signals remain blocked.
+        signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
 
 
 def diagnostic_api_request(self, method, path, body=None):
@@ -47,10 +209,11 @@ def diagnostic_api_request(self, method, path, body=None):
     # reads need their own budget, even after the worker's long-running session.
     deadline = time.monotonic() + 120
     expected = method == 'GET' and endpoint in {API+'/git/ref/heads/'+BRANCH, API+'/labels/'+LABEL}
+    delivery_state = self.__dict__.setdefault('github_diagnostics', {'delivery_failed': False})
     try:
         return github_request(method, endpoint,
-            lambda timeout: github_http_transport(self, method, path, body, timeout),
-            emit=github_diagnostic_emit, deadline=deadline,
+            lambda timeout: github_http_transport(self, method, path, body, timeout, deadline=deadline),
+            emit=github_diagnostic_emit, deadline=deadline, delivery_state=delivery_state,
             clock=time.monotonic, sleep=time.sleep, wall=time.time, expected_404=expected)
     except GithubDiagnosticError as exc:
         # A distinct terminal code prevents the legacy observer from retrying

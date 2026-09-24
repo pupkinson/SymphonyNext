@@ -124,3 +124,36 @@ class DiagnosticsTests(unittest.TestCase):
                 self.m.github_request('GET', endpoint, lambda timeout: self.fail('transport called'),
                                       emit=self.records.append, deadline=100)
         self.assertEqual(self.records, [])
+
+    def test_failed_delivery_preserves_outcome_and_only_fixed_state(self):
+        state = {}
+        def emit(record):
+            self.records.append(dict(record))
+            raise OSError('inert secret must not become evidence')
+        for response, method, expected in (
+                ((200, {}, b'{}'), 'GET', (200, {})),
+                ((401, {}, b'{}'), 'GET', 'auth'),
+                ((503, {}, b'{}'), 'POST', 'unknown_outcome')):
+            with self.subTest(method=method, status=response[0]):
+                kwargs = {'emit': emit, 'deadline': 100, 'clock': lambda: 0}
+                # The fallback demonstrates the same failure on the old signature.
+                import inspect
+                if 'delivery_state' in inspect.signature(self.m.github_request).parameters:
+                    kwargs['delivery_state'] = state
+                result = None
+                try:
+                    result = self.m.github_request(method, '/repos/pupkinson/SymphonyNext',
+                        lambda timeout: response, **kwargs)
+                except Exception as exc:
+                    result = exc.reason if isinstance(exc, self.m.GithubDiagnosticError) else type(exc).__name__
+                self.assertEqual(result, expected)
+                self.assertEqual(state, {'delivery_failed': True})
+
+    def test_late_success_is_classified_as_deadline_before_emission(self):
+        def transport(timeout):
+            self.now = 100
+            return 200, {}, b'{}'
+        with self.assertRaisesRegex(self.m.GithubDiagnosticError, 'deadline_exhausted'):
+            self.m.github_request('GET', '/repos/pupkinson/SymphonyNext', transport,
+                emit=self.records.append, deadline=100, clock=lambda: self.now)
+        self.assertEqual(self.records[-1]['classification'], 'deadline_exhausted')

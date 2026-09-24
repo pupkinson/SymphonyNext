@@ -53,7 +53,7 @@ def github_retry_after(headers, wall):
 
 def github_request(method, endpoint, transport, *, emit, deadline,
                    clock=time.monotonic, sleep=time.sleep, wall=time.time,
-                   expected_404=False):
+                   expected_404=False, delivery_state=None):
     # This is a diagnostic safety boundary, not an authorization grant.
     if method not in ('GET', 'POST', 'DELETE', 'PATCH', 'PUT') or not re.fullmatch(
             r'/repos/pupkinson/SymphonyNext(?:/[A-Za-z0-9_./-]+)?', endpoint):
@@ -111,10 +111,19 @@ def github_request(method, endpoint, transport, *, emit, deadline,
         if method != 'GET' and reason in (
                 'transient_network', 'transient_http', 'malformed_response', 'oversized_response'):
             reason = 'unknown_outcome'
+        if clock() >= deadline:
+            reason = 'unknown_outcome' if method != 'GET' else 'deadline_exhausted'
         record = dict(method=method, endpoint=endpoint, status=status,
                       transport_error=transport_error, elapsed_seconds=round(max(0, clock()-started), 6),
                       attempt=attempt, headers=headers, classification=reason)
-        emit(record)
+        try:
+            emit(record)
+        except Exception:
+            # Delivery is not the HTTP outcome. Keep a bounded, text-free signal;
+            # never prevent the caller's reconciliation or admission cleanup.
+            # BaseException (including operator interruption) still propagates.
+            if delivery_state is not None:
+                delivery_state['delivery_failed'] = True
         if clock() >= deadline:
             raise GithubDiagnosticError('unknown_outcome' if method != 'GET' else 'deadline_exhausted')
         if reason in ('success', 'expected_404'):
