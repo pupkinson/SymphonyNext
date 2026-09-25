@@ -74,6 +74,14 @@ mise exec -- mix build
 mise exec -- ./bin/symphony ./WORKFLOW.md
 ```
 
+## CLI shutdown
+
+Once the CLI has started monitoring its supervisor, a VM shutdown (including
+SIGTERM) is allowed to finish its application stop callbacks and preserve the
+VM's selected exit status. An unexpected supervisor failure while the VM is
+running still exits nonzero. This does not add a guarantee for signals received
+before the CLI finishes startup.
+
 ## Burrito releases
 
 Symphony ships self-contained executables built with
