@@ -20,15 +20,17 @@ defmodule SymphonyElixir.CLIShutdownFixture do
 
   def run([mode, marker]) do
     :ok =
-      :application.load({:application, :snv_cli_shutdown_fixture,
-       [
-         description: ~c"CLI shutdown regression fixture",
-         vsn: ~c"1",
-         modules: [SymphonyElixir.CLIShutdownFixture.Application],
-         registered: [],
-         applications: [:kernel, :stdlib, :elixir],
-         mod: {SymphonyElixir.CLIShutdownFixture.Application, marker}
-       ]})
+      :application.load(
+        {:application, :snv_cli_shutdown_fixture,
+         [
+           description: ~c"CLI shutdown regression fixture",
+           vsn: ~c"1",
+           modules: [SymphonyElixir.CLIShutdownFixture.Application],
+           registered: [],
+           applications: [:kernel, :stdlib, :elixir],
+           mod: {SymphonyElixir.CLIShutdownFixture.Application, marker}
+         ]}
+      )
 
     start = fn ->
       if mode == "missing" do

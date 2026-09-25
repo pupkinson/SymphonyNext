@@ -45,10 +45,15 @@ defmodule SymphonyElixir.CLIShutdownTest do
     code_paths = Enum.flat_map(:code.get_path(), fn path -> ["-pz", List.to_string(path)] end)
 
     args = [
-      "--erl", "+S 2:2 +SDcpu 1 +SDio 1",
-      "-r", @fixture,
-      "-e", "SymphonyElixir.CLIShutdownFixture.run(System.argv())",
-      "--", mode, marker
+      "--erl",
+      "+S 2:2 +SDcpu 1 +SDio 1",
+      "-r",
+      @fixture,
+      "-e",
+      "SymphonyElixir.CLIShutdownFixture.run(System.argv())",
+      "--",
+      mode,
+      marker
     ]
 
     port = Port.open({:spawn_executable, elixir}, [:binary, :exit_status, :stderr_to_stdout, args: code_paths ++ args])
@@ -82,9 +87,11 @@ defmodule SymphonyElixir.CLIShutdownTest do
         triggered =
           if not triggered and String.contains?(output, "SNV_CLI_MONITOR_READY\n") do
             true = Port.command(port, "go\n")
+
             if mode == "sigterm" do
               assert {_, 0} = signal(pid, "TERM")
             end
+
             true
           else
             triggered
@@ -101,8 +108,6 @@ defmodule SymphonyElixir.CLIShutdownTest do
   end
 
   defp signal(pid, name) when name in ["TERM", "KILL"] do
-    System.cmd("/bin/sh", ["-c", "kill -#{name} \"$1\"", "snv-cli-signal", Integer.to_string(pid)],
-      stderr_to_stdout: true
-    )
+    System.cmd("/bin/sh", ["-c", "kill -#{name} \"$1\"", "snv-cli-signal", Integer.to_string(pid)], stderr_to_stdout: true)
   end
 end
