@@ -47,13 +47,13 @@ USER 10001:10001
 # Use the existing CLI, including its explicit acknowledgement and workflow
 # validation. --no-start prevents Mix from starting the scheduler first.
 # No shell wrapper, default tracker, credentials, workflow or Codex is installed.
-ENTRYPOINT ["mix", "run", "--no-compile", "--no-deps-check", "--no-start", "-e", "SymphonyElixir.CLI.main(System.argv())", "--"]
+ENTRYPOINT ["mix", "run", "--no-compile", "--no-deps-check", "--no-start", "-e", "SymphonyElixir.CLI.main(System.argv())", "--", "--logs-root", "/var/lib/symphony"]
 CMD []
 
 # This target is an explicit offline acceptance fixture, never a deployment.
 FROM runtime-base AS smoke
 COPY deploy/runtime/smoke.workflow.md /etc/symphony/smoke.workflow.md
-CMD ["--i-understand-that-this-will-be-running-without-the-usual-guardrails", "--logs-root", "/var/lib/symphony/log", "/etc/symphony/smoke.workflow.md"]
+CMD ["--i-understand-that-this-will-be-running-without-the-usual-guardrails", "/etc/symphony/smoke.workflow.md"]
 
 # The last/default target retains the real CLI admission requirements.
 FROM runtime-base AS runtime

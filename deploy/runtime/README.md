@@ -17,6 +17,9 @@ This candidate explicitly compiles `elixir/` and runs the existing CLI through
 the scheduler is not started before those checks. No example production workflow,
 credentials, Codex, host mounts, published port or admission marker is supplied.
 The default `runtime` target must exit nonzero when invoked without arguments.
+Both targets have an explicit writable log root: `/var/lib/symphony`, producing
+`/var/lib/symphony/log/symphony.log`. The application removes its console handler
+after file logging starts; `docker logs` alone is not the application log.
 
 The separate `smoke` target uses the real application, a memory tracker with no
 issues, a loopback listener, and `/usr/bin/false` in place of an agent command.
@@ -68,6 +71,10 @@ no restart policy, no host networking, no published ports, no credentials or
 mounted production directories. Suggested limits: read-only root, cap-drop ALL,
 no-new-privileges, network none, 2 CPUs, 2 GiB memory, 256 PIDs, bounded tmpfs at
 `/tmp` and `/var/lib/symphony` owned by UID/GID 10001.
+Mount a **new test-only** durable log directory at `/var/lib/symphony/log`, writable
+by UID/GID 10001. Retain it after both successful and failed exits. Do not mount
+any existing bootstrap, verifier or production state. Bound storage on the isolated
+builder. A stopped container does not preserve the contents of its tmpfs.
 
 1. Inspect image config: UID/GID 10001; exec-form Mix entrypoint; no production
    workflow or secrets. Verify the default target does not inherit smoke CMD.
@@ -75,14 +82,19 @@ no-new-privileges, network none, 2 CPUs, 2 GiB memory, 256 PIDs, bounded tmpfs a
    acknowledgement error; an executable/linker/Mix error is not an acceptable pass.
 3. Run `runtime` with the acknowledgement and a nonexistent explicit workflow.
    Require exit 1 with `Workflow file not found`; no scheduler should start.
-4. Run `smoke` once with a 90-second total budget. Within that budget, GET
+4. Run the `runtime` target once with the read-only `smoke.workflow.md` fixture
+   mounted at an explicit path and pass that path plus the acknowledgement.
+   Also exercise the `smoke` target once. Each probe has a 90-second total budget.
+   Within that budget, GET
    `http://127.0.0.1:4327/api/v1/state` from inside that same container. Require a
    JSON object with no `error`, counts running=blocked=retrying=0 and empty lists.
    HTTP 200 alone is insufficient: the existing endpoint can return an error body.
 5. Require GET `/` and the dashboard's referenced static assets to succeed. Verify
    no Codex process, tracker request, agent session, token usage or workspace job.
-6. Send SIGTERM once. Require exit within 15 seconds; capture actual exit status,
-   process list and logs. A SIGKILL, OOM or timeout is not clean shutdown acceptance.
+6. Capture the process list and file logs, then send SIGTERM once. Require exit
+   within 15 seconds; capture actual exit status, Docker logs and durable file logs.
+   A SIGKILL, OOM or timeout is not clean shutdown acceptance. On an earlier process
+   failure, retain the durable log directory even if the HTTP probe never succeeded.
 7. Retain the no-model evidence. Do not infer native tracker/SSO/product readiness.
 
 If any assertion fails, preserve evidence and repair the candidate branch. Do not
