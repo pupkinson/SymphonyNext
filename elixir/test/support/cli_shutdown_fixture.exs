@@ -54,6 +54,11 @@ defmodule SymphonyElixir.CLIShutdownFixture do
       _ -> System.halt(90)
     end
 
+    trigger_shutdown(mode, supervisor)
+    Process.sleep(:infinity)
+  end
+
+  defp trigger_shutdown(mode, supervisor) do
     case mode do
       "vm42" -> System.stop(42)
       "crash" -> Process.exit(supervisor, :kill)
@@ -61,8 +66,6 @@ defmodule SymphonyElixir.CLIShutdownFixture do
       "normal" -> Supervisor.stop(supervisor, :normal)
       "sigterm" -> :ok
     end
-
-    Process.sleep(:infinity)
   end
 
   defp await_monitor(cli, deadline) do
