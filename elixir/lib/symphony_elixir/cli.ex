@@ -187,8 +187,11 @@ defmodule SymphonyElixir.CLI do
 
         receive do
           {:DOWN, ^ref, :process, ^pid, reason} ->
-            case reason do
-              :normal -> System.halt(0)
+            # SIGTERM makes init stop applications before exiting the VM. Do not
+            # override its exit status or interrupt remaining stop callbacks.
+            case {:init.get_status(), reason} do
+              {{:stopping, _}, _} -> Process.sleep(:infinity)
+              {_, :normal} -> System.halt(0)
               _ -> System.halt(1)
             end
         end

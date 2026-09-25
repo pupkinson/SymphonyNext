@@ -1,6 +1,16 @@
 # Explicit Elixir runtime build candidate
 
-Status: source/configuration candidate. The image has **not** been built or run.
+Status: draft candidate with a shutdown repair awaiting native verification.
+The owner built both targets at `4551ab01a4e1f1bd91805922cda1d55a6df02a9e`.
+The first isolated probe passed both admission failures and runtime HTTP/idle
+checks, then stopped on exit code 1 after SIGTERM. Its historical result remains
+STOP; the smoke case was not reached. Do not repeat that consumed probe.
+
+The CLI repair lets an already-started OTP shutdown finish instead of overriding
+it with `halt(1)` when the supervisor exits. It retains the VM's chosen status,
+including nonzero statuses, and still fails on unexpected supervisor loss while
+the VM is running. The change covers the post-start supervisor-monitoring phase.
+The new subprocess regression suite and repaired image acceptance are NOT_RUN.
 This packages the existing Symphony Elixir application. It does not implement or
 certify the SymphonyNext control core, native tracker, Authentik, durable state,
 runner isolation, admission or release features in SPECIFICATION.md.
@@ -63,7 +73,7 @@ Keep UTC start/end, exit status, complete sanitized logs, image IDs, base digest
 package inventory and the exact SHA/tree. A build failure remains a failure.
 Do not change the lockfile, drop compiler errors or replace the app with a web stub.
 
-## Required isolated acceptance (not executed here)
+## Required isolated acceptance of the repaired candidate (not executed here)
 
 Run only the new candidate images on the isolated builder. Use unique names and
 preserve containers/logs after a failure. Bound each probe; no automatic retries,
