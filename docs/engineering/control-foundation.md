@@ -9,7 +9,8 @@ deployment acceptance. The existing Symphony scheduler remains unchanged.
 
 Control is disabled by default. `SYMPHONY_CONTROL_ENABLED=true` enables its
 supervisor and requires `SYMPHONY_CONTROL_DATABASE_URL` from a dedicated runtime
-secret reference. Use the new product's database and role. Do not reuse another
+secret reference. The escript CLI reads these variables before application
+startup; Mix releases also evaluate `config/runtime.exs`. Use the new product's database and role. Do not reuse another
 application's database, credentials or writable state. No database connection is
 started by the control component when disabled.
 

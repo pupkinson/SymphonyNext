@@ -62,17 +62,27 @@ defmodule SymphonyElixir.CLI do
     expanded_path = Path.expand(workflow_path)
 
     if deps.file_regular?.(expanded_path) do
-      :ok = deps.set_workflow_file_path.(expanded_path)
+      case SymphonyControl.RuntimeConfig.configure() do
+        :ok ->
+          start_application(expanded_path, deps)
 
-      case deps.ensure_all_started.() do
-        {:ok, _started_apps} ->
-          :ok
-
-        {:error, reason} ->
-          {:error, "Failed to start Symphony with workflow #{expanded_path}: #{inspect(reason)}"}
+        {:error, :missing_database_url} ->
+          {:error, "SYMPHONY_CONTROL_DATABASE_URL is required when control is enabled"}
       end
     else
       {:error, "Workflow file not found: #{expanded_path}"}
+    end
+  end
+
+  defp start_application(workflow_path, deps) do
+    :ok = deps.set_workflow_file_path.(workflow_path)
+
+    case deps.ensure_all_started.() do
+      {:ok, _started_apps} ->
+        :ok
+
+      {:error, reason} ->
+        {:error, "Failed to start Symphony with workflow #{workflow_path}: #{inspect(reason)}"}
     end
   end
 
