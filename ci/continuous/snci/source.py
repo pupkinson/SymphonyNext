@@ -61,9 +61,15 @@ def validate_rules(live, pinned):
         require(live['bypass_actors']==[],'live_bypass');return 'visible_empty'
     return 'pinned_empty_revision_matched'
 
+def quality_control(path):
+    return (path in ('elixir/mix.exs','elixir/mix.lock') or
+            path.rsplit('/',1)[-1] in ('.credo.exs','.formatter.exs') or
+            path.startswith(('elixir/config/','elixir/lib/mix/')))
+
 def select_profile(entries, policy):
     matches=[p for p in policy['profiles'] if p['locked'] and
-             all(entries.get(path,{}).get('sha')==sha for path,sha in p['locked'].items())]
+             all(entries.get(path,{}).get('sha')==sha for path,sha in p['locked'].items()) and
+             all(path in p['locked'] for path in entries if quality_control(path))]
     require(len(matches)==1,'no_unique_quality_profile')
     return matches[0]
 
@@ -101,3 +107,6 @@ class Source:
             raw=self.blob(entry)
             require(len(raw)==entry['size'],'source_size_changed')
             write_new(p,raw,0o755 if entry['mode']=='100755' else 0o644)
+        # Normalize after materialization: service UMask=0077 must not change
+        # candidate file contracts or supervisor traversal after UID transfer.
+        for p in [directory]+[p for p in directory.rglob('*') if p.is_dir()]:p.chmod(0o755)

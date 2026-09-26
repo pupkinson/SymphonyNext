@@ -67,6 +67,7 @@ def install(head):
     write_new(INSTALL/'installed.json',canonical(manifest),0o644)
     write_new(INSTALL/'revision',head.encode(),0o644)
     (INSTALL/'review-empty').mkdir(mode=0o755)
+    for d in [INSTALL]+[d for d in INSTALL.rglob('*') if d.is_dir()]:d.chmod(0o755)
     run(['/usr/sbin/useradd','--system','--user-group','--home-dir',str(HOME),'--shell','/usr/sbin/nologin','snci-review'])
     user=pwd.getpwnam('snci-review');HOME.mkdir(mode=0o700);os.chown(HOME,user.pw_uid,user.pw_gid)
     write_new(HOME/'config.toml',b'cli_auth_credentials_store = "file"\n',0o644)

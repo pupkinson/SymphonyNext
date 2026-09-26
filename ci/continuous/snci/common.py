@@ -54,7 +54,7 @@ def write_new(path, data, mode=0o600):
     path=Path(path)
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,mode)
     with os.fdopen(fd,'wb') as f:
-        f.write(data);f.flush();os.fsync(f.fileno())
+        f.write(data);f.flush();os.fchmod(f.fileno(),mode);os.fsync(f.fileno())
     fd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
     try:os.fsync(fd)
     finally:os.close(fd)

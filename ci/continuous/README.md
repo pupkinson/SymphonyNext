@@ -38,7 +38,9 @@ Configured coverage excludes modules listed in the pinned mix.exs; this does
 not claim full repository coverage or packaged/live-provider E2E acceptance.
 
 Quality profiles pin existing tests, config, Mix tasks and dependency locks.
-New tests are allowed; changes to pinned files need an owner-reviewed profile
+New tests are allowed; newly introduced quality-control configuration or Mix
+tasks are rejected, including previously absent Credo files. Changes to pinned
+files need an owner-reviewed profile
 migration. CI, policies, AGENTS and bootstrap changes also require an exact
 owner exception. This intentionally does not auto-approve policy changes.
 
@@ -51,7 +53,7 @@ historical check on the old commit; it is never carried forward.
 ## Current evidence and remaining gates
 
 Local: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s ci/continuous/tests -v`
-passes 40 tests with one native UID-capability test skipped because this workspace
+passes 42 tests with one native UID-capability test skipped because this workspace
 lacks SETUID/SETGID capabilities. Python compilation passes.
 On server 1c-db, the pinned Codex 0.155.1 native executable passed five offline
 fixture scenarios: final response, permitted source, denied outside source,

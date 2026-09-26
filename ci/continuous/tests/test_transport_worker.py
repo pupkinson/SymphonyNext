@@ -58,7 +58,7 @@ class TransportWorkerTest(unittest.TestCase):
     @unittest.skipUnless(os.geteuid()==0 and int(next(x.split()[1] for x in Path('/proc/self/status').read_text().splitlines() if x.startswith('CapEff:')),16)&0xc0==0xc0,'native owner gate: requires SETUID/SETGID capabilities')
     def test_candidate_cannot_signal_supervisor(self):
         code='import os,signal,json\ntry:\n os.kill(os.getppid(),signal.SIGCONT)\n blocked=False\nexcept PermissionError:blocked=True\nprint(json.dumps(dict(uid=os.getuid(),blocked=blocked)))'
-        p=subprocess.run([sys.executable,'-I','-c',code],user=10001,group=10001,extra_groups=[],capture_output=True,check=True)
+        p=subprocess.run([sys.executable,'-I','-c',code],user=10001,group=10001,extra_groups=[],start_new_session=True,capture_output=True,check=True)
         self.assertEqual(json.loads(p.stdout),{'uid':10001,'blocked':True})
 
 if __name__=='__main__':unittest.main()
