@@ -1,0 +1,31 @@
+[Unit]
+Description=Symphony Next continuous protected PR verification
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/symphony-next-ci
+ExecStart=/usr/bin/python3 -I /opt/symphony-next-ci/entry.py
+TimeoutStartSec=2700
+TimeoutStopSec=90
+Restart=no
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateTmp=yes
+ReadWritePaths=/var/lib/symphony-next-ci /var/lib/symphony-next-ci-review
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+LimitNOFILE=1024
+TasksMax=256
+MemoryMax=768M
+StandardOutput=journal
+StandardError=journal

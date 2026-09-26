@@ -1,0 +1,50 @@
+{
+  "id": 23980199,
+  "name": "Verifier",
+  "target": "branch",
+  "source_type": "Repository",
+  "source": "pupkinson/SymphonyNext",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "symphony-next/verified-tests",
+            "integration_id": 5069157
+          }
+        ]
+      }
+    }
+  ],
+  "node_id": "RRS_lACqUmVwb3NpdG9yec5SWvkUzgFt6Kc",
+  "created_at": "2026-09-25T05:02:33.329Z",
+  "updated_at": "2026-09-25T05:18:03.406Z",
+  "bypass_actors": [],
+  "current_user_can_bypass": "never",
+  "_links": {
+    "self": {
+      "href": "https://api.github.com/repos/pupkinson/SymphonyNext/rulesets/23980199"
+    },
+    "html": {
+      "href": "https://github.com/pupkinson/SymphonyNext/rules/23980199"
+    }
+  }
+}
