@@ -26,3 +26,10 @@ python3 -B -m unittest discover -s tests -p test_bootstrap_snapshot.py -v
 Narrow snapshot tests не означают готовность runtime или полный GREEN; детали в docs/QA_AND_LIMITATIONS.md. MANIFEST.sha256 обновляется вместе с изменёнными материалами; исходный архив v0.5 остаётся неизменным историческим артефактом.
 
 Существующая делегация scoped auto-release сохранена. Нужны exact checks/review и привязанные Coolify ресурсы, а не повторное согласование каждого обычного deploy. Значения секретов не передавать в Git/чат. tools/validate_package.py и прежний seed_publication.py не реализуются этой правкой. Существующий DF Assistant вне работ.
+
+## Native control foundation
+
+The opt-in PostgreSQL/health foundation is documented in
+[control-foundation.md](docs/engineering/control-foundation.md).
+It remains disabled by default; native tracker, Authentik and product deployment
+acceptance are separate milestones.
