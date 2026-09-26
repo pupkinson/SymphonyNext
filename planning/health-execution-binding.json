@@ -1,0 +1,145 @@
+{
+  "schema": "symphony-next-health-planning-binding/v1",
+  "revision": "HEAL-r1",
+  "status": "review_candidate_not_implemented",
+  "dispatch_enabled": false,
+  "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
+  "base_backlog_sha256": "c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0",
+  "source_addendum": {
+    "path": "docs/superpowers/specs/2026-09-22-health-recovery-design.md",
+    "sha256": "e796f02293e8afcb1fd79d8cb520a2649d61dfe9bb4d5fc6b1486a0e8f5cbb1b"
+  },
+  "task_cards": {
+    "path": "planning/health-task-cards.json",
+    "sha256": "b4f08a564bc7605b636c42d05b27084034503cf07527c62b38fd178329a1903a",
+    "count": 5
+  },
+  "defaults": {
+    "inherit_from_original_base_task": "SN-031",
+    "inherit_fields": [
+      "limits",
+      "risk",
+      "release",
+      "evidence",
+      "handoff",
+      "non_goals",
+      "stop_conditions",
+      "rollback",
+      "steps"
+    ],
+    "status": "planned",
+    "admitted": false,
+    "test_state": "NOT_RUN",
+    "path_status": "proposed_target_contract_not_claimed_existing"
+  },
+  "task_overrides": [
+    {
+      "id": "SN-042",
+      "expected_depends_on": [
+        "SN-029",
+        "SN-031",
+        "SN-034",
+        "SN-035",
+        "SN-038"
+      ],
+      "depends_on": [
+        "SN-029",
+        "SN-031",
+        "SN-034",
+        "SN-035",
+        "SN-038",
+        "SN-049"
+      ]
+    }
+  ],
+  "mcp_integration": {
+    "source_commit": "9091bfc8ec14a7055208aa64906490951b2b3281",
+    "refinement_path": "planning/mcp-execution.json",
+    "refinement_sha256": "d76298cac3346611fe12edaaf1f778a6c886607bcfc6b7ea803b26edb4849ade",
+    "state": "required_before_combined_acceptance_not_applied_to_PR9",
+    "task_overrides": [
+      {
+        "id": "SN-031.W04.03",
+        "expected_depends_on": [
+          "SN-031.W02.02",
+          "SN-021",
+          "SN-022",
+          "SN-023",
+          "SN-024",
+          "SN-041"
+        ],
+        "depends_on": [
+          "SN-031.W02.02",
+          "SN-021",
+          "SN-022",
+          "SN-023",
+          "SN-024",
+          "SN-041",
+          "SN-047"
+        ]
+      },
+      {
+        "id": "SN-031.W06",
+        "expected_depends_on": [
+          "SN-031.W05",
+          "SN-031.W03.02",
+          "SN-031.W03.03",
+          "SN-031.W04.02",
+          "SN-031.W04.03",
+          "SN-031.W04.04",
+          "SN-031.W04.05",
+          "SN-031.W04.06",
+          "SN-035",
+          "SN-036",
+          "SN-038",
+          "SN-041"
+        ],
+        "depends_on": [
+          "SN-031.W05",
+          "SN-031.W03.02",
+          "SN-031.W03.03",
+          "SN-031.W04.02",
+          "SN-031.W04.03",
+          "SN-031.W04.04",
+          "SN-031.W04.05",
+          "SN-031.W04.06",
+          "SN-035",
+          "SN-036",
+          "SN-038",
+          "SN-041",
+          "SN-049"
+        ]
+      }
+    ],
+    "preserve": [
+      "SN-031 aggregate_only",
+      "SN-032 waits for SN-031.W02.02",
+      "all 14 MCP child IDs and all original prerequisites"
+    ],
+    "acceptance_rule": "Map health-recovery-domain-ready to accepted SN-047/SN-049 evidence; never mark it satisfied by merging documentation."
+  },
+  "acceptance": {
+    "requirements": "HEAL-01..HEAL-20",
+    "cases": "AC-97..AC-116",
+    "text_source": "source_addendum acceptance table",
+    "integration_owner": "SN-049",
+    "status": "NOT_RUN"
+  },
+  "composition": {
+    "no_silent_ignore": true,
+    "no_runtime_importer_implemented": true,
+    "bootstrap_replay": false,
+    "no_automatic_admission": true,
+    "task_card_expansion": "Use id/title/depends_on/requirements/acceptance_ids/fixture/acceptance_assertions; goal is title plus interface; implementation_paths=[implementation_path]; consumes=depends_on; produces=interface; test_path gives a specified mix test command, not live acceptance."
+  },
+  "counts": {
+    "base_tasks": 44,
+    "health_tasks": 5,
+    "health_only_nodes": 49,
+    "mcp_child_tasks": 14,
+    "combined_nodes": 63,
+    "combined_executable_nodes": 62,
+    "combined_specified_acceptance": 136,
+    "full_product_acceptance": "NOT_RUN"
+  }
+}
