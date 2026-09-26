@@ -1,0 +1,11 @@
+{
+  "README.md": "2093abf2c39fb077fb1d00944987f61e2a6f9ca0eece9d0ce4cd935394fd7cd2",
+  "askpass.py": "8550724496b80246cb47faa31d71668977637177df2e59d400fdd66746dd0537",
+  "contract.py": "401a7ecbf592937b953622b2737913ffcd872b0055f54346e65f342ee63aada7",
+  "controller.service": "a445fb996d71251da3dbfe75a09b74925105e2521fbd118bdcabb0be49e08bab",
+  "github_api.py": "09297ed7c296988ce1a036ff3df57307d815adfd5828b40c45a8d68acc5337a1",
+  "requirements.lock": "604b9eadbd4735a146a0509dc3fa7fb7f0541b6c8c363fbf787bbf6b9f0fb9cd",
+  "target.json": "1c587fcf6ac9855c9952283f395f4aa89c5c7fd0c0c2e643cd2b2142f451abbb",
+  "verifier.py": "ef66f01d4266779b845752cc5c8887a08c246b9543a08a6017fdbc1fc3610873",
+  "worker.py": "ef28727d579fdc8f6afc79e9bfbcf77af1fe6116ab60a20aecccec89ac79001a"
+}

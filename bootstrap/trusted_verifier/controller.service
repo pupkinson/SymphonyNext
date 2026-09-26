@@ -1,0 +1,28 @@
+[Unit]
+Description=Symphony Next fixed PR11 verifier (no model)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=root
+Group=root
+ExecStart=/usr/bin/python3 -I -B /opt/symphony-next-verifier/verifier.py verify
+WorkingDirectory=/var/lib/symphony-next-verifier
+Environment=SNV_CONTROLLER_SERVICE=1
+Restart=no
+RuntimeMaxSec=1200
+TimeoutStopSec=10
+KillMode=control-group
+SendSIGKILL=yes
+UMask=0077
+LimitCORE=0
+MemoryMax=1073741824
+TasksMax=64
+CPUQuota=100%
+ProtectSystem=strict
+ReadWritePaths=/var/lib/symphony-next-verifier
+ProtectHome=yes
+PrivateTmp=yes
+StandardOutput=journal
+StandardError=journal
