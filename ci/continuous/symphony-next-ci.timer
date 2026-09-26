@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll Symphony Next PR verification queue
+
+[Timer]
+OnBootSec=120
+OnUnitInactiveSec=120
+AccuracySec=10
+Unit=symphony-next-ci.service
+
+[Install]
+WantedBy=timers.target
