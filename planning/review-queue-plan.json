@@ -1,0 +1,31 @@
+{
+  "schema": "symphony-next-review-queue-plan/v1",
+  "source": "c3c8bce82d148c3e558481644eb5d0a4072fdb6f",
+  "owner_design_approval": "CONFIRMED_IN_CONVERSATION_2026-09-23",
+  "plan_status": "WRITTEN_NOT_EXECUTED",
+  "dispatch_enabled": false,
+  "canonical_task_overrides_applied": false,
+  "design_file": "docs/superpowers/specs/2026-09-23-review-queue-design.md",
+  "design_sha256": "75606fb28b78816c13a99998c8ff92ca558f54863a3f238f496e8959eb392cb1",
+  "owner_reviewed_attachment_sha256": "3743a5e11488c8e9f4814ac1612b9df13f152aa3eacdd308d4174103e96231f5",
+  "formatting_only_delta": "One newline before the final external URL; no requirement text changed",
+  "plan_file": "docs/superpowers/plans/2026-09-23-review-queue-execution.md",
+  "plan_sha256": "69df0752a35267e168f26aea90c892f4699c66b057e45e17ab1e0c330c73fe84",
+  "packages_are": "Implementation work packages under existing owners, not canonical admitted jobs",
+  "work_packages": [
+    {"id":"RQ01","owner":"SN-030","after":[],"requirements":[1,2,3,4,6],"acceptance":[1,2,3],"admitted":false},
+    {"id":"RQ02","owner":"SN-030","after":["RQ01"],"requirements":[4,7,8,14,18],"acceptance":[4,9,10,14],"admitted":false},
+    {"id":"RQ03","owner":"SN-030","after":["RQ02"],"requirements":[5,9,10,11,20],"acceptance":[5,6,7,8],"admitted":false},
+    {"id":"RQ04","owner":"SN-030","after":["RQ03"],"requirements":[12,13,14],"acceptance":[7,8,12,14],"admitted":false},
+    {"id":"RQ05","owner":"SN-030","after":["RQ04"],"requirements":[15,16,17],"acceptance":[11,12,13],"admitted":false},
+    {"id":"RQ06","owner":"SN-034","after":["RQ05"],"requirements":[8,19,20],"acceptance":[10,15,16],"admitted":false},
+    {"id":"RQ07","owner":"SN-031.W04.05","after":["RQ05","RQ06"],"requirements":[21],"acceptance":[17],"admitted":false},
+    {"id":"RQ08","owner":"SN-042","after":["RQ07"],"requirements":[22],"acceptance":[18],"admitted":false}
+  ],
+  "coverage_prefixes": {"requirements":"REVQ-","acceptance":"AC-REVQ-"},
+  "implementation_state": "NOT_IMPLEMENTED",
+  "product_acceptance": "NOT_RUN",
+  "work01_scope_expanded": false,
+  "existing_safety_refusal_replayed": false,
+  "next_integration_gate": "Review written plan; integrate exact paired baseline overrides and spec-index in one candidate; verify semantic DAG without backward dependencies; no auto-admission"
+}
