@@ -7,6 +7,7 @@ import selectors
 import signal
 import subprocess
 import time
+from .source import OMITTED_BLOBS
 from .common import Hold, canonical, decode, require, sha256, trusted
 
 FEATURES={name:False for name in (
@@ -189,7 +190,7 @@ def review(target,source,head,base,changed,policy):
         require(started.get('sandbox',{}).get('type')=='readOnly' and started.get('approvalPolicy')=='never'
                 and started.get('instructionSources',[])==[],'review_effective_policy')
         s.thread=started['thread']['id']
-        prompt={'target':target,'changed_paths':changed,'head_paths':sorted(head),'base_paths':sorted(base),
+        prompt={'target':target,'omitted_unchanged_blobs':OMITTED_BLOBS,'changed_paths':changed,'head_paths':sorted(head),'base_paths':sorted(base),
                 'instruction':'Read both versions of every changed file and relevant requirements/context. Return an independent verdict.'}
         s.rpc('turn/start',{'threadId':s.thread,'environments':[],'input':[{'type':'text','text':json.dumps(prompt)}],
                             'outputSchema':SCHEMA,'approvalPolicy':'never'})

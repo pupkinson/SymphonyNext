@@ -37,6 +37,13 @@ numeric exit code, source hashes before/after, test-count floor, skip ceiling,
 Configured coverage excludes modules listed in the pinned mix.exs; this does
 not claim full repository coverage or packaged/live-provider E2E acceptance.
 
+The pre-existing `.github/media/symphony-demo.mp4` is omitted from source
+materialization and review input, with its path/mode/size/Git blob hash pinned
+in installed code (`32b1f857f45eb901905ea24355b599fb417f53c5`, 30,446,771 bytes).
+Both head and base must contain that exact inert asset; change/deletion holds.
+All other size limits stay enforced. Evidence and the reviewer prompt disclose
+this omission; this is not a claim that video content was read or tested.
+
 Quality profiles pin existing tests, config, Mix tasks and dependency locks.
 New tests are allowed; newly introduced quality-control configuration or Mix
 tasks are rejected, including previously absent Credo files. Changes to pinned
@@ -53,7 +60,7 @@ historical check on the old commit; it is never carried forward.
 ## Current evidence and remaining gates
 
 Local: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s ci/continuous/tests -v`
-passes 42 tests with one native UID-capability test skipped because this workspace
+passes 44 tests with one native UID-capability test skipped because this workspace
 lacks SETUID/SETGID capabilities. Python compilation passes.
 On server 1c-db, the pinned Codex 0.155.1 native executable passed five offline
 fixture scenarios: final response, permitted source, denied outside source,

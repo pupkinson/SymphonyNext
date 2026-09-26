@@ -23,7 +23,10 @@ At most one attempt per timer tick, four new attempts per UTC day, maximum
 
 The controller obtains trees and blobs through the GitHub API, checks their
 Git hashes, rejects symlinks/submodules/unsafe paths and oversized input, and
-materializes only verified regular files. No repository program runs on the host.
+materializes only verified regular files. One existing inert 30 MB demo video
+is omitted with exact path/mode/size/Git blob metadata pinned in installed code;
+its change/deletion holds both profile preparation and PR attempts. This omission
+is disclosed in evidence and reviewer input. No repository program runs on the host.
 
 Codex 0.155.1 runs as a separate service identity, using its own ChatGPT login.
 thread/start and turn/start explicitly set environments=[]; shell, apps, MCP,

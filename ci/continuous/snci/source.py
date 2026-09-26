@@ -4,12 +4,18 @@ from pathlib import Path
 import re
 from .common import API, APP_ID, CHECK, REPO, REPO_ID, RULESET, SHA, Hold, blob_hash, require, write_new
 
+# One pre-existing inert video is metadata-pinned, never downloaded/executed.
+# A change, deletion, mode change or another large asset requires owner policy work.
+OMITTED_BLOBS={'.github/media/symphony-demo.mp4':{
+    'sha':'32b1f857f45eb901905ea24355b599fb417f53c5','mode':'100644','size':30446771}}
+
 def safe_path(path):
     return (isinstance(path,str) and len(path)<240 and
             re.fullmatch(r'[A-Za-z0-9_./@+\-]+',path) is not None and
             all(p not in ('','.','..','.git') for p in path.split('/')))
 
-def parse_tree(data, expected):
+def parse_tree(data, expected, omissions=None):
+    omissions=omissions or {}
     require(data.get('sha')==expected and data.get('truncated') is False,'tree_identity_or_truncated')
     entries=data.get('tree',[])
     require(0<len(entries)<=4000,'tree_count')
@@ -21,9 +27,13 @@ def parse_tree(data, expected):
         if e.get('type')=='tree':
             require(e.get('mode')=='040000','tree_mode');continue
         require(e.get('type')=='blob' and e.get('mode') in ('100644','100755'),'tree_type')
+        if path in omissions:
+            require(all(e.get(k)==v for k,v in omissions[path].items()),'omitted_asset_changed')
+            continue
         n=e.get('size');require(type(n) is int and 0<=n<=700000,'blob_size')
         size+=n;require(size<=16*1024*1024,'source_size')
         out[path]={'sha':e['sha'],'mode':e['mode'],'size':n}
+    require(set(omissions)<=seen,'omitted_asset_missing')
     return out
 
 def verify_blob(data, expected):
@@ -90,7 +100,7 @@ class Source:
         d=self.api.request('GET',API+'/git/commits/'+commit)
         require(d.get('sha')==commit,'commit_identity')
         tree=d['tree']['sha'];require(SHA.fullmatch(tree) is not None,'commit_tree')
-        return tree,parse_tree(self.api.request('GET',API+'/git/trees/'+tree+'?recursive=1'),tree)
+        return tree,parse_tree(self.api.request('GET',API+'/git/trees/'+tree+'?recursive=1'),tree,OMITTED_BLOBS)
     def blob(self,entry):
         sha=entry['sha'];p=self.cache/sha
         if p.exists():

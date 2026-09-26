@@ -33,4 +33,31 @@ class ReviewRegressions(unittest.TestCase):
                 select_profile(dict(entries,**{path:{'sha':'b'*40}}),policy)
         self.assertEqual(select_profile(dict(entries,**{'elixir/test/new_test.exs':{'sha':'b'*40}}),policy)['name'],'baseline')
 
+class ActualProfileTrees(unittest.TestCase):
+    def test_real_profiles_fit_after_exact_inert_asset_omission(self):
+        import json
+        from snci.source import parse_tree, OMITTED_BLOBS
+        trees=json.loads(Path(__file__).with_name('profile-trees.json').read_text())
+        for name,tree in trees.items():
+            with self.subTest(profile=name):
+                entries=parse_tree(tree,tree['sha'],OMITTED_BLOBS)
+                profiles=json.loads(Path(__file__).resolve().parents[1].joinpath('profiles.json').read_text())
+                self.assertEqual(select_profile(entries,{'profiles':list(profiles.values())})['name'],name)
+                self.assertNotIn('.github/media/symphony-demo.mp4',entries)
+                self.assertLess(sum(e['size'] for e in entries.values()),16*1024*1024)
+
+    def test_asset_change_deletion_and_other_large_file_hold(self):
+        import copy,json
+        from snci.source import parse_tree, OMITTED_BLOBS
+        baseline=json.loads(Path(__file__).with_name('profile-trees.json').read_text())['main']
+        name='.github/media/symphony-demo.mp4'
+        for mutation in ('changed','deleted','new'):
+            tree=copy.deepcopy(baseline)
+            asset=next(e for e in tree['tree'] if e['path']==name)
+            if mutation=='changed':asset['sha']='a'*40
+            elif mutation=='deleted':tree['tree'].remove(asset)
+            else:tree['tree'].append(dict(asset,path='.github/media/new.mp4'))
+            with self.subTest(mutation=mutation),self.assertRaises(Hold):
+                parse_tree(tree,tree['sha'],OMITTED_BLOBS)
+
 if __name__=='__main__':unittest.main()

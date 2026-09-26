@@ -7,7 +7,7 @@ from pathlib import Path
 import signal
 from .common import API, APP_ID, CHECK, RULESET, Hold, canonical, decode, require, sha256, trusted, write_new
 from .github import GitHub
-from .source import Source, changed_paths, protected_change, select_profile, validate_rules, validate_target
+from .source import OMITTED_BLOBS, Source, changed_paths, protected_change, select_profile, validate_rules, validate_target
 from .state import Journal
 from . import reviewer, runner
 
@@ -58,7 +58,7 @@ def process(api,journal,source,target,policy,digest,review_fn=reviewer.review,ru
         protected_change(paths,target,policy)
         profile=select_profile(head,policy)
         write_new(root/'inputs.json',canonical({'target':target,'base_tree':base_tree,'profile':profile['name'],
-                                               'policy_sha256':digest,'changed':paths}))
+                                               'policy_sha256':digest,'changed':paths,'omitted_unchanged_blobs':OMITTED_BLOBS}))
         fresh=lambda:guard(api,target,policy,digest)
         fresh()
         review=review_fn(target,source,head,base,paths,policy)
@@ -67,7 +67,7 @@ def process(api,journal,source,target,policy,digest,review_fn=reviewer.review,ru
         fresh();source.materialize(head,root/'source')
         quality=run_fn(root,key,head,profile)
         evidence={'target':target,'policy_sha256':digest,'profile':profile['name'],'quality':quality,
-                  'review_sha256':sha256(canonical(review)),'source_tree':tree}
+                  'review_sha256':sha256(canonical(review)),'source_tree':tree,'omitted_unchanged_blobs':OMITTED_BLOBS}
         write_new(root/'result.json',canonical(evidence))
         journal.set(key,'running',{'evidence_sha256':sha256(canonical(evidence))})
         summary='Independent review READY; protected stages passed. Evidence SHA256: '+sha256(canonical(evidence))
