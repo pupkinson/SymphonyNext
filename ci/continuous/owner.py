@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import pwd
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +32,66 @@ UNIT='symphony-next-ci'
 
 def run(args,**kwargs):
     return subprocess.run(args,check=True,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LANG':'C.UTF-8'},**kwargs)
+
+def inspect_image(reference,missing_ok=False):
+    try:
+        result=run(runner.DOCKER+['image','inspect','--format','{{json .}}',reference],
+                   capture_output=True,timeout=30)
+    except subprocess.CalledProcessError as error:
+        message=(error.stderr or b'').decode(errors='replace').strip()
+        missing=message in ('Error response from daemon: No such image: '+reference,
+                            'Error: No such object: '+reference)
+        if missing_ok and error.returncode==1 and not (error.stdout or b'').strip() and missing:
+            return None
+        require(False,'local_image_inspect_failed')
+    info=decode(result.stdout)
+    require(isinstance(info,dict),'local_image_inspect_shape')
+    return info
+
+def image_layers(info):
+    rootfs=info.get('RootFS',{})
+    layers=rootfs.get('Layers')
+    require(rootfs.get('Type')=='layers' and isinstance(layers,list) and layers
+            and all(isinstance(x,str) and re.fullmatch(r'sha256:[0-9a-f]{64}',x) for x in layers),
+            'local_image_layers')
+    return layers
+
+def prepare_seed():
+    # The docker driver uses this daemon's local store; other drivers must hold.
+    builder=run(runner.DOCKER+['buildx','inspect','default','--timeout','20s'],
+                capture_output=True,timeout=30).stdout.decode()
+    require([line.partition(':')[2].strip() for line in builder.splitlines()
+             if line.startswith('Driver:')]==['docker'],'local_seed_requires_docker_driver')
+    info=inspect_image(SEED)
+    require(info is not None and info.get('Id')==SEED,'local_seed_identity')
+    layers=image_layers(info)
+    reference='localhost/symphony-next-ci-seed:'+SEED.split(':')[1]
+    existing=inspect_image(reference,missing_ok=True)
+    require(existing is None or existing.get('Id')==SEED,'local_seed_tag_conflict')
+    if existing is None:
+        run(runner.DOCKER+['image','tag',SEED,reference],timeout=30)
+    require(inspect_image(reference).get('Id')==SEED,'local_seed_tag_identity')
+    return {'reference':reference,'id':SEED,'layers':layers}
+
+def verify_seed_build(seed,image):
+    require(inspect_image(seed['reference']).get('Id')==SEED,'local_seed_tag_changed')
+    built=inspect_image(image)
+    require(built.get('Id')==image,'built_image_identity')
+    layers=image_layers(built)
+    require(layers[:len(seed['layers'])]==seed['layers'],'built_image_seed_layers')
+
+def build_dependency_image(root):
+    seed=prepare_seed()
+    write_new(root/'seed.json',canonical(seed))
+    with (root/'build.log').open('xb') as log:
+        run(runner.DOCKER+['build','--builder=default','--pull=false','--progress=plain',
+            '--network=default','--build-arg','BASE_IMAGE='+seed['reference'],
+            '--iidfile',str(root/'image.id'),'-f',str(root/'Dependency.Dockerfile'),str(root)],
+            stdout=log,stderr=subprocess.STDOUT,timeout=1800)
+    image=(root/'image.id').read_text().strip()
+    require(re.fullmatch(r'sha256:[0-9a-f]{64}',image) is not None,'built_image_id')
+    verify_seed_build(seed,image)
+    return image
 
 def load_policy():return decode(trusted(ETC/'policy.json',private=True).read_bytes())
 
@@ -97,11 +158,7 @@ def prepare(name):
     write_new(root/'Dependency.Dockerfile',trusted(INSTALL/'Dependency.Dockerfile').read_bytes())
     write_new(root/'.dockerignore',b'*\n!Dependency.Dockerfile\n!source\n!source/**\n')
     # Build log may include dependency diagnostics, and remains root-private.
-    with (root/'build.log').open('xb') as log:
-        run(runner.DOCKER+['build','--network=default','--build-arg','BASE_IMAGE='+SEED,
-            '--iidfile',str(root/'image.id'),'-f',str(root/'Dependency.Dockerfile'),str(root)],
-            stdout=log,stderr=subprocess.STDOUT,timeout=1800)
-    image=(root/'image.id').read_text().strip()
+    image=build_dependency_image(root)
     profile=dict(definition,image=image)
     p['profiles']=[x for x in p['profiles'] if x['name']!=name]+[profile]
     validate_policy(p)

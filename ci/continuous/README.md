@@ -125,6 +125,52 @@ limits and authentication expiry hold that attempt; owner investigation is
 required, no automatic repeated model spending. Four attempts is a count cap,
 not a monetary or token guarantee.
 
+## Repair of the local seed reference
+
+Owner preparation on 1c-db reached Docker build but failed before any RUN stage:
+BuildKit interpreted the bare `sha256:a93a…` image ID in FROM as a Docker Hub
+repository reference. The seed now receives an owner-controlled local tag
+`localhost/symphony-next-ci-seed:<full-image-id>`. Setup requires the default
+Docker driver, verifies the immutable seed ID before/after tagging and after
+build, uses `--pull=false`, and checks that the resulting image retains the
+exact seed filesystem layers. An existing tag pointing elsewhere holds setup.
+An absent seed holds setup; it is never pulled or replaced automatically.
+
+`snci/repair_seed.py` is a single owner operation for the observed failure on
+installed revision `8794bfd42e29580c00978015a46969c7642f56dc`. Use the supplied
+hash-pinned command only after independent review of the repair commit.
+It requires disabled/inactive units, no preparation process, an unchanged
+installation/policy with no accepted profiles, complete unchanged main source,
+and the exact pre-RUN metadata-resolution failure. The GitHub App validates
+the incoming commit and its complete source delta against that base; only the
+five repair files are allowed. The source SHA, not a branch name, is recorded.
+
+The operation keeps the original source-only archive, archives the failed
+build under `/var/lib/symphony-next-ci/repair-local-seed-<head>/failed-build`,
+and keeps the prior package at `/opt/symphony-next-ci-before-seed-<head>`.
+The old private policy is retained in `policy-before.json`. Installation
+revision is the only changed policy field. App keys, reviewer login, units,
+locked profile definitions and the CI attempt journal are retained.
+No merge, deployment, trusted check or timer activation is performed.
+Interrupted/failed repair is held for owner inspection; it is not replayed.
+
+A private tmux driver prepares main and sn004 once. Its private `prepare.log`
+retains exceptions. Root-owned `/opt/symphony-next-ci/preparation-status.json`
+contains a closed projection: phase, revision, PID/time and successful native
+test counts, skips, configured coverage and Dialyzer counts. It contains no
+source, exception messages, credentials or log contents. `hold` is a failure;
+`all_profiles_prepared_disabled` requires both successful profile receipts and
+a disabled policy. A stale preparing status with a missing PID is UNKNOWN.
+This file is preparation telemetry, not the GitHub required trusted check.
+
+The repair's local regression and package checks are source evidence. The
+first actual build using the local tag, PostgreSQL/Elixir acceptance, and live
+review/check publication remain owner/runtime gates. Activation remains a
+separate owner action after successful recent acceptance.
+
+Docker reference: [image tagging](https://docs.docker.com/reference/cli/docker/image/tag/),
+[Docker driver](https://docs.docker.com/build/builders/drivers/docker/).
+
 ## Stop and rollback
 
 ```sh
