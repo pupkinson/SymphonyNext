@@ -144,6 +144,15 @@ class RunnerDiagnosticsTests(unittest.TestCase):
             d=dict(self.diagnostic(),**{field:10**400})
             self.assertEqual(self.run_failure(b'SNCI_FAILURE '+json.dumps(d).encode()+b'\n'),'worker_failed')
 
+    def test_setup_steps_are_closed_and_only_allowed_for_setup(self):
+        d=dict(self.diagnostic(),stage='setup',kind='io_error',setup_step='build_cache')
+        self.assertEqual(self.run_failure(b'SNCI_FAILURE '+json.dumps(d).encode()+b'\n'),
+                         'worker_io_error_setup_build_cache')
+        for change in [dict(setup_step='PRIVATE_FIXTURE_SECRET'),dict(setup_step=True),
+                       dict(setup_step=['build_cache']),dict(stage='dialyzer')]:
+            logs=b'SNCI_FAILURE '+json.dumps(dict(d,**change)).encode()+b'\n'
+            self.assertEqual(self.run_failure(logs),'worker_failed')
+
     def test_successful_worker_ignores_failure_noise_but_requires_full_quality(self):
         quality=dict(stages=dict.fromkeys(('build','format','lint','coverage','dialyzer'),0),source_before=True,
                      source_after=True,cleanup=0,tests=305,failures=0,skipped=6,coverage=100.0,dialyzer_errors=0)

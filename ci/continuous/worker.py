@@ -15,6 +15,7 @@ ROOT=Path('/work/source')
 LOG_BYTES=0
 LOG_LIMIT=16*1024*1024
 CLEANUP_EXIT_CODE=None
+SETUP_STEP=None
 STAGES={'build':['mix','build'],'format':['mix','format','--check-formatted'],
         'lint':['mix','lint'],'coverage':['mix','test','--cover'],
         'dialyzer':['mix','dialyzer','--format','short']}
@@ -36,14 +37,29 @@ class StageFailure(RuntimeError):
         super().__init__('stage_failed')
 
 def failure_details(error):
+    original=error
     seen=set()
     while error is not None and id(error) not in seen:
         seen.add(id(error))
         if isinstance(error,StageFailure):
             return dict(error.details,cleanup_exit_code=CLEANUP_EXIT_CODE)
         error=error.__context__
-    return dict(stage='setup',kind='worker_error',exit_code=None,timeout_seconds=0,
+    detail=dict(stage='setup',kind='worker_error',exit_code=None,timeout_seconds=0,
                 duration_seconds=0,log_bytes=0,log_truncated=False,cleanup_exit_code=CLEANUP_EXIT_CODE)
+    if SETUP_STEP in {'supervisor','manifest','source_copy','source_verify','lock','home_cache',
+                      'empty_codex','deps_cache','build_cache','ownership','postgres_toolchain','postgres_dirs'}:
+        detail['setup_step']=SETUP_STEP
+        if isinstance(original,(OSError,shutil.Error)):detail['kind']='io_error'
+    return detail
+
+def copy_build_cache(source,destination):
+    source=Path(source)
+    excluded={source/env/directory for env in ('dev','test') for directory in ('lib','phoenix-colocated')}
+    def ignore(directory,names):
+        return {'symphony_elixir'} if Path(directory) in excluded else set()
+    # Exclude own compiled output before dereferencing links. Dependency links
+    # remain strict: a missing dependency target must still fail preparation.
+    shutil.copytree(source,destination,ignore=ignore)
 
 def stage(name,args,timeout=300):
     require(name in set(STAGES)|{'isolation','pg-init','pg-start','pg-create','deps'},'stage_name')
@@ -101,34 +117,45 @@ def parse_quality(coverage,dialyzer):
     return dict(zip(('tests','failures','skipped'),map(int,count[0])),coverage=100.0,dialyzer_errors=0)
 
 def main():
-    global CLEANUP_EXIT_CODE
+    global CLEANUP_EXIT_CODE,SETUP_STEP
+    SETUP_STEP='supervisor'
     require(os.getuid()==0,'worker_supervisor_user')
+    SETUP_STEP='manifest'
     entries=json.loads(Path('/source.json').read_text())
+    SETUP_STEP='source_copy'
     shutil.copytree('/input',ROOT)
+    SETUP_STEP='source_verify'
     verify_source(entries)
+    SETUP_STEP='lock'
     require(hashlib.sha256((ROOT/'elixir/mix.lock').read_bytes()).hexdigest()==Path('/seed/lock.sha256').read_text().strip(),'dependency_image_lock')
+    SETUP_STEP='home_cache'
     shutil.copytree('/seed/home','/work/home')
+    SETUP_STEP='empty_codex'
     Path('/work/empty-codex').mkdir()
+    SETUP_STEP='deps_cache'
     shutil.copytree('/seed/source/elixir/deps',ROOT/'elixir/deps')
     # Dependency cache only; the candidate application must be rebuilt.
+    SETUP_STEP='build_cache'
     if Path('/seed/source/elixir/_build').exists():
-        shutil.copytree('/seed/source/elixir/_build',ROOT/'elixir/_build')
-        for env in ('dev','test'):
-            shutil.rmtree(ROOT/'elixir/_build'/env/'lib/symphony_elixir',ignore_errors=True)
+        copy_build_cache('/seed/source/elixir/_build',ROOT/'elixir/_build')
     # Candidate processes cannot signal the root supervisor or rewrite its logs.
     # Only disposable source/cache directories belong to the candidate identity.
+    SETUP_STEP='ownership'
     for parent in (ROOT,Path('/work/home'),Path('/work/empty-codex')):
         os.chown(parent,10001,10001)
         for p in parent.rglob('*'):
             if not p.is_symlink():os.chown(p,10001,10001)
+    SETUP_STEP='postgres_toolchain'
     pg_bins=sorted(Path('/usr/lib/postgresql').glob('*/bin/initdb'))
     require(len(pg_bins)==1,'postgres_toolchain')
+    SETUP_STEP='postgres_dirs'
     bindir=pg_bins[0].parent;data=Path('/work/pg');sock=Path('/work/pg-socket');sock.mkdir(mode=0o700);data.mkdir(mode=0o700)
     os.chown(sock,10001,10001);os.chown(data,10001,10001)
     pg_log=Path('/work/pg/postgres.log')
     result={'stages':{},'source_before':True,'source_after':False,'cleanup':1}
     started=False
     isolation='import os,signal; assert os.getuid()==10001; caps=next(x.split()[1] for x in open("/proc/self/status") if x.startswith("CapEff:")); assert int(caps,16)==0\ntry: os.kill(os.getppid(),signal.SIGCONT)\nexcept PermissionError: pass\nelse: raise RuntimeError("candidate_can_signal_supervisor")'
+    SETUP_STEP=None
     stage('isolation',['/usr/bin/python3','-I','-c',isolation])
     try:
         stage('pg-init',[str(bindir/'initdb'),'-D',str(data),'-U','sn004_fixture','--auth=trust','--no-locale'])
@@ -154,6 +181,8 @@ def main():
     print('SNCI_RESULT '+json.dumps(result,sort_keys=True),flush=True)
 
 def run_main():
+    global SETUP_STEP
+    SETUP_STEP=None
     try:main();return 0
     except Exception as error:
         print('SNCI_FAILURE '+json.dumps(failure_details(error),sort_keys=True),flush=True)
