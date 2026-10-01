@@ -59,18 +59,20 @@ historical check on the old commit; it is never carried forward.
 
 ## Current evidence and remaining gates
 
-Local: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s ci/continuous/tests -v`
-passes 44 tests with one native UID-capability test skipped because this workspace
-lacks SETUID/SETGID capabilities. Python compilation passes.
+The original controller baseline ran 44 tests with one native UID-capability
+test skipped in a workspace lacking SETUID/SETGID capabilities. Subsequent
+repairs add their own regression fixtures. Run the complete suite for each
+reviewed revision:
+`PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s ci/continuous/tests -v`.
 On server 1c-db, the pinned Codex 0.155.1 native executable passed five offline
 fixture scenarios: final response, permitted source, denied outside source,
 empty skills catalog, denied private fixture file. No real model request or
 existing credentials were used. Binary SHA256:
 `0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761`.
 
-**Not yet run:** owner installation, ChatGPT login, dependency-image build,
-real PostgreSQL/Elixir worker acceptance, live model review and new trusted
-check publication/readback. Installation readiness is not runtime acceptance.
+**Runtime gates:** protected owner installation/login/preparation, real
+PostgreSQL/Elixir worker acceptance, live model review and trusted check
+publication/readback. Source readiness does not establish runtime acceptance.
 `prepare` performs the native worker/isolation checks and remains disabled.
 `activate` requires recent successful preparation and login. First live PR
 verification must still succeed after activation. SN-003/SN-030 completion,
@@ -170,6 +172,44 @@ separate owner action after successful recent acceptance.
 
 Docker reference: [image tagging](https://docs.docker.com/reference/cli/docker/image/tag/),
 [Docker driver](https://docs.docker.com/build/builders/drivers/docker/).
+
+## Owner repair of capability spelling
+
+The container inspector previously compared four allowed capability names with
+the bare spellings. Docker can report those same rights with `CAP_` prefixes.
+The comparison now accepts either exact spelling, in any order, while requiring
+exactly CHOWN, KILL, SETGID and SETUID. Missing, repeated, extra, nested-prefix,
+lowercase or malformed entries remain a hold. All other isolation checks,
+resource limits, mounts, worker identity and locked quality profiles are retained.
+
+`snci/repair_caps.py` is the second bounded native setup code repair, based on
+reviewed revision `151fc2eb53189bca42b0775e26a231fb837e7899`. It requires the
+unchanged disabled installation, stopped processes, no accepted profiles and
+the protected diagnostic evidence identifying only the capability spelling
+difference. The exact five-file incoming source delta and bounded commit
+ancestry are checked. A complete unchanged 180-file main source, successful
+seed-image provenance and the initial inspection failure must be preserved;
+worker logs or acceptance evidence refuse this repair.
+
+The owner operation preserves the failed main preparation, previous package,
+private policy, public status and attempt journal. Installation revision is the
+only immediate policy change. A private one-time tmux driver materializes a new
+main source from verified cached blobs and reuses the immutable already built
+image, with a fresh seed identity/layer check, rules check and offline reviewer
+probe. It then executes the full locked worker suite once. There is no main
+dependency rebuild, quality reduction, credential replacement or retry of the
+consumed one-shot verifier.
+
+Only successful fresh main acceptance updates its profile. The driver then
+prepares sn004 once using the normal owner procedure. Both profiles must succeed
+while policy remains disabled before metadata reports
+`all_profiles_prepared_disabled`. Raw diagnostics, source, logs and exception
+messages stay private; the existing closed metadata projection is retained.
+
+Partial writes, launch uncertainty or another native failure preserve their
+claim/evidence and require inspection; this operation cannot be replayed.
+This repair does not enable the timer, publish a trusted check, merge or deploy.
+Native repaired acceptance and live check publication remain separate gates.
 
 ## Stop and rollback
 
