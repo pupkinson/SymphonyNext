@@ -9,10 +9,21 @@ deployment acceptance. The existing Symphony scheduler remains unchanged.
 
 Control is disabled by default. `SYMPHONY_CONTROL_ENABLED=true` enables its
 supervisor and requires `SYMPHONY_CONTROL_DATABASE_URL` from a dedicated runtime
-secret reference. The escript CLI reads these variables before application
-startup; Mix releases also evaluate `config/runtime.exs`. Use the new product's database and role. Do not reuse another
-application's database, credentials or writable state. No database connection is
-started by the control component when disabled.
+secret reference. Mix embeds `config/runtime.exs` in an Elixir escript, evaluates
+it at launch, merges it over the build-time configuration and installs the
+merged values with `persistent: true` before invoking the CLI. `app: nil`
+suppresses automatic application startup; it does not suppress configuration
+loading. The CLI helper retains its explicit environment-validation contract.
+Use the new product's database and role. Do not reuse another application's
+database, credentials or writable state. No database connection is started by
+the control component when disabled.
+
+This ordering is defined in [Mix 1.19.6 `escript.build` source](https://github.com/elixir-lang/elixir/blob/v1.19.6/lib/mix/lib/mix/tasks/escript.build.ex)
+by `gen_main/5`, `main_body_for/4`, `load_config/1` and `start_app_for/1`.
+`Application.put_env/3` alone is not persistent, but the normal generated
+Elixir wrapper has already persisted the runtime override. Omitting that merge
+can reproduce a reset on `Application.load/1`; that is a negative-control
+scenario, not evidence that the normal packaged entry point resets the flag.
 
 Migrations are explicit: `mix ecto.migrate -r SymphonyControl.Repo`. Use a separate
 migration role in that invocation; the running application does not need schema
@@ -30,8 +41,11 @@ is developed with its owning domain tasks.
 | `GET /health/ready` | 200 only with a reachable repository, exact supported migration versions and the required project relation columns. Otherwise 503 with `ready`, `database`, `schema` booleans. |
 | `GET /api/v1/control/identity` | 403 by default. Disclosure requires the configured server authorizer and the server's `current_actor` assignment. Query parameters do not supply authorization. |
 
-Each health interaction has a 500 ms timeout, including connection checkout;
-no individual SQL probe waits indefinitely. Readiness is read-only and does not open execution admission.
+Each individual SQL probe has a 500 ms outer timeout, including connection
+checkout. Liveness and SQL probes run sequentially, so 500 ms is not an
+end-to-end readiness deadline. The schema check verifies migration versions
+and the availability of required columns, not their types, indexes or constraints.
+Readiness is read-only and does not open execution admission.
 Database failure does not by itself make the control supervisor dead. SQL,
 connection strings and exception details are not returned in health responses.
 
@@ -81,6 +95,23 @@ Run as an unprivileged user with Elixir 1.19/OTP 28 and PostgreSQL tools availab
 The trap stops only that fresh cluster; evidence/data are retained in the printed
 temporary path for investigation. No model turn, production service, TCP listener,
 Docker socket or deployment is involved in this fixture.
+
+## Configuration-load tests and limits
+
+`runtime_config_test.exs` has separate checks for the injected CLI callback and
+fresh-VM application loading. The latter evaluate the real project configuration
+files, merge them using `Config.Reader.merge/2`, set each value persistently as
+Mix 1.19.6 does, call `RuntimeConfig.configure/0`, and load (not start) the OTP
+application. They cover enabled and disabled control, database/identity
+preservation, and an intentionally omitted runtime merge as a negative control.
+No services, database connections or model turns are started by these fixtures.
+
+These are configuration-load **unit tests**, not execution of the generated
+escript or proof of a deployed image. Artifact-level entry-point and functional
+acceptance remain required. The previous source-review P1 assumed an omitted
+runtime merge; source inspection and the configuration-load tests do not support
+that premise for the documented Mix 1.19.6 path. This does not grant release
+approval or replace independent exact-HEAD review and trusted checks.
 
 ## Release boundary
 

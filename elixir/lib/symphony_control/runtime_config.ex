@@ -2,9 +2,11 @@ defmodule SymphonyControl.RuntimeConfig do
   @moduledoc """
   Load control settings before an escript starts the application.
 
-  Mix releases also evaluate config/runtime.exs. The escript does not bundle that
-  file, so the CLI applies the same environment contract explicitly. Neither
-  path enables control unless SYMPHONY_CONTROL_ENABLED is exactly "true".
+  Mix embeds config/runtime.exs in Elixir escripts and applies its merged
+  configuration persistently before invoking the CLI, even with app: nil.
+  This helper retains the explicit CLI environment-validation contract; it is
+  not a workaround for missing escript runtime configuration. Control remains
+  opt-in through SYMPHONY_CONTROL_ENABLED being exactly "true".
   """
 
   alias SymphonyControl.Repo
