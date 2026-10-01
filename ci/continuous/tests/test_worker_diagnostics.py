@@ -100,24 +100,27 @@ class WorkerDiagnosticsTests(unittest.TestCase):
 
 
 class RunnerDiagnosticsTests(unittest.TestCase):
-    def run_failure(self,logs):
+    def run_failure(self,logs,success=False):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);data=container(['CHOWN','KILL','SETGID','SETUID'])
             data['Mounts'][0]['Source']=str(root/'source');data['Mounts'][2]['Source']=str(root/'source.json')
-            data['State'].update(ExitCode=1,OOMKilled=False,Error='')
+            data['State'].update(ExitCode=0 if success else 1,OOMKilled=False,Error='')
             calls=[]
             def command(args,**kw):
                 calls.append(args)
                 if args[0]=='inspect':return json.dumps([data]).encode()
-                if args[0]=='wait':return b'1'
+                if args[0]=='wait':return b'0' if success else b'1'
                 if args[0]=='logs':return logs
                 if args[0]=='ps':return ('snci-'+KEY).encode()
                 return b''
             with patch.object(runner,'command',side_effect=command):
-                with self.assertRaises(Hold) as caught:runner.run(root,KEY,{},dict(image=IMAGE))
+                profile=dict(image=IMAGE,minimum_tests=305,maximum_skips=6)
+                if success:result=runner.run(root,KEY,{},profile)
+                else:
+                    with self.assertRaises(Hold) as caught:runner.run(root,KEY,{},profile)
             self.assertEqual((root/'worker.log').read_bytes(),logs)
             self.assertEqual(len([c for c in calls if c[0]=='rm']),1)
-            return str(caught.exception)
+            return result if success else str(caught.exception)
 
     def diagnostic(self):
         return dict(stage='dialyzer',kind='timeout',exit_code=-15,timeout_seconds=600,
@@ -135,6 +138,21 @@ class RunnerDiagnosticsTests(unittest.TestCase):
             cases.append(b'SNCI_FAILURE '+json.dumps(dict(d,**change)).encode()+b'\n')
         for logs in cases:
             with self.subTest(logs=logs):self.assertEqual(self.run_failure(logs),'worker_failed')
+
+    def test_huge_integer_diagnostic_is_generic_hold(self):
+        for field in ('duration_seconds','timeout_seconds'):
+            d=dict(self.diagnostic(),**{field:10**400})
+            self.assertEqual(self.run_failure(b'SNCI_FAILURE '+json.dumps(d).encode()+b'\n'),'worker_failed')
+
+    def test_successful_worker_ignores_failure_noise_but_requires_full_quality(self):
+        quality=dict(stages=dict.fromkeys(('build','format','lint','coverage','dialyzer'),0),source_before=True,
+                     source_after=True,cleanup=0,tests=305,failures=0,skipped=6,coverage=100.0,dialyzer_errors=0)
+        noise=b'SNCI_FAILURE '+json.dumps(dict(self.diagnostic(),duration_seconds=10**400)).encode()+b'\n'
+        logs=noise+b'SNCI_RESULT '+json.dumps(quality).encode()+b'\n'
+        with patch.object(runner,'failure_code',side_effect=AssertionError('Successful worker parsed failure noise')):
+            self.assertEqual(self.run_failure(logs,success=True),quality)
+        bad=b'SNCI_RESULT '+json.dumps(dict(quality,tests=1)).encode()+b'\n'
+        with self.assertRaisesRegex(Hold,'quality_assertions'):self.run_failure(bad,success=True)
 
 
 if __name__=='__main__':unittest.main()

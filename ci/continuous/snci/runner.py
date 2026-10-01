@@ -92,7 +92,7 @@ def failure_code(logs):
         if d['stage'] not in {'setup','isolation','pg-init','pg-start','pg-create','deps','build','format','lint','coverage','dialyzer'}:return 'worker_failed'
         if d['kind'] not in {'timeout','stage_exit','spawn_error','io_error','log_budget','worker_error'}:return 'worker_failed'
         if not all(d[k] is None or (type(d[k]) is int and -255<=d[k]<=255) for k in ('exit_code','cleanup_exit_code')):return 'worker_failed'
-        if not all(type(d[k]) in (int,float) and math.isfinite(d[k]) and 0<=d[k]<=1800 for k in ('timeout_seconds','duration_seconds')):return 'worker_failed'
+        if not all(type(d[k]) in (int,float) and 0<=d[k]<=1800 and math.isfinite(d[k]) for k in ('timeout_seconds','duration_seconds')):return 'worker_failed'
         if type(d['log_bytes']) is not int or not 0<=d['log_bytes']<=256*1024*1024 or type(d['log_truncated']) is not bool:return 'worker_failed'
         return 'worker_'+d['kind']+'_'+d['stage'].replace('-','_')
     except (Hold,ValueError,TypeError,KeyError):return 'worker_failed'
@@ -107,9 +107,9 @@ def run(root,key,entries,profile):
         final=inspect_container(key,image,root)
         logs=command(['logs','snci-'+key])
         write_new(root/'worker.log',logs)
-        require(status=='0' and final['State'].get('Running') is False and final['State'].get('ExitCode')==0
-                and not final['State'].get('OOMKilled') and not final['State'].get('Error'),
-                'worker_failed' if final['State'].get('OOMKilled') or final['State'].get('Error') else failure_code(logs))
+        if not (status=='0' and final['State'].get('Running') is False and final['State'].get('ExitCode')==0
+                and not final['State'].get('OOMKilled') and not final['State'].get('Error')):
+            raise Hold('worker_failed' if final['State'].get('OOMKilled') or final['State'].get('Error') else failure_code(logs))
         matches=[line[len(b'SNCI_RESULT '):] for line in logs.splitlines() if line.startswith(b'SNCI_RESULT ')]
         require(len(matches)==1,'worker_receipt')
         return validate_result(decode(matches[0]),profile)
