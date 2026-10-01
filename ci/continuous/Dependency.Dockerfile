@@ -16,6 +16,9 @@ ENV HOME=/seed/home MIX_HOME=/seed/home/.mix HEX_HOME=/seed/home/.hex \
 WORKDIR /seed/source/elixir
 RUN mix deps.get --check-locked && mix deps.compile \
     && MIX_ENV=test mix deps.compile
+# Build the version/lock/profile-specific PLT before the isolated analysis.
+# The worker still runs the full Dialyzer command and checks its exit/output.
+RUN mix dialyzer --plt
 USER root
 RUN sha256sum /seed/source/elixir/mix.lock | cut -d' ' -f1 > /seed/lock.sha256
 USER 10001:10001

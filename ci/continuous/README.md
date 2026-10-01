@@ -211,6 +211,44 @@ claim/evidence and require inspection; this operation cannot be replayed.
 This repair does not enable the timer, publish a trusted check, merge or deploy.
 Native repaired acceptance and live check publication remain separate gates.
 
+## Additional bounded repair: worker diagnostics and PLT preparation
+
+The owner authorized one additional setup repair beyond the original two-cycle
+budget. It starts from `8fd4edc25a4e3ddd5b690a4e269919cc88c73760` and permits
+one native main attempt followed, only on success, by one sn004 attempt. The
+previous worker passed stages through coverage; Dialyzer's failure reason is
+unknown because timeout/spawn exceptions discarded its output.
+
+The supervisor now preserves bounded output on failures and emits one closed
+`SNCI_FAILURE` record containing stage, failure kind, exit/cleanup codes,
+deadline, elapsed time and log size/truncation. Exception messages are excluded.
+The runner retains the private worker log and projects validated diagnostics
+to stable hold codes, such as `worker_timeout_dialyzer`. Malformed, duplicate,
+extra-field or arbitrary diagnostics remain generic `worker_failed`; these
+records cannot create successful acceptance.
+
+`snci/repair_dialyzer.py` requires the exact protected failed log, complete
+unchanged main source, disabled policy, stopped units/processes and exact
+reviewed source delta. A durable single-use claim precedes mutations. It copies
+the immutable image's dev cache from an inert, never-started, credential-free
+container and inspects the bounded tar without host extraction. Cache files
+are hashed and tied to the image and locked source identity. Traversal, linked,
+empty or duplicate project PLTs hold the operation.
+
+A verified warm main image is reused. Only an absent project PLT causes a main
+dependency rebuild with `mix dialyzer --plt`; sn004 receives its own prepared
+image. Both require a nonempty project PLT, the fresh offline native probe and
+the complete isolated quality suite, including full Dialyzer analysis. The
+600-second Dialyzer and 1500-second worker deadlines, resource limits, profile
+hashes, test floors, skip ceiling and coverage requirement are retained.
+
+The operation preserves failed source/logs, previous package, private policy,
+public preparation status and attempt journal. Only installed revision changes
+immediately; accepted profiles update only after fresh quality success. The
+timer stays disabled. Replay, partial writes, launch uncertainty or a new native
+failure hold for inspection. No trusted status, merge, deployment or production
+readiness is established by this source repair.
+
 ## Stop and rollback
 
 ```sh

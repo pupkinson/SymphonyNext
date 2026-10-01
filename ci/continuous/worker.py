@@ -9,9 +9,12 @@ import resource
 import shutil
 import signal
 import subprocess
+import time
 
 ROOT=Path('/work/source')
 LOG_BYTES=0
+LOG_LIMIT=16*1024*1024
+CLEANUP_EXIT_CODE=None
 STAGES={'build':['mix','build'],'format':['mix','format','--check-formatted'],
         'lint':['mix','lint'],'coverage':['mix','test','--cover'],
         'dialyzer':['mix','dialyzer','--format','short']}
@@ -27,24 +30,66 @@ def verify_source(entries):
         require(not p.is_symlink() and p.is_file() and git_hash(p.read_bytes())==e['sha'],'source_changed')
         require(p.stat().st_mode&0o777==(0o755 if e['mode']=='100755' else 0o644),'source_mode')
 
+class StageFailure(RuntimeError):
+    def __init__(self,details):
+        self.details=details
+        super().__init__('stage_failed')
+
+def failure_details(error):
+    seen=set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        if isinstance(error,StageFailure):
+            return dict(error.details,cleanup_exit_code=CLEANUP_EXIT_CODE)
+        error=error.__context__
+    return dict(stage='setup',kind='worker_error',exit_code=None,timeout_seconds=0,
+                duration_seconds=0,log_bytes=0,log_truncated=False,cleanup_exit_code=CLEANUP_EXIT_CODE)
+
 def stage(name,args,timeout=300):
+    require(name in set(STAGES)|{'isolation','pg-init','pg-start','pg-create','deps'},'stage_name')
     log=Path('/work')/(name+'.log')
     def limits():resource.setrlimit(resource.RLIMIT_FSIZE,(256*1024*1024,256*1024*1024))
-    with log.open('wb') as out:
-        p=subprocess.Popen(args,cwd=ROOT/'elixir',stdout=out,stderr=subprocess.STDOUT,start_new_session=True,preexec_fn=limits,user=10001,group=10001,extra_groups=[])
-        try:code=p.wait(timeout=timeout)
-        finally:
-            if p.poll() is None:
-                os.killpg(p.pid,signal.SIGTERM)
-                try:p.wait(timeout=5)
-                except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);p.wait(timeout=5)
+    started=time.monotonic();code=None;kind=None;p=None
+    try:
+        fd=os.open(log,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        with os.fdopen(fd,'wb') as out:
+            try:
+                p=subprocess.Popen(args,cwd=ROOT/'elixir',stdout=out,stderr=subprocess.STDOUT,start_new_session=True,preexec_fn=limits,user=10001,group=10001,extra_groups=[])
+            except (OSError,subprocess.SubprocessError):kind='spawn_error'
+            if p is not None:
+                try:code=p.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:kind='timeout'
+                finally:
+                    if p.poll() is None:
+                        try:os.killpg(p.pid,signal.SIGTERM)
+                        except ProcessLookupError:pass
+                        try:p.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            try:os.killpg(p.pid,signal.SIGKILL)
+                            except ProcessLookupError:pass
+                            p.wait(timeout=5)
+                    code=p.returncode
+    except OSError:kind=kind or 'io_error'
     global LOG_BYTES
-    LOG_BYTES+=log.stat().st_size
-    require(LOG_BYTES<=16*1024*1024,'log_budget')
-    text=log.read_text(errors='replace')
+    size=0;raw=b'';remaining=max(0,LOG_LIMIT-LOG_BYTES)
+    # Read only our newly created regular log, never an existing/symlink path.
+    if p is not None or kind=='spawn_error':
+        try:
+            size=log.stat().st_size
+            with log.open('rb') as inp:raw=inp.read(remaining)
+        except OSError:kind=kind or 'io_error'
+    text=raw.decode(errors='replace')
+    encoded=text.encode()
+    truncated=len(raw)<size or len(encoded)>remaining
+    if len(encoded)>remaining:text=encoded[:remaining].decode(errors='ignore')
+    LOG_BYTES+=len(text.encode())
     print('SNCI_STAGE '+name+' '+str(code),flush=True)
     print(text,flush=True)
-    require(code==0,'stage_'+name)
+    kind=kind or ('log_budget' if truncated else 'stage_exit' if code!=0 else None)
+    if kind:
+        raise StageFailure(dict(stage=name,kind=kind,exit_code=code,timeout_seconds=timeout,
+                                duration_seconds=round(time.monotonic()-started,3),
+                                log_bytes=size,log_truncated=truncated,cleanup_exit_code=None))
     return text
 
 def parse_quality(coverage,dialyzer):
@@ -56,6 +101,7 @@ def parse_quality(coverage,dialyzer):
     return dict(zip(('tests','failures','skipped'),map(int,count[0])),coverage=100.0,dialyzer_errors=0)
 
 def main():
+    global CLEANUP_EXIT_CODE
     require(os.getuid()==0,'worker_supervisor_user')
     entries=json.loads(Path('/source.json').read_text())
     shutil.copytree('/input',ROOT)
@@ -103,9 +149,14 @@ def main():
         if started:
             r=subprocess.run([str(bindir/'pg_ctl'),'-D',str(data),'-m','immediate','-w','stop'],capture_output=True,timeout=30,user=10001,group=10001,extra_groups=[])
             result['cleanup']=r.returncode
+            CLEANUP_EXIT_CODE=r.returncode
         require(result['cleanup']==0,'postgres_cleanup')
     print('SNCI_RESULT '+json.dumps(result,sort_keys=True),flush=True)
 
-if __name__=='__main__':
-    try:main()
-    except Exception:print('SNCI_WORKER_FAILED',flush=True);raise SystemExit(1)
+def run_main():
+    try:main();return 0
+    except Exception as error:
+        print('SNCI_FAILURE '+json.dumps(failure_details(error),sort_keys=True),flush=True)
+        print('SNCI_WORKER_FAILED',flush=True);return 1
+
+if __name__=='__main__':raise SystemExit(run_main())
