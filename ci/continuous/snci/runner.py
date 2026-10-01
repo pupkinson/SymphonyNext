@@ -35,6 +35,12 @@ def command(args,timeout=30):
     require(len(r.stdout)<=34*1024*1024,'docker_output')
     return r.stdout
 
+def worker_capabilities(value):
+    if not isinstance(value,list) or len(value)!=4 or not all(isinstance(x,str) for x in value):
+        return False
+    names=[x[4:] if x.startswith('CAP_') else x for x in value]
+    return sorted(names)==['CHOWN','KILL','SETGID','SETUID']
+
 def inspect_container(key,image,root):
     data=decode(command(['inspect','snci-'+key]))
     require(isinstance(data,list) and len(data)==1,'container_inspect')
@@ -44,7 +50,7 @@ def inspect_container(key,image,root):
     require(h['NetworkMode']=='none' and h['ReadonlyRootfs'] and not h['Privileged']
             and h['RestartPolicy']['Name']=='no' and h['Memory']==4294967296 and h['MemorySwap']==4294967296
             and h['NanoCpus']==2000000000 and h['PidsLimit']==256 and h['CapDrop']==['ALL']
-            and sorted(h['CapAdd'])==['CHOWN','KILL','SETGID','SETUID']
+            and worker_capabilities(h.get('CapAdd'))
             and h['SecurityOpt']==['no-new-privileges:true'] and h['Tmpfs']==TMPFS,'container_isolation')
     require(c['Entrypoint']==['/usr/bin/env'] and c['Cmd']==['-i']+WORKER_ENV+['/usr/bin/python3','-I','/worker.py']
             and not c.get('Volumes') and not c.get('OpenStdin') and not c.get('Tty'),'container_command')
