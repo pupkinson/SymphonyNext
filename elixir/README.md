@@ -405,3 +405,12 @@ you.
 ## License
 
 This project is licensed under the [Apache License 2.0](../LICENSE).
+
+## Native control foundation
+
+`SymphonyControl.Application` adds an opt-in PostgreSQL repository alongside the
+existing scheduler. Database migrations are explicit and health checks are read-only.
+Control tests require an isolated PostgreSQL fixture through `SN004_TEST_PG_SOCKET`.
+See [the configuration and test guide](../docs/engineering/control-foundation.md)
+for startup, migration, health and authorization contracts. Default startup keeps
+control disabled; this does not expose a production tracker or Authentik integration.
