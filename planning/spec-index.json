@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-spec-composition/v1",
-  "revision": "0.5+MCP-SN031-r2",
+  "revision": "0.5+MCP-SN031-r2+TRK-r1",
   "status": "review_candidate_not_runtime_ready",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
   "dispatch_enabled": false,
@@ -29,6 +29,20 @@
       "requirements": "MCP-07..MCP-26",
       "acceptance": "AC-MCP-01..AC-MCP-20",
       "owner": "SN-031"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-02-tracker-selection-design.md",
+      "sha256": "35c87f42b43a5d0e956357a61e55215b1f675aa25a469b0d483de54cd5084bf0",
+      "requirements": "TRK-01..TRK-14",
+      "acceptance": "AC-TRK-01..AC-TRK-12",
+      "owner": "SN-006"
+    },
+    {
+      "path": "planning/tracker-selection.json",
+      "sha256": "0bcf9400da0d52dc6558206e2ea4af8cb241d8395ea10fd78f9883799adf2828",
+      "requirements": "TRK-01..TRK-14",
+      "acceptance": "AC-TRK-01..AC-TRK-12",
+      "owner": "SN-TRK-05"
     }
   ],
   "task_refinements": [
@@ -55,7 +69,8 @@
     "Interpret this as one versioned planning source, not a second queue or a completed native importer.",
     "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
     "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance.",
-    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them."
+    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them.",
+    "TRK-r1 explicitly reinterprets only its listed native-only clauses and adds native/github/linear first-version acceptance. planning/tracker-selection.json is a required normative extension, not an implemented importer. Unsupported assembly must hold; preserve all baseline and MCP gates; no automatic tracker switch or admission."
   ],
   "related_pending_sources": [
     {
