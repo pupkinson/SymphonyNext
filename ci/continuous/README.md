@@ -97,6 +97,45 @@ publication/readback. Source readiness does not establish runtime acceptance.
 verification must still succeed after activation. SN-003/SN-030 completion,
 SN-015 scheduler implementation and production readiness are not claimed.
 
+## Owner maintenance after the zero-read review hold
+
+`snci/repair_review.py` is single-use for the exact activated-policy digest,
+installed38ead317 package and saved PR14 review-only hold. Its source base is
+the independently accepted direct-source PR53 commit0d0f619. The owner reviews
+this separate maintenance candidate before executing it from a clean,
+root-owned exact-HEAD checkout in the existing root tmux session on1c-db.
+The agent obtains no root/Docker scope and does not write protected server paths.
+
+The helper requires inactive/dead service and disabled/inactive timer, no live
+worker or pending attempt, exact installed/source bytes and manifests, bounded
+Git ancestry/package delta, current sole eligible PR14/head/base, unchanged
+rules/native binary and both fresh successful preparation receipts/images.
+It verifies the exact saved zero-read HOLD and retains every journal row,
+receipt byte and timestamp. One staged offline native probe runs as existing
+snci-review in fresh unauthenticated homes. This probe spends no model tokens.
+
+Before replacement it archives the private old policy and entire old package,
+records a durable intent and rechecks all inputs/staged bytes. It changes only
+installed_revision in the already-enabled policy: enabled=true is preserved
+while timer/service remain stopped. A byte-bound completion/readback is required.
+Terminal marker: `REVIEW_TRANSPORT_INSTALLED_PAUSED <reviewed-head>`.
+No old installer/refresh, image build/reprepare, model/profile switch, journal
+reset, automatic rollback, timer enablement, check publication or service start
+occurs in this helper. Failure/interruption after claim requires reconciliation;
+preserve the claim, partial stage and backups rather than invoking it again.
+
+After successful installation, the owner may start only
+`symphony-next-ci.service` **once**, leaving the timer disabled. This starts one
+real paid source review and isolated PR14 quality run; it may take many minutes.
+The changed verifier revision produces a new immutable policy tuple under the
+unchanged global daily_attempts<=4; the old hold remains immutable. No automatic
+additional attempt/model spending follows a failed or unknown result. Read the
+sanitized controller result, saved evidence and exact protected GitHub check/App
+identity before enabling polling or considering merge. Unit success alone is
+insufficient. Protected installation and corrective live CI are not claimed by
+source tests. Preserve old package/policy for owner reconciliation; rollback
+does not remove consumed attempts or magically revalidate old policy readiness.
+
 ## Owner installation (new service only)
 
 Review and independently approve this source revision first. Use a clean,
