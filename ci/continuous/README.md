@@ -299,3 +299,95 @@ named `snci-<journal-key>` with the matching `snci.attempt` label. Do not delete
 state to retry an unknown GitHub POST. Do not reuse PR13 state or alter branch
 rules to bypass a hold. No application deployment needs rollback: this increment
 does not deploy SymphonyNext or touch DF Assistant.
+# Refresh successful preparations (GH24)
+
+The original `prepare` command is a first-use operation: it creates fixed
+directories and cannot renew completed preparations. `snci/refresh.py` is a
+separate, one-shot owner transition from installed revision
+`10b56bc96f764dabdf498aef3c1ed869f3845fb8` with both main and sn004 already successful.
+It is not a failed-cache repair. Never remove a claim, edit receipt timestamps,
+overwrite the old `prepare-*` directories or rerun the old repair helpers.
+
+The transition preserves all old receipts and the old installed package. It
+reuses only the same immutable image IDs recorded by successful preparation,
+after checking local availability, unchanged dependency/configuration inputs and
+the dependency-image recipe. It executes the existing isolated runner again,
+including all five quality stages, native offline Codex probe and cleanup.
+There are no live model calls, image builds/pulls or changed container limits.
+
+Main keeps every locked file and minimum305/max-skips6. sn004 advances only to
+PR14 `21ce4282e7ef8330cc1155bcb7b94fbf132032a8`, tree
+`29fe41a2873a3db13ac2c0dc74b7f149391c9eeb`, minimum331/max-skips6 and the reviewed
+runtime_config_test blob `5ca85121e627a8e085083fc2ea25b404c2fcd9c7`.
+No other suite or policy limit changes. Published `profiles.json` stays the
+historical seed definition; the protected runtime policy carries the transition.
+
+## Owner procedure after exact-source review
+
+Use a clean, root-owned checkout under `/root` of the exact accepted refresh
+commit. Do not execute a moving branch, an unreviewed SHA, or an agent-controlled
+directory. The helper verifies Git HEAD/cleanliness, GitHub linear ancestry/scope,
+installed manifest and file bytes, disabled service/timer, controller lock,
+pending journal entries, leftover worker containers, historical receipts and
+current target identities before doing native work. Missing/stale inputs hold.
+Ancestry is bounded to the initial commit plus at most two review repair commits
+above the installed baseline; merges and unrelated history are rejected. The
+aggregate change must still contain exactly the same four permitted paths.
+
+From that checkout, with `REVIEWED_SHA` set to the exact independently accepted
+refresh commit (the coordinator supplies it in the PR evidence):
+
+```sh
+python3 -I ci/continuous/snci/refresh.py --reviewed-head "$REVIEWED_SHA"
+```
+
+Run this long command in the owner's existing terminal/tmux session and retain
+its output. Each profile can take up to the existing1500-second runner deadline
+plus the180-second offline probe. No scheduler or service is started by this
+command. The new evidence directory is
+`/var/lib/symphony-next-ci/refresh-<reviewed-sha>/`.
+
+Only after both profiles pass does the helper stage the reviewed package and
+recheck all inputs. It journals commit intent, retains the predecessor at
+`/opt/symphony-next-ci-before-refresh-<reviewed-sha>`, installs the new package,
+and atomically commits one disabled policy containing both immutable receipt
+pointers/digests. `COMPLETE.json` and `REFRESHED_DISABLED` mean this transition
+finished; they are not a trusted PR check or deployment approval.
+
+Review the fresh evidence, then activation remains a distinct owner operation:
+
+```sh
+python3 -I /opt/symphony-next-ci/owner.py activate
+```
+
+Activation requires matching `commit-intent.json` and `COMPLETE.json` records
+bound to the installed revision and SHA256 of the exact installed disabled-policy
+bytes, including whitespace and key order. Activation reads and decodes that same
+protected byte snapshot; refresh verifies byte-exact publication readback. Both
+receipt pointers must refer to that same refresh. Missing, partial or mismatching
+completion proof holds before login checks or timer changes. It also verifies
+package revision/integrity, all receipt identities/hashes,
+age<86400s, complete quality, ruleset and dedicated reviewer login. Only then
+does the existing timer start. Draft PRs need the existing `snv:verify` label;
+request one exact target after authoritative state readback. A final trusted
+check still comes only from the protected controller's own review and execution.
+
+## Failure and recovery
+
+Any claimed attempt is single-use, even after a failure. Do not delete/reset it.
+Before installation, a failure leaves the original package and policy in place.
+If the package rename fails, the predecessor is restored. If directory sync fails
+after a successful rename, both packages remain for owner reconciliation; no
+rollback into the now-occupied install path is attempted. A crash/error after
+`commit-intent.json` requires owner reconciliation of revision, policy digest and
+`COMPLETE.json`; never blindly retry or activate. If policy publication fails
+after package replacement, activation rejects a mismatching installed revision
+or missing completion proof even when policy replacement itself already happened.
+The old policy bytes are preserved privately as `policy-before.json`, and both
+old preparation directories remain untouched. Rollback is owner-operated while
+disabled: reconcile actual state before restoring the preserved package/policy;
+never reuse a partially completed attempt or fabricate a fresh receipt.
+
+Local tests exercise real temporary files and injected GitHub/native boundaries.
+They do not attest host1c-db, Docker, native Elixir or protected check publication.
+This transition must receive an independent exact-source review before owner use.
