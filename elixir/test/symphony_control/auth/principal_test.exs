@@ -131,6 +131,46 @@ defmodule SymphonyControl.Auth.PrincipalTest do
     assert value.issuer == issuer
   end
 
+  test "rejects malformed percent escapes in authority and path" do
+    for issuer <- [
+          "https://auth.test/%",
+          "https://auth.test/%ZZ",
+          "https://auth.test/%1",
+          "https://auth.test/%aG",
+          "https://au%ZZth.test/issuer"
+        ] do
+      assert Principal.user(issuer, "id", @principal, @user) == {:error, :invalid_principal}
+    end
+  end
+
+  test "rejects invalid authority and raw path delimiters" do
+    for issuer <- [
+          "https://auth.test/[bad]",
+          "https://auth.test/a]b",
+          "https://auth.test/a\\b",
+          "https://auth.test/{x}",
+          "https://auth.test/a|b",
+          "https://auth.test/a^b",
+          "https://auth.test:/issuer",
+          "https://[not-an-ip]/issuer"
+        ] do
+      assert Principal.user(issuer, "id", @principal, @user) == {:error, :invalid_principal}
+    end
+  end
+
+  test "valid escaped paths and IPv6 keep exact issuer identity" do
+    for issuer <- [
+          "https://auth.test/%2fissuer",
+          "https://auth.test/%5Bok%5D",
+          "https://[::1]:8443/issuer",
+          "https://[::ffff:192.0.2.1]/issuer",
+          "https://auth.test/a:b@c;d=e!$&'()*+,~_"
+        ] do
+      assert {:ok, value} = Principal.user(issuer, "id", @principal, @user)
+      assert value.issuer == issuer
+    end
+  end
+
   test "constructor failures never echo private input" do
     assert Principal.user("not-valid-private-data", "private-token", @principal, @user) ==
              {:error, :invalid_principal}

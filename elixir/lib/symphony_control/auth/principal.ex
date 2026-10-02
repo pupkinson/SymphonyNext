@@ -33,7 +33,13 @@ defmodule SymphonyControl.Auth.Principal do
 
   @uuid ~r/\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z/
   @printable ~r/\A[\x20-\x7E]+\z/
-  @uri_text ~r/\A[\x21-\x7E]+\z/
+  @registered_name "(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})+"
+  @path_chars "(?:[A-Za-z0-9._~!$&'()*+,;=:@/-]|%[0-9A-Fa-f]{2})*"
+  @issuer_uri Regex.compile!(
+                "\\Ahttps://(" <>
+                  @registered_name <>
+                  "|\\[[0-9A-Fa-f:.]+\\])(?::[0-9]+)?(?:/" <> @path_chars <> ")?\\z"
+              )
 
   @spec user(term(), term(), term(), term()) :: result()
   def user(issuer, subject, principal_id, user_id) do
@@ -71,17 +77,24 @@ defmodule SymphonyControl.Auth.Principal do
   end
 
   defp https_issuer?(value) when is_binary(value) and byte_size(value) in 1..2048 do
-    with true <- Regex.match?(@uri_text, value),
+    with [_uri, raw_host] <- Regex.run(@issuer_uri, value),
          {:ok,
           %URI{scheme: "https", host: host, port: port, userinfo: nil, query: nil, fragment: nil}} <-
            URI.new(value) do
-      is_binary(host) and host != "" and is_integer(port) and port in 1..65_535
+      is_binary(host) and host != "" and is_integer(port) and port in 1..65_535 and
+        valid_literal?(raw_host, host)
     else
       _invalid -> false
     end
   end
 
   defp https_issuer?(_value), do: false
+
+  defp valid_literal?("[" <> _rest, host) do
+    match?({:ok, _address}, :inet.parse_ipv6_address(String.to_charlist(host)))
+  end
+
+  defp valid_literal?(_registered_name, _host), do: true
 
   defp subject?(value) when is_binary(value) and byte_size(value) in 1..255 do
     Regex.match?(@printable, value)

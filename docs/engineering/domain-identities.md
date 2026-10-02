@@ -51,7 +51,9 @@ subject case/spacing are not silently canonicalized. UUID text is normalized.
 
 The project accepts an HTTPS issuer URI without userinfo/query/fragment,
 length at most 2048 bytes, and a nonempty printable ASCII subject of at most
-255 bytes. These are syntax/shape checks, not signature, discovery, issuer
+255 bytes. URI components require well-formed percent escapes and path characters;
+authority supports registered names and valid IPv6 literals, not IPvFuture/zone IDs.
+The original encoded spelling is preserved. These are shape checks, not signature, discovery, issuer
 allowlist, audience, expiry or nonce validation. Only constructor results
 satisfy the opaque type; structs can be forged by code and are not authority.
 No token, cookie, group, role, session or verified flag is stored. Inspect
@@ -73,6 +75,12 @@ full Mix run. The first execution failed on missing modules; after implementing
 them, 23 tests passed. Checks cover equality/namespace separation, integer
 precision, input types/bounds, UUID normalization, exact issuer/sub semantics,
 user versus service/agent distinction, redacted Inspect and fixed errors.
+
+GH35 found missing percent-escape validation. On Elixir 1.19.6, the original
+constructor accepted `%ZZ` and `%`; this was reproduced before changing code.
+Three regressions were added (26 tests, two failures RED). Component grammar and
+IPv6 literal validation now reject malformed escapes/authority/path while valid
+encoded paths and IPv6 keep exact spelling: 26 tests, zero failures GREEN.
 
 A planned private dependency-cache preparation plus full `mix test --cover`
 invocation was rejected by the execution tool and did NOT run. It is not
