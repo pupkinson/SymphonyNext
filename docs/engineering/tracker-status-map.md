@@ -2,115 +2,96 @@
 
 ## Purpose and status
 
-Implement the business-status mapping required by TRK-05 in the owner-approved
-tracker-choice amendment (PR26, source accepted at
-85bb926f53028768400b67422cb60be1fb800cc1). This task starts from main
-2bf21950e0725bc9228b262e1495f5af5eeea1d6 and does not use unfinished
-TaskRef or SessionAccess code. This document alone is NOT implementation.
+Implement business-status mapping required by TRK-05 in the owner-approved
+tracker-choice amendment PR26 (source accepted at
+85bb926f53028768400b67422cb60be1fb800cc1). Base main is
+2bf21950e0725bc9228b262e1495f5af5eeea1d6. This is independent of unfinished
+TaskRef and SessionAccess. This document alone is NOT implementation.
+A business status is neither execution success nor an admission/approval grant.
 
-A tracker business status is not execution success or an admission grant.
-No function in this increment may enqueue work, approve a run, infer successful
-tests/review, mutate an issue, resolve credentials, or call a remote API.
+## Allowed files and boundaries
 
-## Allowed change
+1. elixir/lib/symphony_control/tracker/status_map.ex (new module)
+2. elixir/test/symphony_control/tracker/status_map_test.exs (new tests)
+3. docs/engineering/tracker-status-map.md (contract and actual evidence)
 
-- elixir/lib/symphony_control/tracker/status_map.ex (new implementation)
-- elixir/test/symphony_control/tracker/status_map_test.exs (new tests)
-- docs/engineering/tracker-status-map.md (this contract and actual evidence)
+Do not modify existing source/config/tests, CI, dependencies, services, credentials,
+other branches or PRs. Do not perform PR37/38 malformed-struct repairs, access their
+worktrees, repeat refused cache/full-suite or CI activation/profile operations,
+contact the production server, or work around platform refusals. No merge/deploy.
+This independent module does not call APIs, mutate issues, enqueue, approve runs,
+or infer that tests/review passed. Adapter/registry integration is separate work.
 
-Do not change existing source, requirements, test configuration, CI, dependencies,
-service files, credentials, other branches or PRs. In particular, do not work on
-PR37/38 malformed-struct repairs, their worktrees, previously refused cache/full
-suite operations, the CI activation/profile transition, or the server runtime.
-This is independent feature development, not an alternative execution of those
-operations. Do not disable or work around platform refusals. Do not deploy/merge.
+## Interface
 
-## Function contract
-
-Module: SymphonyControl.Tracker.StatusMap. Provide explicit functions:
-
+Module SymphonyControl.Tracker.StatusMap:
 - native(category)
 - github(state, state_reason, labels, mapping, default_category)
 - linear(state_id, mapping)
 
-All input status/category/map keys are strings. Never create atoms from input.
-Valid category strings are exactly: triage, backlog, unstarted, started, review,
-completed, canceled. Return {:ok, category_string} or {:error, reason_atom}.
-The fixed reason atoms are invalid_input, invalid_mapping, unknown_status,
-ambiguous_status, contradictory_status. Never return private input in errors.
-Successful results contain no admitted/approved/execution_success fields.
-
-These functions consume a provider adapter's extracted status fields, not
-arbitrary GitHub/Linear API response envelopes. API extraction, complete
-pagination, stable-ID readback, scoped authorization, and versioned scheme
-persistence are explicitly separate integration work.
+Input categories, statuses and mapping keys are strings; never create input atoms.
+Categories: triage, backlog, unstarted, started, review, completed, canceled.
+Return {:ok, category_string} or {:error, reason_atom}. Fixed reasons:
+invalid_input, invalid_mapping, unknown_status, ambiguous_status,
+contradictory_status. Do not echo input or return admission/execution fields.
+These functions consume extracted status fields, not entire provider responses.
+API extraction/pagination, scope checks and persisted scheme versions are outside.
 
 ### Native
 
-A category must be a valid category string, without trimming or case folding.
-An unknown nonempty string returns unknown_status; a wrong type, empty string,
-invalid UTF-8 or control-character input returns invalid_input.
+Accept exactly the seven category strings, without trimming or case folding.
+Unknown nonempty strings return unknown_status; wrong type, empty string,
+invalid UTF-8 or ASCII control characters return invalid_input.
 
 ### GitHub
 
-Inputs: state string open/closed; state_reason nil or a string; labels is a list
-of label-name strings; mapping is a map of managed label names to nonterminal
-category strings; default_category is a nonterminal category. A mapping may be
-empty. Nonterminal categories are the first five categories listed above.
+state is open/closed; state_reason is nil or a nonempty valid UTF-8 string without
+ASCII controls; labels is a list of label-name strings; mapping is a map of managed
+label names to nonterminal categories; default_category is nonterminal. Nonterminal
+means triage/backlog/unstarted/started/review. An empty mapping is allowed.
+Validate the entire input and all mapping entries, including unused entries, before
+classification. Wrong raw types/shapes return invalid_input. Invalid mapping/default
+returns invalid_mapping. No contractual precedence is required when both are invalid.
 
-Validate the entire input/mapping, including unused entries, before classifying.
-Map keys and labels must be nonempty valid UTF-8, at most 256 bytes and contain
-no ASCII control characters. Matching is exact; no downcasing/trimming.
-Limit mapping and labels to at most 256 entries each. Duplicate occurrences
-of the same label do not create ambiguity. Unknown, unmanaged labels are ignored.
-Mapping values and default_category must be valid nonterminal categories.
+Label/map keys must be nonempty valid UTF-8, at most 256 bytes, without ASCII control
+characters. Match exactly. At most 256 labels and 256 map entries are allowed.
+Duplicate occurrences of one label count once. Ignore unmanaged valid labels.
 
-For state=open, state_reason must be nil or reopened. Other reasons are
-contradictory_status. No managed label uses default_category. Exactly one distinct
-managed label uses its mapped category. Two distinct managed labels are
-ambiguous_status even when they map to the same category: competing configured
-workflow labels must not silently choose a winner.
+For open: reason nil/reopened is allowed; other valid reasons are contradictory_status.
+When no managed label is present, use default_category. One distinct managed label
+uses its category. Two distinct managed labels are ambiguous_status EVEN if they map
+to the same category; never silently choose between competing workflow labels.
 
-For state=closed, completed maps to completed; not_planned maps to canceled.
-Nil/unknown reasons return unknown_status, reopened is contradictory_status.
-Still-present nonterminal labels are allowed and do not override terminal state;
-closing an issue does not necessarily remove its workflow labels. Malformed
-labels or mapping must still fail validation even on closed issues.
-
-Unknown state string returns unknown_status. Wrong input types return
-invalid_input; malformed mapping/default category returns invalid_mapping.
+For closed: completed -> completed; not_planned -> canceled; nil/unknown reason ->
+unknown_status; reopened -> contradictory_status. Nonterminal labels may remain after
+closing: do not override the terminal result or cause ambiguity. Invalid label/mapping
+shape must still be rejected. Unknown state string returns unknown_status.
 
 ### Linear
 
-Accept a canonical UUID state_id (case-insensitive hex accepted and normalized
-for matching), and mapping from UUID workflow-state IDs to category strings.
-Do not map display names, localized names, team issue identifiers or type aliases.
-Validate all mapping entries (1..256 entries); reject duplicate canonical UUID
-keys represented with differing text case as invalid_mapping rather than
-silently overwrite. All seven categories are allowed as targets. A malformed
-state_id returns invalid_input; a well-formed unmapped ID returns unknown_status.
-Workspace/team/project authorization and actual workflow-state existence are
-not established by these pure functions.
+state_id is a UUID; mapping has UUID workflow-state keys and category-string values.
+Accept hexadecimal text case and normalize UUIDs for matching. Do not map display
+names, translated names, team issue keys or type aliases. Validate ALL mapping
+entries (1..256) and reject duplicate normalized UUID keys as invalid_mapping, even
+when their categories agree. All seven category targets are valid. Malformed
+state_id -> invalid_input; well-formed unmapped ID -> unknown_status. No existence
+or workspace/team/project permission is established by this pure function.
 
-## Required tests and evidence
+## Tests and handoff
 
-Write ExUnit tests first and show genuine RED before implementing the module.
-Cover all categories and exact matching; bad types/UTF-8/control characters;
-malformed and unused mapping entries; input size bounds; GitHub open default,
-one label, duplicate identical label, conflicting labels (including same target),
-closed completed/not_planned, stale nonterminal labels, unknown/reopened reasons;
-Linear UUID case normalization, duplicate normalized keys, unknown state ID and
-absence of display-name fallback. Assert no function grants execution admission.
+Write ExUnit tests first and record genuine RED, then implement. Cover exact category
+matching; bad types/UTF-8/control chars; unused malformed map entries; bounds; GitHub
+default, single/duplicate/conflicting labels, same-target conflicts, terminal reason
+handling and stale nonterminal labels; Linear UUID case and duplicate-normalized keys,
+unknown ID and no display-name fallback. Verify results contain no execution admission.
 
-Run only this new dependency-free subset in a fresh Elixir process; for example
-start ExUnit, require the new module and its new test file. Do not rerun the
-previously refused full-suite/cache preparation. Record exact commands/exits,
-Elixir version, RED/GREEN evidence and git diff --check. If an Elixir runtime is
-not present in the selected environment, report that specific gap rather than
-claiming tests passed or accessing the production server for a workaround.
+Run only the new dependency-free subset in a fresh Elixir process (start ExUnit,
+require the module and its test file). Do not rerun previously refused full-suite/cache
+preparation. Record command, version, exit codes, RED/GREEN and git diff --check.
+If runtime/tool access is missing, report the exact gap instead of claiming success
+or using the production server. Do not change dependencies or test thresholds.
 
-Commit only the allowed files to this task branch, include [skip ci] in the
-commit message, and leave the PR draft. GitHub Actions are not to be enabled.
-The coordinator will obtain a new exact-HEAD review through the already running
-Symphony after the implementation is returned. Source review is not trusted CI
-or a release approval. Registry/adapter integration remains a later stage.
+Commit only allowed files on this task branch, with [skip ci], leave PR draft.
+The coordinator will request independent exact-HEAD review through the existing
+Symphony AFTER implementation returns; no simultaneous writer or automatic merge.
+Source review does not replace protected CI or product integration acceptance.
