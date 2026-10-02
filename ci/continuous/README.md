@@ -17,10 +17,17 @@ contains the evidence digest, not raw source, model output or credentials.
 
 The reviewer uses a **dedicated ChatGPT login**, not an OpenAI API key.
 The pinned native Codex binary has no execution environment; its dynamic tool
-reads verified source only. All changed file versions must be read. Native
-Codex still advertises `skills.list`, `skills.read`, `request_user_input`:
-all built-in skills are disabled and their catalog is tested empty. Arbitrary
-skill-package reads are denied. Other app-server requests stop the attempt.
+reads verified source through direct JSON `snci_source.read_source` only. All
+changed file versions must be read. `agents.enabled=false` and both multi-agent
+features disable model-forced agent tools. The code-mode host stays disabled.
+Codex 0.155.1's bundled gpt-6-astra catalog forces code_mode_only despite the
+code_mode feature flag. A dedicated direct_only_tool_namespaces entry keeps
+source available directly and excludes it from the nested JavaScript surface.
+The model still sees inert exec/wait entrypoints, whose host-disabled refusal
+is tested. Request-user-input callbacks are denied by the client guard.
+With a direct-tool catalog, built-in skills remain advertised: their catalog
+is tested empty and arbitrary packages unavailable. Other requests/events stop
+the attempt. No model or native binary upgrade is part of this transport fix.
 A separate service identity, empty working directory and fresh ephemeral
 thread exclude author history and GitHub credentials. Model review remains
 probabilistic; a READY verdict is not a proof that arbitrary code is safe.
@@ -64,11 +71,23 @@ test skipped in a workspace lacking SETUID/SETGID capabilities. Subsequent
 repairs add their own regression fixtures. Run the complete suite for each
 reviewed revision:
 `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s ci/continuous/tests -v`.
-On server 1c-db, the pinned Codex 0.155.1 native executable passed five offline
-fixture scenarios: final response, permitted source, denied outside source,
-empty skills catalog, denied private fixture file. No real model request or
-existing credentials were used. Binary SHA256:
+The original five offline scenarios used an unknown fixture model and did not
+exercise model-forced wrappers. After a live gpt-6-astra review held with zero
+source reads, the same server binary reproduced `code-mode host is disabled`.
+The corrected nine offline scenarios cover both direct and bundled gpt-6-astra
+catalogs, both wire inventory layouts, complete head/base reads, unread-READY
+refusal, outside-path refusal, empty/unavailable skills and disabled code-mode
+execution. Both catalogs read two source versions; no collaboration or shell
+tool is advertised and no private canary reaches model input. These are fake
+localhost provider tests with fresh unauthenticated homes, not live reviews.
+Native exit0/log SHA256:
+`64d021089635b3453eb756ae7ccea342f64a15524f48acf331d0badd62fa27c4`.
+Binary SHA256:
 `0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761`.
+Source tests: 182 tests, 181 passed, one existing native isolation skip, exit0.
+The installed package remains 38ead317 and stopped; this source change neither
+installs itself nor replays the immutable held attempt. A separately reviewed
+owner transition and subsequent trusted exact-HEAD check remain required.
 
 **Runtime gates:** protected owner installation/login/preparation, real
 PostgreSQL/Elixir worker acceptance, live model review and trusted check
