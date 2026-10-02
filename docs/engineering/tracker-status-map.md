@@ -95,3 +95,87 @@ Commit only allowed files on this task branch, with [skip ci], leave PR draft.
 The coordinator will request independent exact-HEAD review through the existing
 Symphony AFTER implementation returns; no simultaneous writer or automatic merge.
 Source review does not replace protected CI or product integration acceptance.
+
+## Implementation evidence — 2026-10-02
+
+ACCEPTED: one implementer, TRK-05 under specification/policy v0.5, exact seed
+`170fdf9d9dc352b5359db5ae47805c3dd8444353`, branch
+`feat/tracker-status-map-20261002`, existing draft PR41. The cloud checkout initially
+had clean branch `work` at base `2bf21950e0725bc9228b262e1495f5af5eeea1d6`.
+After fetching and verifying the feature seed, implementation used the separate
+worktree `/workspace/SymphonyNext-status-map`; the original checkout was preserved.
+Only the three allowed files changed.
+
+Implemented `native/1`, `github/5` and `linear/2` as dependency-free functions with
+public specs. Validation covers unused schema entries, malformed text and shapes,
+byte/count limits, exact GitHub labels and normalized Linear UUID collisions.
+Closed GitHub issues use their reason only after input/schema validation. Return
+values are category/error tuples with no execution, admission or approval fields.
+
+### Runtime and commands
+
+Elixir/Mix were initially absent from PATH. A local runtime was unpacked under
+`/tmp/status-map-tools`, without root, system installation or project dependencies.
+Test runtime: Elixir **1.19.5**, Mix **1.19.5**, Erlang/OTP **28.1**, ERTS **16.1**.
+Other tools: Git **2.52.0**, Python **3.12.14**, GitHub CLI **2.46.0**.
+An initial OTP 28.0 version probe warned about regex recompilation; all test runs
+used OTP 28.1 and the GREEN runs emitted no warnings.
+
+Runtime downloads and observed SHA-256:
+
+- `https://builds.hex.pm/builds/otp/amd64/ubuntu-22.04/OTP-28.1.tar.gz`:
+  `60c1083df707642f20831c762a68db191984314fef1d4d80b05bb8caf70b70bf`
+- `https://builds.hex.pm/builds/elixir/v1.19.5-otp-28.zip`:
+  `ca481510feb6dabc875bba43e44b25c7abafa53bd7a103639851b7aeace8a022`
+
+From the feature worktree's `elixir/` directory:
+
+```sh
+export PATH=/tmp/status-map-tools/elixir/bin:/tmp/status-map-tools/OTP-28.1/bin:$PATH
+
+# Same command before and immediately after implementation. The wildcard allows
+# ExUnit to execute every test while the production module does not yet exist.
+elixir -e 'ExUnit.start(seed: 0); Enum.each(Path.wildcard("lib/symphony_control/tracker/status_map.ex"), &Code.require_file/1); Code.require_file("test/symphony_control/tracker/status_map_test.exs")'
+
+# Final verification requires both files explicitly in a fresh process.
+elixir -e 'ExUnit.start(seed: 0); Code.require_file("lib/symphony_control/tracker/status_map.ex"); Code.require_file("test/symphony_control/tracker/status_map_test.exs")'
+```
+
+| Run | Tests | Failures | Exit code | Observation |
+| --- | ---: | ---: | ---: | --- |
+| RED before implementation | 62 | 62 | 2 | UndefinedFunctionError: StatusMap was absent |
+| GREEN after implementation | 62 | 0 | 0 | Same test file and command as RED |
+| Final explicit-load GREEN | 62 | 0 | 0 | No warnings; 2026-10-02 13:22:43.871–13:22:44.504 UTC |
+
+Formatting was checked from `/tmp` so no Mix application or dependencies start:
+
+```sh
+mix format --check-formatted --dot-formatter /workspace/SymphonyNext-status-map/elixir/.formatter.exs /workspace/SymphonyNext-status-map/elixir/lib/symphony_control/tracker/status_map.ex /workspace/SymphonyNext-status-map/elixir/test/symphony_control/tracker/status_map_test.exs
+```
+
+Formatting exit code: **0**. `git diff --check` and `git diff --cached --check`
+also return **0** with the new files included.
+
+### Evidence hashes and remaining gates
+
+SHA-256 of the implementation and unchanged RED/GREEN test source:
+
+- `elixir/lib/symphony_control/tracker/status_map.ex`:
+  `e443fcd0c3fc5e455e0362986044fa61fe2e7d2e1ebaf3ecbb0ffc044317e717`
+- `elixir/test/symphony_control/tracker/status_map_test.exs`:
+  `499ed91641ba631e26784dc01c7366c103547934ced831f24b4cee9201fd650f`
+
+Local logs are retained under `/tmp/status-map-evidence/` (not protected CI artifacts):
+
+- `red.log`: `254d825f9c11aa9eabfa175c91596959f58b40bb7e355dcf0588dfd6adb989d7`
+- `green.log`: `a4420736a4d7cadce1b9c0addcb04138b00168e0eee0091e46269660a5059f59`
+- `final-green.log`: `47b96b4187a3619b552ae36ba9597f888801797e21603b3a38298e1a3f4006c1`
+
+VERIFIED: the isolated 62-test contract subset and formatting/whitespace checks.
+NOT_RUN: full suite, cache preparation, CI activation, external API/adapters,
+product integration, merge and deploy. Independent exact-HEAD review through
+Symphony and protected checks remain pending; this is implementer evidence only.
+No task admission, execution success or release acceptance is granted. The final
+commit/tree are recorded in the handoff, rather than self-referenced in this file.
+Before merge, rollback is to withhold this feature commit; no runtime or schema
+was changed and no unrelated work needs reverting.
