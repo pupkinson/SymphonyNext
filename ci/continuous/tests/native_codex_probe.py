@@ -1,8 +1,7 @@
-"""Offline native capability acceptance: fixture provider, no login or model billing.
+"""Offline capability acceptance with direct and model-forced code-mode catalogs.
 
-Built-in skills/request_user_input remain advertised in Codex 0.155.1. Require an
-empty skills catalog, unavailable arbitrary packages, and absent execution tools.
-This is transport/capability evidence, not a real model review.
+Use the native bundled gpt-6-astra metadata, fake localhost provider and fresh
+unauthenticated home. This is transport evidence, not a real model review.
 """
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -14,11 +13,30 @@ import tempfile
 import threading
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from snci.common import Hold, sha256
-from snci.reviewer import codex_flags, ReadOnlyContext, Session, SCHEMA, thread_params
+from snci.reviewer import codex_flags, ReadOnlyContext, Session, SCHEMA, thread_params, SOURCE_NAMESPACE
 
 TARGET={'pr':1,'head':'a'*40,'base':'b'*40,'tree':'c'*40}
 REQUESTS=[]
-CALL=None
+CALLS=[]
+
+def request_tools(request):
+    tools=list(request.get('tools',[]))
+    for item in request.get('input',[]):
+        if item.get('type')=='additional_tools':tools.extend(item.get('tools',[]))
+    assert tools,'Native request has no capability inventory'
+    return tools
+
+def inventory(request):
+    names=[]
+    for tool in request_tools(request):
+        if tool['type']=='namespace':names.extend(tool['name']+'.'+x['name'] for x in tool['tools'])
+        else:names.append(tool['name'])
+    return sorted(names)
+
+def tool_outputs(requests):
+    return [i.get('output') for r in requests for i in r.get('input',[])
+            if i.get('type') in ('function_call_output','custom_tool_call_output')]
+
 class Server(BaseHTTPRequestHandler):
     def log_message(self,*_):pass
     def do_GET(self):
@@ -29,8 +47,10 @@ class Server(BaseHTTPRequestHandler):
         verdict=dict(TARGET,verdict='READY',findings=[],limitations=['Synthetic transport probe only'])
         item={'id':'m1','type':'message','role':'assistant','status':'completed',
               'content':[{'type':'output_text','text':json.dumps(verdict),'annotations':[]}]}
-        if len(REQUESTS)==1 and CALL:
-            item=dict(CALL,id='fc1',type='function_call',call_id='call1')
+        index=len(REQUESTS)-1
+        if index<len(CALLS):
+            item=dict(CALLS[index],id='fc'+str(index),call_id='call'+str(index))
+            item.setdefault('type','function_call')
         events=[('response.created',{'response':{'id':'r1','status':'in_progress','output':[]}}),
                 ('response.output_item.added',{'output_index':0,'item':item}),
                 ('response.output_item.done',{'output_index':0,'item':item}),
@@ -41,67 +61,96 @@ class Server(BaseHTTPRequestHandler):
             self.wfile.write(('event: '+name+'\ndata: '+json.dumps(dict(data,type=name))+'\n\n').encode());self.wfile.flush()
 
 class FixtureSource:
-    def blob(self,_):return b'FIXTURE_SOURCE'
+    def blob(self,entry):return entry['data']
 
-def probe(binary,call,expected):
-    global CALL
-    CALL=call;REQUESTS.clear()
+def probe(binary,calls,expected,model='fixture-model'):
+    global CALLS
+    CALLS=[dict(c) for c in calls];REQUESTS.clear()
     server=ThreadingHTTPServer(('127.0.0.1',0),Server)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     with tempfile.TemporaryDirectory(prefix='snci-native-') as tmp:
         Path(tmp,'canary').write_text('PRIVATE_FIXTURE_CANARY')
-        flags=codex_flags(tmp)+['-c','model_provider="fixture"','-c','model="fixture-model"',
+        flags=codex_flags(tmp)+['-c','model_provider="fixture"','-c','model='+json.dumps(model),
             '-c','model_providers.fixture.name="Fixture"','-c','model_providers.fixture.wire_api="responses"',
             '-c','model_providers.fixture.requires_openai_auth=false',
             '-c','model_providers.fixture.supports_websockets=false',
             '-c','model_providers.fixture.base_url="http://127.0.0.1:'+str(server.server_port)+'/v1"',
             '-c','features.enable_request_compression=false']
-        if CALL and CALL.get('namespace')=='skills' and CALL['name']=='read':
-            CALL['arguments']=json.dumps({'package':tmp+'/canary'})
+        for call in CALLS:
+            if call.get('namespace')=='skills' and call['name']=='read':
+                call['arguments']=json.dumps({'package':tmp+'/canary'})
         p=subprocess.Popen([binary,'app-server','--stdio','--strict-config']+flags,cwd=tmp,
             env={'PATH':'/usr/bin:/bin','HOME':tmp,'CODEX_HOME':tmp,'LANG':'C.UTF-8'},
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,start_new_session=True)
-        ctx=ReadOnlyContext(FixtureSource(),{'README.md':{}},{},[]);s=Session(p,ctx,30)
+        ctx=ReadOnlyContext(FixtureSource(),{'README.md':{'data':b'FIXTURE_HEAD_SOURCE'}},
+                            {'README.md':{'data':b'FIXTURE_BASE_SOURCE'}},['README.md'])
+        s=Session(p,ctx,30)
         held=False
         try:
             s.rpc('initialize',{'clientInfo':{'name':'snci-native-probe','version':'1'},'capabilities':{'experimentalApi':True}})
             s.send({'method':'initialized','params':{}})
-            params=thread_params(tmp,'fixture-model');params['modelProvider']='fixture'
+            params=thread_params(tmp,model);params['modelProvider']='fixture'
             started=s.rpc('thread/start',params);s.thread=started['thread']['id']
             assert started['sandbox']=={'type':'readOnly','networkAccess':False}
+            assert started['approvalPolicy']=='never'
             assert started.get('instructionSources',[])==[]
             s.rpc('turn/start',{'threadId':s.thread,'environments':[],
                 'input':[{'type':'text','text':'Synthetic fixture: emit the supplied verdict.'}],'outputSchema':SCHEMA})
             try:s.finish(TARGET)
             except Hold:held=True
             assert REQUESTS
-            inventory=[]
-            for t in REQUESTS[0]['tools']:
-                if t['type']=='namespace':inventory.extend(t['name']+'.'+x['name'] for x in t['tools'])
-                else:inventory.append(t['name'])
-            assert sorted(inventory)==['read_source','request_user_input','skills.list','skills.read'],inventory
+            names=inventory(REQUESTS[0])
+            source_name=SOURCE_NAMESPACE+'.read_source'
+            expected_names=([source_name,'request_user_input','skills.list','skills.read']
+                            if model=='fixture-model' else
+                            [source_name,'functions.exec','functions.wait','functions.request_user_input',
+                             'functions.request_user_input_async'])
+            assert names==sorted(expected_names),names
+            source=next(t for t in request_tools(REQUESTS[0]) if t.get('name')==SOURCE_NAMESPACE)['tools'][0]
+            assert source['name']=='read_source' and source['type']=='function',source
+            assert source['parameters']['required']==['path','revision']
+            for t in request_tools(REQUESTS[0]):
+                if t.get('name')=='functions':
+                    for nested in t.get('tools',[]):
+                        if nested['name']=='exec':
+                            assert 'read_source' not in nested['description']
+                            assert 'collaboration__' not in nested['description']
             all_input=json.dumps([r.get('input',[]) for r in REQUESTS])
             assert 'PRIVATE_FIXTURE_CANARY' not in all_input
             assert '<skills_instructions>' not in all_input
-            if expected=='denied':assert held
-            else:
+            outputs=tool_outputs(REQUESTS[1:])
+            if expected=='source':
                 assert not held
-                outputs=[i.get('output') for r in REQUESTS[1:] for i in r.get('input',[]) if i.get('type')=='function_call_output']
+                assert ctx.calls==2 and ctx.complete()
+                assert all(x in all_input for x in ('FIXTURE_HEAD_SOURCE','FIXTURE_BASE_SOURCE'))
+            else:
+                assert held
+                assert ctx.calls==0 and not ctx.complete()
                 if expected=='empty':assert any(json.loads(x).get('skills')==[] for x in outputs)
-                if expected=='unavailable':assert outputs and 'not available' in outputs[-1]
-                if expected=='source':assert ctx.calls==1 and 'FIXTURE_SOURCE' in all_input
+                elif expected=='unavailable':assert outputs and 'not available' in outputs[-1]
+                elif expected=='host-disabled':
+                    assert outputs and 'code-mode host is disabled' in json.dumps(outputs)
+                    assert 'EXECUTED_FIXTURE_CANARY' not in json.dumps(outputs)
+            return {'model':model,'inventory':names,'read_count':ctx.calls,'source_bytes':ctx.bytes,
+                    'verdict_held':held,'result':'PASS'}
         finally:s.close();server.shutdown();server.server_close()
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('codex');args=parser.parse_args()
-    cases=[('final',None,'ready'),
-      ('source',{'name':'read_source','arguments':json.dumps({'path':'README.md','revision':'head'})},'source'),
-      ('outside-source',{'name':'read_source','arguments':json.dumps({'path':'/etc/passwd','revision':'head'})},'denied'),
-      ('empty-skills',{'name':'list','namespace':'skills','arguments':json.dumps({'authority':{'kind':'executor'}})},'empty'),
-      ('private-file',{'name':'read','namespace':'skills','arguments':'{}'},'unavailable')]
-    for name,call,expected in cases:
-        probe(args.codex,call,expected)
-        print(json.dumps({'case':name,'result':'PASS'}),flush=True)
+    source=[{'name':'read_source','namespace':SOURCE_NAMESPACE,
+             'arguments':json.dumps({'path':'README.md','revision':rev})} for rev in ('head','base')]
+    outside=[dict(source[0],arguments=json.dumps({'path':'/etc/passwd','revision':'head'}))]
+    common=[('unread-ready',[],'denied'),('source-both-versions',source,'source'),
+            ('outside-source',outside,'denied')]
+    cases=[('fixture-model',name,calls,expected) for name,calls,expected in common+[
+      ('empty-skills',[{'name':'list','namespace':'skills','arguments':json.dumps({'authority':{'kind':'executor'}})}],'empty'),
+      ('private-file',[{'name':'read','namespace':'skills','arguments':'{}'}],'unavailable')]]
+    cases += [('gpt-6-astra',name,calls,expected) for name,calls,expected in common+[
+      ('host-disabled',[{'type':'custom_tool_call','namespace':'functions','name':'exec',
+                        'input':'text("EXECUTED_FIXTURE_CANARY")'}],'host-disabled')]]
+    for model,name,calls,expected in cases:
+        report=probe(args.codex,calls,expected,model)
+        print(json.dumps(dict(report,case=name)),flush=True)
     print(json.dumps({'native_acceptance':'PASS','codex_sha256':sha256(Path(args.codex).read_bytes()),'cases':len(cases)}))
 
 if __name__=='__main__':main()
