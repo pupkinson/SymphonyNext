@@ -178,11 +178,12 @@ def prepare(name):
     print('PROFILE_PREPARED_DISABLED '+name)
 
 def activate():
-    p=load_policy();require(p['enabled'] is False,'already_enabled')
+    policy_raw=trusted(ETC/'policy.json',private=True).read_bytes()
+    p=decode(policy_raw);require(p['enabled'] is False,'already_enabled')
     validate_policy(p)
     require(trusted(INSTALL/'revision').read_text()==p['installed_revision'],'installed_revision_mismatch')
     from snci.refresh import completed_refresh, read_acceptance
-    completed_refresh(STATE,p)
+    completed_refresh(STATE,p,policy_raw)
     manifest=decode(trusted(INSTALL/'installed.json').read_bytes())
     for name,digest in manifest.items():
         require(sha256(trusted(INSTALL/name).read_bytes())==digest,'installed_code_changed')

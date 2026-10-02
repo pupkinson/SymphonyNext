@@ -109,7 +109,7 @@ def reviewed_commit(api, head):
     raise Hold('refresh_commit_parent')
 
 
-def completed_refresh(state, policy):
+def completed_refresh(state, policy, policy_raw):
     """Activation requires the disabled-policy commit's matching completion proof."""
     head = policy['installed_revision']
     require(isinstance(head, str) and re.fullmatch(r'[0-9a-f]{40}', head), 'refresh_completion_revision')
@@ -120,7 +120,7 @@ def completed_refresh(state, policy):
     require(len(profiles) == 2 and {p['name'] for p in profiles} == {'main', 'sn004'}
             and all(p.get('preparation') == 'refresh-' + head + '/' + p['name'] + '/acceptance.json'
                     for p in profiles), 'refresh_completion_pointer')
-    expected = dict(head=head, policy_sha256=sha256(canonical(policy)))
+    expected = dict(head=head, policy_sha256=sha256(policy_raw))
     try:
         intent = decode(trusted(attempt / 'commit-intent.json', private=True).read_bytes())
         complete = decode(trusted(attempt / 'COMPLETE.json', private=True).read_bytes())
@@ -344,7 +344,9 @@ def perform(owner, head, api, source):
     # The policy is one atomic commit for BOTH profiles. Any error after intent is a hold,
     # not a retry or automatic rollback; the full old package/policy remains preserved.
     owner.replace_policy(future)
-    require(owner.load_policy() == future, 'refresh_policy_readback')
+    require(owner.load_policy() == future
+            and trusted(ETC / 'policy.json', private=True).read_bytes() == canonical(future),
+            'refresh_policy_readback')
     result = attempt / 'COMPLETE.json'
     try:
         write_new(result, canonical(dict(committed, status='REFRESHED_DISABLED', profiles=future['profiles'])))

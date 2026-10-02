@@ -317,7 +317,7 @@ class RefreshTests(unittest.TestCase):
         (self.install / 'installed.json').write_bytes(canonical({}))
         binary = self.root / 'codex'
         binary.write_bytes(b'fixture binary')
-        for key, value in [('INSTALL', self.install), ('STATE', self.state),
+        for key, value in [('INSTALL', self.install), ('STATE', self.state), ('ETC', self.etc),
                            ('trusted', lambda p, **kw: binary if str(p) == '/usr/bin/fixture-codex' else Path(p)),
                            ('load_policy', self.o.load_policy), ('replace_policy', self.o.replace_policy),
                            ('validate_policy', lambda p: None), ('sha256', lambda b: CODEX),
@@ -378,6 +378,37 @@ class RefreshTests(unittest.TestCase):
             owner.activate()
         self.assertTrue(self.o.load_policy()['enabled'])
         run.assert_called_once_with(['systemctl', 'enable', '--now', 'symphony-next-ci.timer'])
+
+    def test_activation_rejects_changed_policy_bytes_with_identical_json(self):
+        self.flow()
+        self.r.perform(self.o, HEAD, self.api, self.source)
+        owner = self.activation()
+        policy = self.o.load_policy()
+        raw = self.policy_path.read_bytes()
+        variants = [raw + b'\n', json.dumps(policy, indent=2).encode(),
+                    json.dumps(dict(reversed(list(policy.items()))), separators=(',', ':')).encode()]
+        for changed in variants:
+            self.assertNotEqual(changed, raw)
+            self.assertEqual(json.loads(changed), policy)
+            self.policy_path.write_bytes(changed)
+            with self.subTest(serialization=changed[:30]), \
+                    patch.object(owner, 'GitHub', side_effect=AssertionError('must hold before GitHub')) as github:
+                with self.assertRaisesRegex(Hold, 'completion_mismatch'):
+                    owner.activate()
+                github.assert_not_called()
+            self.assertFalse(self.o.load_policy()['enabled'])
+
+    def test_policy_byte_readback_must_match_intent_before_completion(self):
+        self.flow()
+        publish = self.o.replace_policy
+        def altered_serialization(policy):
+            publish(policy)
+            self.policy_path.write_bytes(self.policy_path.read_bytes() + b'\n')
+        self.o.replace_policy = altered_serialization
+        with self.assertRaisesRegex(Hold, 'policy_readback'):
+            self.r.perform(self.o, HEAD, self.api, self.source)
+        self.assertEqual(self.o.load_policy()['installed_revision'], HEAD)
+        self.assertFalse((self.state / ('refresh-' + HEAD) / 'COMPLETE.json').exists())
 
     def test_failure_after_real_policy_publish_cannot_activate(self):
         self.flow()

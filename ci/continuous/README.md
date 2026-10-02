@@ -361,7 +361,9 @@ python3 -I /opt/symphony-next-ci/owner.py activate
 ```
 
 Activation requires matching `commit-intent.json` and `COMPLETE.json` records
-bound to the installed revision and SHA256 of the entire disabled policy. Both
+bound to the installed revision and SHA256 of the exact installed disabled-policy
+bytes, including whitespace and key order. Activation reads and decodes that same
+protected byte snapshot; refresh verifies byte-exact publication readback. Both
 receipt pointers must refer to that same refresh. Missing, partial or mismatching
 completion proof holds before login checks or timer changes. It also verifies
 package revision/integrity, all receipt identities/hashes,
