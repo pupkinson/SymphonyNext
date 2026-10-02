@@ -83,20 +83,20 @@ def read_acceptance(state, profile, codex_sha, now, fresh=True):
     return receipt
 
 
-def package_delta(base, head):
-    require(set(changed_paths(head, base)) == DELTA and DELTA <= set(head), 'refresh_package_scope')
+def package_delta(base, head, delta=DELTA):
+    require(set(changed_paths(head, base)) == delta and delta <= set(head), 'refresh_package_scope')
     package = {p[len(PREFIX):]: e for p, e in head.items() if p.startswith(PREFIX)}
     require(all(e['mode'] == '100644' for e in package.values()), 'refresh_package_mode')
     return package
 
 
-def reviewed_commit(api, head):
-    """One initial commit plus at most two linear review repairs above BASE."""
+def reviewed_commit(api, head, base=BASE):
+    """One initial commit plus at most two linear repairs above the approved base."""
     candidate = None
     seen = set()
     for _ in range(3):
         require(isinstance(head, str) and re.fullmatch(r'[0-9a-f]{40}', head)
-                and head not in seen, 'refresh_commit_parent')
+                and head not in seen and head != BASE, 'refresh_commit_parent')
         seen.add(head)
         commit = api.request('GET', API + '/git/commits/' + head)
         parents = commit.get('parents', [])
@@ -104,7 +104,7 @@ def reviewed_commit(api, head):
         if candidate is None:
             candidate = commit
         head = parents[0].get('sha')
-        if head == BASE:
+        if head == base:
             return candidate
     raise Hold('refresh_commit_parent')
 
@@ -189,7 +189,7 @@ def verify_package(entries):
     return sha256(manifest_raw)
 
 
-def preflight(owner, head, api, source):
+def preflight(owner, head, api, source, rebuild=False):
     require(isinstance(head, str) and re.fullmatch(r'[0-9a-f]{40}', head) and head != BASE,
             'refresh_reviewed_head')
     stopped(owner)
@@ -201,11 +201,20 @@ def preflight(owner, head, api, source):
     owner.validate_policy(policy)
     require(policy['codex_binary'] == owner.BINARY and policy['codex_sha256'] == owner.BINARY_SHA
             and sha256(trusted(owner.BINARY).read_bytes()) == owner.BINARY_SHA, 'refresh_codex')
-    commit = reviewed_commit(api, head)
+    if rebuild:
+        from snci import rebuild_missing as recovery
+        commit = reviewed_commit(api, head, base=recovery.SOURCE_BASE)
+    else:
+        commit = reviewed_commit(api, head)
     _, old = source.tree(BASE)
     tree, new = source.tree(head)
     require(tree == commit['tree']['sha'], 'refresh_commit_tree')
-    package = package_delta(old, new)
+    if rebuild:
+        reviewed_tree, reviewed = source.tree(recovery.SOURCE_BASE)
+        require(reviewed_tree == recovery.SOURCE_TREE, 'rebuild_source_base')
+        package = recovery.package(old, reviewed, new)
+    else:
+        package = package_delta(old, new)
     manifest_sha = verify_package(old)
     definitions = decode(trusted(INSTALL / 'profiles.json').read_bytes())
     future = targets(definitions, policy['profiles'])
@@ -217,10 +226,15 @@ def preflight(owner, head, api, source):
         require(trusted(root / 'Dependency.Dockerfile').read_bytes() == recipe, 'refresh_recipe')
         require(trusted(root / 'image.id').read_text().strip() == profile['image'], 'refresh_image_receipt')
         receipts[profile['name']] = sha256(trusted(root / 'acceptance.json', private=True).read_bytes())
-        require(owner.inspect_image(profile['image']).get('Id') == profile['image'], 'refresh_image_unavailable')
+        if not rebuild:
+            require(owner.inspect_image(profile['image']).get('Id') == profile['image'], 'refresh_image_unavailable')
     validate_rules(api.request('GET', API + '/rulesets/23980199'), policy['ruleset'])
-    return dict(policy=policy, policy_raw=raw, definitions=definitions, targets=future,
-                old=old, package=package, tree=tree, receipts=receipts, manifest_sha=manifest_sha)
+    snapshot = dict(policy=policy, policy_raw=raw, definitions=definitions, targets=future,
+                    old=old, package=package, tree=tree, receipts=receipts, manifest_sha=manifest_sha,
+                    recipe=recipe)
+    if rebuild:
+        snapshot.update(recovery.preflight(owner, head, policy['profiles']))
+    return snapshot
 
 
 def source_entries(snapshot, api, source):
@@ -244,7 +258,7 @@ def source_entries(snapshot, api, source):
     return output
 
 
-def recheck(owner, snapshot, api, source):
+def recheck(owner, snapshot, api, source, rebuild=False):
     stopped(owner)
     idle_native()
     require(trusted(ETC / 'policy.json', private=True).read_bytes() == snapshot['policy_raw']
@@ -255,7 +269,8 @@ def recheck(owner, snapshot, api, source):
         name = profile['name']
         require(sha256(trusted(STATE / ('prepare-' + name) / 'acceptance.json', private=True).read_bytes())
                 == snapshot['receipts'][name], 'refresh_history_changed')
-        require(owner.inspect_image(profile['image']).get('Id') == profile['image'], 'refresh_image_unavailable')
+        if not rebuild:
+            require(owner.inspect_image(profile['image']).get('Id') == profile['image'], 'refresh_image_unavailable')
     validate_rules(api.request('GET', API + '/rulesets/23980199'), snapshot['policy']['ruleset'])
     source_entries(snapshot, api, source)
 
@@ -292,8 +307,12 @@ def stage_package(head, snapshot, source):
     return stage
 
 
-def perform(owner, head, api, source):
-    snapshot = preflight(owner, head, api, source)
+def perform(owner, head, api, source, rebuild=False):
+    if rebuild:
+        from snci import rebuild_missing as recovery
+        snapshot = preflight(owner, head, api, source, rebuild=True)
+    else:
+        snapshot = preflight(owner, head, api, source)
     entries = source_entries(snapshot, api, source)
     attempt = STATE / ('refresh-' + head)
     backup = INSTALL.with_name(INSTALL.name + '-before-refresh-' + head)
@@ -301,7 +320,10 @@ def perform(owner, head, api, source):
     attempt.mkdir(mode=0o700)
     sync(STATE)
     write_new(attempt / 'policy-before.json', snapshot['policy_raw'])
-    write_new(attempt / 'inputs.json', canonical(dict(head=head, base=BASE, targets=snapshot['targets'])))
+    inputs = dict(head=head, base=BASE, targets=snapshot['targets'])
+    if rebuild:
+        inputs.update(mode='rebuild_missing', source_base=recovery.SOURCE_BASE, seed=snapshot['seed'])
+    write_new(attempt / 'inputs.json', canonical(inputs))
     future = copy.deepcopy(snapshot['policy'])
     future['profiles'] = []
     for profile in snapshot['targets']:
@@ -309,6 +331,8 @@ def perform(owner, head, api, source):
         root = attempt / name
         root.mkdir(mode=0o700)
         source.materialize(entries[name], root / 'source')
+        if rebuild:
+            profile = recovery.build(owner, root, profile, snapshot, head)
         print('REFRESH_QUALITY_START ' + name, flush=True)
         quality, probe_sha = native_quality(root, profile, entries[name], owner, snapshot['policy'], head)
         runner.validate_result(quality, profile)
@@ -324,7 +348,11 @@ def perform(owner, head, api, source):
     future['installed_revision'] = head
     owner.validate_policy(future)
     stage = stage_package(head, snapshot, source)
-    recheck(owner, snapshot, api, source)
+    if rebuild:
+        recheck(owner, snapshot, api, source, rebuild=True)
+        recovery.recheck(owner, snapshot, head, attempt, future['profiles'])
+    else:
+        recheck(owner, snapshot, api, source)
     for profile in future['profiles']:
         read_acceptance(STATE, profile, future['codex_sha256'], time.time())
     committed = dict(head=head, policy_sha256=sha256(canonical(future)))
@@ -359,7 +387,7 @@ def perform(owner, head, api, source):
     return result
 
 
-def apply(head):
+def apply(head, rebuild=False):
     require(os.geteuid() == 0 and os.uname().nodename.split('.')[0] == '1c-db', 'refresh_owner_identity')
     import owner
     checkout = trusted(Path(__file__).resolve().parents[3], directory=True)
@@ -379,16 +407,16 @@ def apply(head):
         policy = owner.load_policy()
         api = GitHub(policy['github'], policy['github_key'])
         source = Source(api, STATE / 'blobs')
-        perform(owner, head, api, source)
+        perform(owner, head, api, source, rebuild=rebuild)
 
 
-def main():
+def main(rebuild=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--reviewed-head', required=True)
     args = parser.parse_args()
     os.umask(0o077)
     try:
-        apply(args.reviewed_head)
+        apply(args.reviewed_head, rebuild=rebuild)
     except Hold as error:
         print('HOLD ' + str(error))
         raise SystemExit(1)

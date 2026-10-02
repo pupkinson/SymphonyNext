@@ -391,3 +391,68 @@ never reuse a partially completed attempt or fabricate a fresh receipt.
 Local tests exercise real temporary files and injected GitHub/native boundaries.
 They do not attest host1c-db, Docker, native Elixir or protected check publication.
 This transition must receive an independent exact-source review before owner use.
+
+## Rebuild the two missing preparation images (GH24)
+
+Owner readback on 2026-10-02 confirmed that both accepted profile image IDs were
+absent while the pinned toolchain seed remained available. The reuse-only refresh
+correctly held before claiming an attempt or modifying the installed package.
+The current Docker store uses overlay2; image deletion versus an unlocated older
+store is not established. This separate recovery does not reconfigure Docker.
+
+`snci/rebuild_missing.py` handles only this observed state: installed revision
+`10b56bc96f764dabdf498aef3c1ed869f3845fb8`, disabled CI, unchanged successful
+historical preparations, main image `sha256:b6ef7528c8e8435208c0856698d50158e545c2e4fc7624ca6bda49f585a392c0`
+and sn004 image `sha256:9233988cb5fbbf405a565fc1d0bb92e9296e189b90f3381c50221463801a1172`
+both absent, and original seed `sha256:a93a7c8e7a2d292c924f461d06a27986b1a95818c1be1fbb5b68b290b409256c`
+present with filesystem layers matching both protected historical seed receipts.
+A daemon/auth error is not classified as an absent image. Any different binding,
+missing seed, existing output tag, active service/worker or pending journal holds.
+
+Source approval is separate from the older refresh review: the recovery candidate
+must be a bounded linear descendant (initial commit plus at most two repairs) of
+accepted source `716d3b5b6f22e6ebe005d09820ed8806667a287b`, with changes limited to
+`snci/refresh.py`, `snci/rebuild_missing.py`, `tests/test_rebuild_missing.py` and
+this README. Package scope is also checked against the installed predecessor.
+The existing owner, worker, runner, dependency recipe, seed, profile assertions,
+controller and service configuration are unchanged.
+
+After independent exact-source review, use a clean root-owned checkout of that
+new accepted revision on 1c-db. In the owner's terminal/tmux session:
+
+```sh
+python3 -I ci/continuous/snci/rebuild_missing.py --reviewed-head "$REVIEWED_SHA"
+```
+
+The shared controller lock and `refresh-<reviewed-sha>` claim protect the whole
+transition. For each exact target, the helper materializes a new source tree,
+copies the unchanged dependency recipe and calls the existing owner image build.
+Build has the existing dependency-fetch network and 1800-second deadline; this
+is not an offline operation. The pinned base is never pulled or substituted.
+The build remains bound to its seed layers and source locks. New image IDs are
+recorded in new evidence; historical image IDs and acceptance bytes are preserved.
+
+Each new image receives a local tag
+`localhost/symphony-next-ci-prepared:<reviewed-sha>-<profile>` before quality runs.
+Conflicting tags hold; the helper never deliberately retargets an existing tag.
+Tags prevent the images from being untagged; they are not backups and do not
+protect against removal of all unused images by an external administrator.
+`retention.json`, `image.id`, `seed.json` and `build.log` remain in the new private
+profile directory. No image archive or registry upload is performed.
+
+Both profiles must pass the unchanged offline Codex probe and isolated worker
+(including PostgreSQL, all five quality stages and cleanup). Main keeps its
+305-test floor; sn004 uses the already reviewed target/minimum331/test lock.
+After both pass, final checks verify source, old package/policy/receipt bytes,
+seed and historical seed receipts, new build/retention records and live image
+identities/layers. Only then does the existing package-swap and atomic disabled
+policy commit execute. Byte-exact completion gates and crash handling are shared
+with the accepted refresh; activation remains a separate owner action.
+
+`REBUILD_IMAGE_START`, `REFRESH_QUALITY_START` and final `REFRESHED_DISABLED` are
+progress/completion messages, not trusted PR checks. Each profile may take up to
+1800 seconds for build, 180 seconds for probe and 1500 seconds for quality.
+On any failure, retain both old preparations and all new partial evidence/images.
+Do not delete claims or rerun old prepare/repair helpers. A claimed recovery is
+single-use; interruption requires inspection and reconciliation, not blind retry.
+This helper neither restarts Docker nor activates CI, merges or deploys.
