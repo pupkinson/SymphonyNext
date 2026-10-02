@@ -1,5 +1,6 @@
 """Rebuild lost preparation images while preserving historical evidence."""
 import copy
+import fcntl
 import importlib
 import json
 from pathlib import Path
@@ -249,6 +250,41 @@ class RebuildMissingTests(unittest.TestCase):
     def test_cli_requires_owner_before_touching_native_or_policy(self):
         with patch.object(self.r.os, 'geteuid', return_value=997), self.assertRaisesRegex(Hold, 'owner_identity'):
             self.r.apply(HEAD, rebuild=True)
+
+    def test_shared_lock_serializes_supported_refresh_and_rebuild_writers(self):
+        lock_path = self.f.state / 'controller.lock'
+        def git(args, **kwargs):
+            if args == ['git', 'rev-parse', 'HEAD']:
+                return types.SimpleNamespace(stdout=HEAD.encode())
+            if args == ['git', 'status', '--porcelain', '--untracked-files=all']:
+                return types.SimpleNamespace(stdout=b'')
+            raise AssertionError(args)
+        with lock_path.open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with patch.object(self.r.os, 'geteuid', return_value=0), \
+                    patch.object(self.r.os, 'uname', return_value=types.SimpleNamespace(nodename='1c-db')), \
+                    patch.object(self.owner, 'run', side_effect=git):
+                for rebuild in (False, True):
+                    with self.subTest(rebuild=rebuild), self.assertRaisesRegex(Hold, 'controller_busy'):
+                        self.r.apply(HEAD, rebuild=rebuild)
+        self.assertEqual(self.events, [])
+
+    def test_external_writer_ignoring_lock_can_race_docker_tag_outside_contract(self):
+        # Characterization of Docker's non-CAS boundary, not a no-overwrite guarantee.
+        snapshot = self.snapshot()
+        root = self.f.state / 'external-race-fixture' / 'main'
+        (root / 'source').mkdir(parents=True)
+        tag = self.recovery.image_tag(HEAD, 'main')
+        conflicts = []
+        def external_writer(args, **kwargs):
+            self.images[tag] = {'Id': NEW['sn004']}
+            conflicts.append(self.images[tag]['Id'])
+            return self.docker_run(args, **kwargs)
+        self.o.run = external_writer
+        profile = self.recovery.build(self.o, root, self.profiles[0], snapshot, HEAD)
+        self.assertEqual(conflicts, [NEW['sn004']])
+        self.assertEqual(self.images[tag]['Id'], NEW['main'])
+        self.assertEqual(profile['image'], NEW['main'])
 
     def test_complete_preflight_wires_source_installation_history_and_missing_guards(self):
         f = self.f

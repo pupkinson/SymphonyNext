@@ -434,7 +434,14 @@ recorded in new evidence; historical image IDs and acceptance bytes are preserve
 
 Each new image receives a local tag
 `localhost/symphony-next-ci-prepared:<reviewed-sha>-<profile>` before quality runs.
-Conflicting tags hold; the helper never deliberately retargets an existing tag.
+The owner must reserve this tag namespace exclusively for these owner workflows.
+All supported refresh/rebuild writers hold the same `controller.lock` for the
+whole transition. Conflicts visible at inspection hold. Docker's tag operation
+has no compare-and-set: a separate administrator, process or Docker API client
+that ignores this lock can create a conflicting tag between inspection and tag
+creation, and Docker can overwrite it without a detectable failure. This helper
+does not provide no-overwrite protection against such external concurrent writers.
+Do not schedule another writer to this namespace while recovery is running.
 Tags prevent the images from being untagged; they are not backups and do not
 protect against removal of all unused images by an external administrator.
 `retention.json`, `image.id`, `seed.json` and `build.log` remain in the new private

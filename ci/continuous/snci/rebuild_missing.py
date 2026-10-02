@@ -67,7 +67,8 @@ def build(owner, root, profile, snapshot, head):
     require(decode(refresh.trusted(root / 'seed.json', private=True).read_bytes()) == snapshot['seed'],
             'rebuild_build_seed')
     owner.verify_seed_build(snapshot['seed'], image)
-    # Do not overwrite a tag created concurrently, even if preflight saw it absent.
+    # Catch observable conflicts. Docker tag has no compare-and-set: the owner
+    # must reserve this namespace for the workflow serialized by controller.lock.
     require(owner.inspect_image(tag, missing_ok=True) is None, 'rebuild_tag_exists')
     owner.run(owner.runner.DOCKER + ['image', 'tag', image, tag], timeout=30)
     require(owner.inspect_image(tag).get('Id') == image, 'rebuild_tag_readback')
