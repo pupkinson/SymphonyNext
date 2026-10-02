@@ -59,7 +59,7 @@ class TrackerSelectionSpecTests(unittest.TestCase):
         p = load(PLAN)
         required = {'INV-02','DEC-04','DEC-05','DATA-01','DATA-03','DATA-05','DATA-09',
                     'UI-02','INT-01','INT-02','INT-07','INT-08','NFR-11','AC-34','AC-73','SN-043',
-                    'TSK-01','TSK-04','TSK-10','TSK-13'}
+                    'TSK-01','TSK-04','TSK-10','TSK-13','BOOT-07'}
         self.assertTrue(required <= set(p['baseline_clauses_reinterpreted']))
         doc = (ROOT/DOC).read_text()
         for clause in required:
@@ -84,6 +84,32 @@ class TrackerSelectionSpecTests(unittest.TestCase):
         for task in graph:
             visit(task)
         self.assertEqual(set(p['final_milestone_required_tasks']), {t['id'] for t in p['tasks']})
+
+    def test_effective_mcp_tracker_and_final_gates_are_acyclic(self):
+        from test_mcp_input_contracts import compose_fixture, check_graph
+        p = load(PLAN)
+        mcp = load('planning/mcp-execution.json')
+        tasks = compose_fixture(load('planning/backlog.json'), mcp)
+        for task in p['tasks']:
+            self.assertNotIn(task['id'], tasks)
+            tasks[task['id']] = dict(task, depends_on=list(task['depends_on']))
+        self.assertEqual(p['acceptance_extension_targets'], ['SN-042', 'SN-044'])
+        for target in p['acceptance_extension_targets']:
+            tasks[target]['depends_on'] += p['final_milestone_required_tasks']
+        graph = check_graph(tasks, include_contracts=True)
+        required = set(p['final_milestone_required_tasks']) | {t['id'] for t in mcp['tasks']}
+        for target in p['acceptance_extension_targets']:
+            seen, todo = set(), list(graph[target])
+            while todo:
+                current = todo.pop()
+                if current not in seen:
+                    seen.add(current)
+                    todo.extend(graph[current])
+            self.assertTrue(required <= seen, target)
+        # A downstream final gate must not become a prerequisite of the adapter.
+        tasks['SN-TRK-01']['depends_on'].append('SN-044')
+        with self.assertRaisesRegex(ValueError, 'contract_cycle'):
+            check_graph(tasks, include_contracts=True)
 
     def test_all_source_manifest_entries_match(self):
         for line in (ROOT/'MANIFEST.sha256').read_text().splitlines():

@@ -32,14 +32,14 @@
     },
     {
       "path": "docs/superpowers/specs/2026-10-02-tracker-selection-design.md",
-      "sha256": "98330b5aaef2fcbccf2811e82b5535124aa66131a556b05094529dc785a42156",
+      "sha256": "35c87f42b43a5d0e956357a61e55215b1f675aa25a469b0d483de54cd5084bf0",
       "requirements": "TRK-01..TRK-14",
       "acceptance": "AC-TRK-01..AC-TRK-12",
       "owner": "SN-006"
     },
     {
       "path": "planning/tracker-selection.json",
-      "sha256": "cff4121471f432be56ae3f284b65eecd7ab8d297fdc227269dcea8b3b32978e8",
+      "sha256": "0bcf9400da0d52dc6558206e2ea4af8cb241d8395ea10fd78f9883799adf2828",
       "requirements": "TRK-01..TRK-14",
       "acceptance": "AC-TRK-01..AC-TRK-12",
       "owner": "SN-TRK-05"

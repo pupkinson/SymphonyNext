@@ -35,7 +35,7 @@ project isolation, запись, review и recovery нового продукт�
 | TSK-13 | Native attachments остаются локальными. Внешние вложения — разрешённые provider refs или явно полученные project-scoped snapshots; токены и приватные URL не превращаются в публичные ссылки. Evidence выполнения остаётся в локальном защищённом storage. |
 | INT-01, INT-02, INT-08; раздел 10 | Native остаётся default, но routing выбирает native/github/linear на уровне проекта. Используются нормализованные scoped domain tools, не произвольный upstream GraphQL/HTTP доступ агента. |
 | NFR-11, AC-34, AC-73 | Без Linear работают native-проекты и ручные локальные функции; тест полной автономности выполняется в профиле без внешних tracker bindings. Выбранный внешний provider — явная зависимость только соответствующего проекта. GitHub как code provider не смешивается с tracker provider. |
-| Разделы 17.2, 18; SN-043 | Обязательность принудительного перевода каждого проекта с GitHub на native отменяется. Native import/cutover остаётся реализуемым и проверяемым вариантом. Для текущего bootstrap нет автоматического переключения; режим выбирается владельцем после drain. |
+| Разделы 17.2, 18, 26; SN-043, BOOT-07 | Переход на native — выбранный владельцем вариант, не обязанность каждого проекта. При выбранном cutover обязательны native acceptance, drain, snapshot, source→target mapping и count/hash readback; старые admission снимаются до передачи единственного execution owner. После такого перехода прежний bootstrap сохраняется stopped для rollback, без удаления. До выбранного cutover текущая постоянная GitHub-очередь продолжает работу. |
 
 ## Требования
 
