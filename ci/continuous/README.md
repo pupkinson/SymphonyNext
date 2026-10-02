@@ -326,10 +326,13 @@ historical seed definition; the protected runtime policy carries the transition.
 
 Use a clean, root-owned checkout under `/root` of the exact accepted refresh
 commit. Do not execute a moving branch, an unreviewed SHA, or an agent-controlled
-directory. The helper verifies Git HEAD/cleanliness, GitHub sole parent/scope,
+directory. The helper verifies Git HEAD/cleanliness, GitHub linear ancestry/scope,
 installed manifest and file bytes, disabled service/timer, controller lock,
 pending journal entries, leftover worker containers, historical receipts and
 current target identities before doing native work. Missing/stale inputs hold.
+Ancestry is bounded to the initial commit plus at most two review repair commits
+above the installed baseline; merges and unrelated history are rejected. The
+aggregate change must still contain exactly the same four permitted paths.
 
 From that checkout, with `REVIEWED_SHA` set to the exact independently accepted
 refresh commit (the coordinator supplies it in the PR evidence):
@@ -357,7 +360,11 @@ Review the fresh evidence, then activation remains a distinct owner operation:
 python3 -I /opt/symphony-next-ci/owner.py activate
 ```
 
-Activation verifies package revision/integrity, all receipt identities/hashes,
+Activation requires matching `commit-intent.json` and `COMPLETE.json` records
+bound to the installed revision and SHA256 of the entire disabled policy. Both
+receipt pointers must refer to that same refresh. Missing, partial or mismatching
+completion proof holds before login checks or timer changes. It also verifies
+package revision/integrity, all receipt identities/hashes,
 age<86400s, complete quality, ruleset and dedicated reviewer login. Only then
 does the existing timer start. Draft PRs need the existing `snv:verify` label;
 request one exact target after authoritative state readback. A final trusted
@@ -367,10 +374,13 @@ check still comes only from the protected controller's own review and execution.
 
 Any claimed attempt is single-use, even after a failure. Do not delete/reset it.
 Before installation, a failure leaves the original package and policy in place.
-If the package rename fails, the predecessor is restored. A crash/error after
+If the package rename fails, the predecessor is restored. If directory sync fails
+after a successful rename, both packages remain for owner reconciliation; no
+rollback into the now-occupied install path is attempted. A crash/error after
 `commit-intent.json` requires owner reconciliation of revision, policy digest and
 `COMPLETE.json`; never blindly retry or activate. If policy publication fails
-after package replacement, activation rejects mismatching installed revision.
+after package replacement, activation rejects a mismatching installed revision
+or missing completion proof even when policy replacement itself already happened.
 The old policy bytes are preserved privately as `policy-before.json`, and both
 old preparation directories remain untouched. Rollback is owner-operated while
 disabled: reconcile actual state before restoring the preserved package/policy;

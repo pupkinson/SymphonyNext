@@ -90,6 +90,46 @@ def package_delta(base, head):
     return package
 
 
+def reviewed_commit(api, head):
+    """One initial commit plus at most two linear review repairs above BASE."""
+    candidate = None
+    seen = set()
+    for _ in range(3):
+        require(isinstance(head, str) and re.fullmatch(r'[0-9a-f]{40}', head)
+                and head not in seen, 'refresh_commit_parent')
+        seen.add(head)
+        commit = api.request('GET', API + '/git/commits/' + head)
+        parents = commit.get('parents', [])
+        require(commit.get('sha') == head and len(parents) == 1, 'refresh_commit_parent')
+        if candidate is None:
+            candidate = commit
+        head = parents[0].get('sha')
+        if head == BASE:
+            return candidate
+    raise Hold('refresh_commit_parent')
+
+
+def completed_refresh(state, policy):
+    """Activation requires the disabled-policy commit's matching completion proof."""
+    head = policy['installed_revision']
+    require(isinstance(head, str) and re.fullmatch(r'[0-9a-f]{40}', head), 'refresh_completion_revision')
+    attempt = Path(state) / ('refresh-' + head)
+    profiles = policy['profiles']
+    if not any('preparation' in p for p in profiles) and not attempt.exists():
+        return  # Original first-use preparations retain their existing activation gate.
+    require(len(profiles) == 2 and {p['name'] for p in profiles} == {'main', 'sn004'}
+            and all(p.get('preparation') == 'refresh-' + head + '/' + p['name'] + '/acceptance.json'
+                    for p in profiles), 'refresh_completion_pointer')
+    expected = dict(head=head, policy_sha256=sha256(canonical(policy)))
+    try:
+        intent = decode(trusted(attempt / 'commit-intent.json', private=True).read_bytes())
+        complete = decode(trusted(attempt / 'COMPLETE.json', private=True).read_bytes())
+    except OSError:
+        raise Hold('refresh_completion_missing') from None
+    require(intent == expected and complete == dict(expected, status='REFRESHED_DISABLED', profiles=profiles),
+            'refresh_completion_mismatch')
+
+
 def sync(directory):
     fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
     try:
@@ -161,9 +201,7 @@ def preflight(owner, head, api, source):
     owner.validate_policy(policy)
     require(policy['codex_binary'] == owner.BINARY and policy['codex_sha256'] == owner.BINARY_SHA
             and sha256(trusted(owner.BINARY).read_bytes()) == owner.BINARY_SHA, 'refresh_codex')
-    commit = api.request('GET', API + '/git/commits/' + head)
-    require(commit.get('sha') == head and [p['sha'] for p in commit.get('parents', [])] == [BASE],
-            'refresh_commit_parent')
+    commit = reviewed_commit(api, head)
     _, old = source.tree(BASE)
     tree, new = source.tree(head)
     require(tree == commit['tree']['sha'], 'refresh_commit_tree')
@@ -289,22 +327,32 @@ def perform(owner, head, api, source):
     recheck(owner, snapshot, api, source)
     for profile in future['profiles']:
         read_acceptance(STATE, profile, future['codex_sha256'], time.time())
-    write_new(attempt / 'commit-intent.json', canonical(dict(head=head, policy_sha256=sha256(canonical(future)))))
+    committed = dict(head=head, policy_sha256=sha256(canonical(future)))
+    write_new(attempt / 'commit-intent.json', canonical(committed))
     INSTALL.rename(backup)
     sync(INSTALL.parent)
     try:
         stage.rename(INSTALL)
-        sync(INSTALL.parent)
     except Exception:
         backup.rename(INSTALL)
         sync(INSTALL.parent)
         raise
+    try:
+        sync(INSTALL.parent)
+    except OSError:
+        raise Hold('refresh_reconcile_package_sync') from None
     # The policy is one atomic commit for BOTH profiles. Any error after intent is a hold,
     # not a retry or automatic rollback; the full old package/policy remains preserved.
     owner.replace_policy(future)
     require(owner.load_policy() == future, 'refresh_policy_readback')
     result = attempt / 'COMPLETE.json'
-    write_new(result, canonical(dict(status='REFRESHED_DISABLED', head=head, profiles=future['profiles'])))
+    try:
+        write_new(result, canonical(dict(committed, status='REFRESHED_DISABLED', profiles=future['profiles'])))
+    except Exception:
+        # An interrupted/failed completion write must not become activation proof.
+        result.unlink(missing_ok=True)
+        sync(attempt)
+        raise
     print('REFRESHED_DISABLED ' + head, flush=True)
     return result
 

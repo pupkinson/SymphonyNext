@@ -312,6 +312,149 @@ class RefreshTests(unittest.TestCase):
         with patch.object(self.r.os, 'geteuid', return_value=997), self.assertRaisesRegex(Hold, 'owner_identity'):
             self.r.apply(HEAD)
 
+    def activation(self):
+        owner = importlib.import_module('owner')
+        (self.install / 'installed.json').write_bytes(canonical({}))
+        binary = self.root / 'codex'
+        binary.write_bytes(b'fixture binary')
+        for key, value in [('INSTALL', self.install), ('STATE', self.state),
+                           ('trusted', lambda p, **kw: binary if str(p) == '/usr/bin/fixture-codex' else Path(p)),
+                           ('load_policy', self.o.load_policy), ('replace_policy', self.o.replace_policy),
+                           ('validate_policy', lambda p: None), ('sha256', lambda b: CODEX),
+                           ('time', types.SimpleNamespace(time=lambda: NOW)),
+                           ('validate_rules', lambda *a: None)]:
+            mock = patch.object(owner, key, value)
+            mock.start()
+            self.addCleanup(mock.stop)
+        return owner
+
+    def test_activation_requires_matching_completion_intent_policy_and_revision(self):
+        self.flow()
+        result = self.r.perform(self.o, HEAD, self.api, self.source)
+        owner = self.activation()
+        complete = result.read_bytes()
+        intent_path = result.parent / 'commit-intent.json'
+        intent = intent_path.read_bytes()
+        policy = self.o.load_policy()
+        cases = ('missing', 'partial', 'wrong_head', 'wrong_digest', 'intent', 'missing_intent',
+                 'policy', 'pointer', 'stripped_pointers')
+        for case in cases:
+            result.write_bytes(complete)
+            intent_path.write_bytes(intent)
+            self.policy_path.write_bytes(canonical(policy))
+            if case == 'missing': result.unlink()
+            elif case == 'partial': result.write_bytes(b'{')
+            elif case == 'intent': intent_path.write_bytes(canonical({'head': HEAD, 'policy_sha256': '0' * 64}))
+            elif case == 'missing_intent': intent_path.unlink()
+            elif case == 'policy': self.policy_path.write_bytes(canonical(dict(policy, extra='changed')))
+            elif case == 'stripped_pointers':
+                changed = copy.deepcopy(policy)
+                for profile in changed['profiles']:
+                    profile.pop('preparation')
+                    profile.pop('preparation_sha256')
+                self.policy_path.write_bytes(canonical(changed))
+            elif case == 'pointer':
+                changed = copy.deepcopy(policy)
+                changed['profiles'][0]['preparation'] = 'refresh-' + 'e' * 40 + '/main/acceptance.json'
+                self.policy_path.write_bytes(canonical(changed))
+            else:
+                record = json.loads(complete)
+                record['head' if case == 'wrong_head' else 'policy_sha256'] = '0' * (40 if case == 'wrong_head' else 64)
+                result.write_bytes(canonical(record))
+            with self.subTest(case=case), patch.object(owner, 'GitHub') as github, patch.object(owner, 'run') as run:
+                with self.assertRaises((Hold, OSError)):
+                    owner.activate()
+                github.assert_not_called()
+                run.assert_not_called()
+                self.assertFalse(self.o.load_policy()['enabled'])
+
+    def test_completed_refresh_allows_existing_activation_checks(self):
+        self.flow()
+        self.r.perform(self.o, HEAD, self.api, self.source)
+        owner = self.activation()
+        with patch.object(owner, 'GitHub'), patch.object(owner, 'run') as run, \
+                patch.object(owner.pwd, 'getpwnam', return_value=types.SimpleNamespace(pw_uid=1, pw_gid=1)), \
+                patch.object(owner.subprocess, 'run'):
+            owner.activate()
+        self.assertTrue(self.o.load_policy()['enabled'])
+        run.assert_called_once_with(['systemctl', 'enable', '--now', 'symphony-next-ci.timer'])
+
+    def test_failure_after_real_policy_publish_cannot_activate(self):
+        self.flow()
+        publish = self.o.replace_policy
+        def fail(policy):
+            publish(policy)
+            raise OSError('injected failure after policy replace')
+        self.o.replace_policy = fail
+        with self.assertRaises(OSError):
+            self.r.perform(self.o, HEAD, self.api, self.source)
+        self.assertEqual(self.o.load_policy()['installed_revision'], HEAD)
+        owner = self.activation()
+        with patch.object(owner, 'GitHub') as github, self.assertRaises((Hold, OSError)):
+            owner.activate()
+        github.assert_not_called()
+        self.assertFalse(self.o.load_policy()['enabled'])
+
+    def test_completion_write_failure_after_file_creation_removes_activation_proof(self):
+        self.flow()
+        write = self.r.write_new
+        def fail(path, *args):
+            write(path, *args)
+            if path.name == 'COMPLETE.json':
+                raise OSError('injected completion durability failure')
+        with patch.object(self.r, 'write_new', side_effect=fail), self.assertRaises(OSError):
+            self.r.perform(self.o, HEAD, self.api, self.source)
+        self.assertEqual(self.o.load_policy()['installed_revision'], HEAD)
+        self.assertFalse((self.state / ('refresh-' + HEAD) / 'COMPLETE.json').exists())
+        owner = self.activation()
+        with patch.object(owner, 'GitHub') as github, self.assertRaises(Hold):
+            owner.activate()
+        github.assert_not_called()
+
+    def test_failed_policy_readback_never_writes_completion_proof(self):
+        self.flow()
+        publish = self.o.replace_policy
+        load = self.o.load_policy
+        def stale_readback(policy):
+            publish(policy)
+            self.o.load_policy = lambda: self.policy
+        self.o.replace_policy = stale_readback
+        with self.assertRaisesRegex(Hold, 'policy_readback'):
+            self.r.perform(self.o, HEAD, self.api, self.source)
+        self.assertEqual(load()['installed_revision'], HEAD)
+        self.assertFalse((self.state / ('refresh-' + HEAD) / 'COMPLETE.json').exists())
+
+    def test_directory_sync_failure_after_swap_preserves_both_packages(self):
+        self.flow()
+        sync = self.r.sync
+        def fail(directory):
+            if directory == self.install.parent and (self.install / 'revision').exists() \
+                    and (self.install / 'revision').read_text() == HEAD:
+                raise OSError('injected sync after swap')
+            sync(directory)
+        with patch.object(self.r, 'sync', side_effect=fail), self.assertRaisesRegex(Hold, 'reconcile_package_sync'):
+            self.r.perform(self.o, HEAD, self.api, self.source)
+        self.assertEqual((self.install / 'revision').read_text(), HEAD)
+        self.assertEqual((self.install.with_name('install-before-refresh-' + HEAD) / 'revision').read_text(), self.r.BASE)
+        self.assertEqual(self.o.load_policy(), self.policy)
+        self.assertFalse((self.state / ('refresh-' + HEAD) / 'COMPLETE.json').exists())
+
+    def test_reviewed_history_allows_bounded_repairs_without_rewriting_branch(self):
+        commits = {}
+        parent = self.r.BASE
+        for sha in ['a' * 40, 'b' * 40, 'c' * 40, 'd' * 40]:
+            commits[sha] = dict(sha=sha, parents=[{'sha': parent}], tree={'sha': 'f' * 40})
+            parent = sha
+        api = types.SimpleNamespace(request=lambda method, url: commits[url.rsplit('/', 1)[1]])
+        for sha in ['a' * 40, 'b' * 40, 'c' * 40]:
+            self.assertEqual(self.r.reviewed_commit(api, sha), commits[sha])
+        with self.assertRaises(Hold):
+            self.r.reviewed_commit(api, 'd' * 40)
+        for parents in [[], [{'sha': self.r.BASE}, {'sha': 'e' * 40}], [{'sha': 'a' * 40}], [{'sha': '../bad'}]]:
+            commits['a' * 40]['parents'] = parents
+            with self.subTest(parents=parents), self.assertRaises(Hold):
+                self.r.reviewed_commit(api, 'a' * 40)
+
 
 if __name__ == '__main__':
     unittest.main()
