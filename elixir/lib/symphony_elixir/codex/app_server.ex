@@ -4,7 +4,7 @@ defmodule SymphonyElixir.Codex.AppServer do
   """
 
   require Logger
-  alias SymphonyElixir.{Codex.DynamicTool, Config, PathSafety, SSH}
+  alias SymphonyElixir.{Codex.DynamicTool, Config, PathSafety, SSH, SubprocessEnv}
 
   @initialize_id 1
   @thread_start_id 2
@@ -204,7 +204,7 @@ defmodule SymphonyElixir.Codex.AppServer do
             :stderr_to_stdout,
             args: [~c"-lc", String.to_charlist(local_launch_command(dynamic_tool_binding))],
             cd: String.to_charlist(workspace),
-            env: tracker_secret_port_env(dynamic_tool_binding),
+            env: subprocess_secret_port_env(dynamic_tool_binding),
             line: @port_line_bytes
           ]
         )
@@ -220,7 +220,7 @@ defmodule SymphonyElixir.Codex.AppServer do
 
   defp local_launch_command(dynamic_tool_binding) do
     [
-      tracker_secret_unset_command(dynamic_tool_binding),
+      subprocess_secret_unset_command(dynamic_tool_binding),
       "exec #{Config.settings!().codex.command}"
     ]
     |> Enum.reject(&is_nil/1)
@@ -230,24 +230,23 @@ defmodule SymphonyElixir.Codex.AppServer do
   defp remote_launch_command(workspace, dynamic_tool_binding) when is_binary(workspace) do
     [
       "cd #{shell_escape(workspace)}",
-      tracker_secret_unset_command(dynamic_tool_binding),
+      subprocess_secret_unset_command(dynamic_tool_binding),
       "exec #{Config.settings!().codex.command}"
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" && ")
   end
 
-  defp tracker_secret_port_env(dynamic_tool_binding) do
+  defp subprocess_secret_port_env(dynamic_tool_binding) do
     dynamic_tool_binding.secret_environment_names
     |> valid_environment_names()
-    |> Enum.map(fn name -> {String.to_charlist(name), false} end)
+    |> SubprocessEnv.port_env()
   end
 
-  defp tracker_secret_unset_command(dynamic_tool_binding) do
-    case dynamic_tool_binding.secret_environment_names |> valid_environment_names() do
-      [] -> nil
-      names -> "unset " <> Enum.join(names, " ")
-    end
+  defp subprocess_secret_unset_command(dynamic_tool_binding) do
+    dynamic_tool_binding.secret_environment_names
+    |> valid_environment_names()
+    |> SubprocessEnv.unset_command()
   end
 
   defp valid_environment_names(names) do

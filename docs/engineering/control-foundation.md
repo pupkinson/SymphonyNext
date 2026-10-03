@@ -18,6 +18,15 @@ Use the new product's database and role. Do not reuse another application's
 database, credentials or writable state. No database connection is started by
 the control component when disabled.
 
+The database URL remains available to the control repository in the Symphony
+process. It is removed from the environment of Codex, all local workspace hooks
+and local SSH clients, including explicit SSH command environment overrides.
+Codex launch commands and local hooks also unset the variable after shell startup,
+so a shell profile cannot reintroduce it into the launched agent or hook. Ordinary
+environment variables and the existing tracker credential filtering are preserved.
+This environment boundary does not grant repository scripts database access;
+configure any required hook credentials separately with their own scopes.
+
 This ordering is defined in [Mix 1.19.6 `escript.build` source](https://github.com/elixir-lang/elixir/blob/v1.19.6/lib/mix/lib/mix/tasks/escript.build.ex)
 by `gen_main/5`, `main_body_for/4`, `load_config/1` and `start_app_for/1`.
 `Application.put_env/3` alone is not persistent, but the normal generated

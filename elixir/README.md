@@ -410,6 +410,9 @@ This project is licensed under the [Apache License 2.0](../LICENSE).
 
 `SymphonyControl.Application` adds an opt-in PostgreSQL repository alongside the
 existing scheduler. Database migrations are explicit and health checks are read-only.
+`SYMPHONY_CONTROL_DATABASE_URL` is retained for the control repository and removed
+from Codex, local workspace hooks and local SSH subprocess environments. Shell
+launches for Codex and local hooks also unset it after loading the shell profile.
 Control tests require an isolated PostgreSQL fixture through `SN004_TEST_PG_SOCKET`.
 See [the configuration and test guide](../docs/engineering/control-foundation.md)
 for startup, migration, health and authorization contracts. Default startup keeps

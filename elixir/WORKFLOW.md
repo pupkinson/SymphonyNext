@@ -41,6 +41,9 @@ codex:
 
 You are working on a Linear ticket `{{ issue.identifier }}`
 
+Symphony removes `SYMPHONY_CONTROL_DATABASE_URL` from Codex, local workspace hooks
+and local SSH children. Hooks must use their own scoped credentials when needed.
+
 {% if attempt %}
 Follow-up context:
 

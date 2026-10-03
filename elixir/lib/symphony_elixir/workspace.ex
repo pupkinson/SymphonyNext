@@ -4,7 +4,7 @@ defmodule SymphonyElixir.Workspace do
   """
 
   require Logger
-  alias SymphonyElixir.{Config, PathSafety, SSH}
+  alias SymphonyElixir.{Config, PathSafety, SSH, SubprocessEnv}
 
   @remote_workspace_marker "__SYMPHONY_WORKSPACE__"
 
@@ -401,7 +401,11 @@ defmodule SymphonyElixir.Workspace do
 
     task =
       Task.async(fn ->
-        System.cmd("sh", ["-lc", command], cd: workspace, stderr_to_stdout: true)
+        System.cmd("sh", ["-lc", SubprocessEnv.unset_command() <> " && " <> command],
+          cd: workspace,
+          stderr_to_stdout: true,
+          env: SubprocessEnv.system_cmd_env()
+        )
       end)
 
     case Task.yield(task, timeout_ms) do

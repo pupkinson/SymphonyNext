@@ -33,3 +33,5 @@ The opt-in PostgreSQL/health foundation is documented in
 [control-foundation.md](docs/engineering/control-foundation.md).
 It remains disabled by default; native tracker, Authentik and product deployment
 acceptance are separate milestones.
+Its database URL stays in Symphony; Codex, workspace hooks and local SSH children
+do not inherit `SYMPHONY_CONTROL_DATABASE_URL`.
