@@ -521,3 +521,64 @@ On any failure, retain both old preparations and all new partial evidence/images
 Do not delete claims or rerun old prepare/repair helpers. A claimed recovery is
 single-use; interruption requires inspection and reconciliation, not blind retry.
 This helper neither restarts Docker nor activates CI, merges or deploys.
+
+
+### Recover recurrent image loss and retain running references
+
+The owner observed both prepared images and retention tags missing again,
+while seed, activated38 policy and saved zero-read review remained intact.
+PR55 claim/stage/backup were absent. Tagged images are still eligible for
+`docker image prune -a`; stopped anchors are eligible for container/system
+prune. The deletion actor is UNKNOWN. No shared cleanup configuration changes.
+
+Use only an independently accepted exact candidate above PR55 HEAD
+10fc787a2b03c0dbd602f35991dd9aacd36718ab/tree812fe91fc7fe9154229f2e4ecad475b98da5250e.
+New helper `snci/recover_retention.py` validates bounded candidate delta,
+exact paused activated policy, old package/manifest, prior activation,
+immutable held attempt and historical receipts, current PR14/quality-source
+bindings, native binary/seed/daemon/rules and stopped units/no live workers.
+Its new claim is private refresh-HEAD; all prior claims/receipts remain intact.
+Do not invoke the consumed38 rebuild or replay PR55's rejected preflight.
+
+The staged exact candidate runs the accepted9-case offline fake-provider
+native probe once as existing snci-review in fresh unauthenticated homes.
+Both dependency images are built once from unchanged locked sources/recipe
+and pinned local seed. Build IDs may differ: each image receives a fresh
+full locked worker quality run and receipt with actual timestamp/results.
+Historical receipts are checked as history, never reset to confer freshness.
+
+Two names `snci-retain-HEAD-{main,sn004}` run only a Python signal wait,
+with inherited healthcheck disabled, UID/GID10001, networknone, readonly,
+no mounts/secrets/socket/caps, no-new-privileges, 0.05CPU/32MiB/16PIDs each
+and restartunless-stopped. Exact inspected identity/isolation/running state
+binds each image. These references protect against ordinary Docker
+image/container/system prune; forced deletion, keeper termination and daemon
+data loss remain outside that guarantee and cause HOLD. They are retention
+resources, not model/quality workers, and spend no model calls.
+
+Before commit, recheck old package/policy/history/target/rules/binary/seed/daemon,
+fresh receipts, both keepers/images/tags and staged bytes. Preserve predecessor
+package/private policy; atomically change only installed_revision and image/
+preparation fields in both profiles. All heads/trees/locks/thresholds/models/
+budgets/exceptions and enabled=true remain fixed. Dedicated timer/service
+remain disabled/stopped; do not invoke activate or enable the timer.
+
+Run once in existing owner root tmux on1c-db from a clean root-owned checkout:
+
+```sh
+/usr/bin/python3 -I ci/continuous/snci/recover_retention.py --reviewed-head "$REVIEWED_HEAD"
+```
+
+Success is `RECOVERED_REVIEW_TRANSPORT_PAUSED HEAD`, with private byte-bound
+commit-intent/COMPLETE proof and full readback. An interruption/partial/unknown
+write retains claim, backups and owned keeper/build evidence for reconciliation;
+no automatic deletion, replay or rollback. Only after completion verification
+may the owner start the dedicated CI service once under unchanged daily<=4.
+Actual exact-HEAD review/quality/check gates still apply; no CI success or
+release is implied by source tests or this maintenance transition.
+
+Author source tests:213 total,212passed,one existing native isolation skip,
+0failures/errors,exit0; log SHA256
+0209e133f92ea046ac88683fb7b50cf2e41ba1487156f089f18aef7b81215374.
+Protected native recovery/build/keepers/quality/install/live model/check
+NOT_RUN during source work. Current actor/runtime availability UNKNOWN.
