@@ -408,12 +408,19 @@ This project is licensed under the [Apache License 2.0](../LICENSE).
 
 ## Native control foundation
 
-`SymphonyControl.Application` adds an opt-in PostgreSQL repository alongside the
-existing scheduler. Database migrations are explicit and health checks are read-only.
-`SYMPHONY_CONTROL_DATABASE_URL` is retained for the control repository and removed
-from Codex, local workspace hooks and local SSH subprocess environments. Shell
-launches for Codex and local hooks also unset it after loading the shell profile.
-Control tests require an isolated PostgreSQL fixture through `SN004_TEST_PG_SOCKET`.
+`SymphonyControl.Application` supplies a PostgreSQL repository and read-only health
+components. The default legacy application and agent supervisor reject control
+enablement or access to its credentials before starting agent children. Individual
+Codex, workspace hook and SSH launch paths enforce the same restriction, including
+a retained URL in Linux's initial `/proc/self/environ`. Missing startup-environment
+evidence fails closed; platforms without this Linux evidence are not admitted.
+A verified OS/container identity boundary is required before control and agents
+can operate together. Parent Repo configuration remains intact.
+
+Credential-free children lose `SYMPHONY_CONTROL_DATABASE_URL` and receive
+`SYMPHONY_CONTROL_ENABLED=false`, including explicit overrides and shell/profile
+initialization. This filtering alone does not provide process isolation.
+Control component tests require isolated PostgreSQL through `SN004_TEST_PG_SOCKET`.
 See [the configuration and test guide](../docs/engineering/control-foundation.md)
-for startup, migration, health and authorization contracts. Default startup keeps
-control disabled; this does not expose a production tracker or Authentik integration.
+for startup, migration, health, authorization and test limits. Default startup
+keeps control disabled; production tracker and Authentik acceptance remain separate.

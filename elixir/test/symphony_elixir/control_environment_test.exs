@@ -2,7 +2,7 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
   use SymphonyElixir.TestSupport
 
   alias SymphonyControl.{Repo, RuntimeConfig}
-  alias SymphonyElixir.SSH
+  alias SymphonyElixir.{SSH, SubprocessEnv}
 
   @database_url "SYMPHONY_CONTROL_DATABASE_URL"
   @canary "postgres://synthetic_user:synthetic_password@example.invalid/control_fixture"
@@ -28,10 +28,11 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
       File.rm_rf!(root)
     end)
 
-    System.put_env(@database_url, @canary)
+    System.delete_env(@database_url)
     System.put_env(@ordinary, "ordinary-value")
     System.put_env("SYMPHONY_CONTROL_ENABLED", "true")
-    assert :ok = RuntimeConfig.configure()
+    Application.put_env(:symphony_elixir, :control_enabled, false)
+    Application.delete_env(:symphony_elixir, Repo)
 
     %{root: root}
   end
@@ -44,7 +45,8 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     profile = Path.join(root, "profile.sh")
     File.mkdir_p!(workspace)
     install_codex!(binary, trace)
-    File.write!(profile, "export #{@database_url}='#{@canary}'\nexport #{@ordinary}='ordinary-value'\n")
+    marker = Path.join(root, "profile-ran")
+    File.write!(profile, "printf ran > '#{marker}'\nexport #{@database_url}='#{@canary}'\nexport SYMPHONY_CONTROL_ENABLED=true\nexport #{@ordinary}='ordinary-value'\n")
     System.put_env("BASH_ENV", profile)
 
     write_workflow_file!(Workflow.workflow_file_path(),
@@ -53,8 +55,9 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     )
 
     assert {:ok, _result} = AppServer.run(workspace, "Check child environment", issue())
-    assert File.read!(trace) == "DATABASE_URL:absent\nORDINARY:ordinary-value\n"
-    assert_parent_configuration()
+    assert File.read!(marker) == "ran"
+    assert File.read!(trace) == "DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n"
+    assert_credential_free_parent()
   end
 
   test "all local workspace hooks lose the database URL and keep ordinary environment", %{root: root} do
@@ -73,8 +76,8 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     assert :ok = Workspace.run_before_run_hook(workspace, issue())
     assert :ok = Workspace.run_after_run_hook(workspace, issue())
     assert {:ok, _removed} = Workspace.remove(workspace)
-    assert File.read!(trace) == String.duplicate("DATABASE_URL:absent\nORDINARY:ordinary-value\n", 4)
-    assert_parent_configuration()
+    assert File.read!(trace) == String.duplicate("DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n", 4)
+    assert_credential_free_parent()
   end
 
   test "SSH command children lose the database URL including an explicit override", %{root: root} do
@@ -84,13 +87,13 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     assert {:ok, {"", 0}} = SSH.run("fixture.invalid", "printf ok")
 
     assert {:ok, {"", 0}} =
-             SSH.run("fixture.invalid", "printf ok", env: [{@database_url, @canary}, {@ordinary, "override-value"}])
+             SSH.run("fixture.invalid", "printf ok", env: [{@database_url, @canary}, {"SYMPHONY_CONTROL_ENABLED", "true"}, {@ordinary, "override-value"}])
 
     assert File.read!(trace) ==
-             "DATABASE_URL:absent\nORDINARY:ordinary-value\n" <>
-               "DATABASE_URL:absent\nORDINARY:override-value\n"
+             "DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n" <>
+               "DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:override-value\n"
 
-    assert_parent_configuration()
+    assert_credential_free_parent()
   end
 
   test "SSH port children lose the database URL with either output mode", %{root: root} do
@@ -102,8 +105,8 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
       assert_receive {^port, {:exit_status, 0}}, 5_000
     end
 
-    assert File.read!(trace) == String.duplicate("DATABASE_URL:absent\nORDINARY:ordinary-value\n", 2)
-    assert_parent_configuration()
+    assert File.read!(trace) == String.duplicate("DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n", 2)
+    assert_credential_free_parent()
   end
 
   test "remote Codex launch clears a database URL introduced on the worker", %{root: root} do
@@ -116,6 +119,7 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
 
     install_ssh!(root, """
     export #{@database_url}='#{@canary}'
+    export SYMPHONY_CONTROL_ENABLED=true
     for arg do command="$arg"; done
     exec /bin/sh -c "$command"
     """)
@@ -128,8 +132,8 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     assert {:ok, _result} =
              AppServer.run(workspace, "Check worker environment", issue(), worker_host: "fixture.invalid")
 
-    assert File.read!(trace) == "DATABASE_URL:absent\nORDINARY:ordinary-value\n"
-    assert_parent_configuration()
+    assert File.read!(trace) == "DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n"
+    assert_credential_free_parent()
   end
 
   test "children also run when the control database variable is absent", %{root: root} do
@@ -138,22 +142,56 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     install_ssh!(root, environment_report(trace))
 
     assert {:ok, {"", 0}} = SSH.run("fixture.invalid", "printf ok")
-    assert File.read!(trace) == "DATABASE_URL:absent\nORDINARY:ordinary-value\n"
+    assert File.read!(trace) == "DATABASE_URL:absent\nCONTROL_ENABLED:false\nORDINARY:ordinary-value\n"
     assert System.get_env(@database_url) == nil
-    assert Application.fetch_env!(:symphony_elixir, Repo)[:url] == @canary
+    assert_credential_free_parent()
   end
 
-  defp assert_parent_configuration do
-    assert System.get_env(@database_url) == @canary
+  test "a real trusted configuration child disables control while parent Repo stays configured" do
+    System.put_env(@database_url, @canary)
+    assert :ok = RuntimeConfig.configure()
+
+    code = ~S"""
+    config = Config.Reader.read!("config/runtime.exs", env: :test)[:symphony_elixir]
+    IO.puts("CONTROL_ENABLED:" <> to_string(Keyword.get(config, :control_enabled, false)))
+    IO.puts("DATABASE_URL:" <> to_string(System.get_env("SYMPHONY_CONTROL_DATABASE_URL") != nil))
+    """
+
+    executable = System.find_executable("elixir") || raise "elixir executable is required"
+
+    assert {"CONTROL_ENABLED:false\nDATABASE_URL:false\n", 0} =
+             System.cmd(executable, ["-e", code],
+               env: SubprocessEnv.system_cmd_env([{"SYMPHONY_CONTROL_ENABLED", "true"}, {@database_url, @canary}]),
+               stderr_to_stdout: true
+             )
+
     assert Application.fetch_env!(:symphony_elixir, Repo)[:url] == @canary
     assert Application.fetch_env!(:symphony_elixir, :control_enabled)
-    assert :ok = RuntimeConfig.configure()
+    assert System.get_env(@database_url) == @canary
+  end
+
+  test "child policies retain tracker filtering and forbid enabling overrides" do
+    env = SubprocessEnv.port_env(["TRACKER_SECRET", "SYMPHONY_CONTROL_ENABLED"])
+    assert {~c"TRACKER_SECRET", false} in env
+    assert {~c"SYMPHONY_CONTROL_DATABASE_URL", false} in env
+    assert {~c"SYMPHONY_CONTROL_ENABLED", ~c"false"} in env
+    assert Enum.count(env, &(elem(&1, 0) == ~c"SYMPHONY_CONTROL_ENABLED")) == 1
+
+    assert SubprocessEnv.unset_command(["TRACKER_SECRET"]) ==
+             "unset TRACKER_SECRET SYMPHONY_CONTROL_DATABASE_URL && export SYMPHONY_CONTROL_ENABLED=false"
+  end
+
+  defp assert_credential_free_parent do
+    assert System.get_env(@database_url) == nil
+    assert System.get_env("SYMPHONY_CONTROL_ENABLED") == "true"
+    refute Application.get_env(:symphony_elixir, :control_enabled, false)
+    refute Application.get_env(:symphony_elixir, Repo, [])[:url]
   end
 
   defp environment_report(trace) do
     """
     if [ "\${#{@database_url}+present}" = present ]; then state=present; else state=absent; fi
-    printf 'DATABASE_URL:%s\\nORDINARY:%s\\n' "$state" "$#{@ordinary}" >> '#{trace}'
+    printf 'DATABASE_URL:%s\\nCONTROL_ENABLED:%s\\nORDINARY:%s\\n' "$state" "$SYMPHONY_CONTROL_ENABLED" "$#{@ordinary}" >> '#{trace}'
     """
   end
 

@@ -13,25 +13,50 @@ and backlog remain authoritative. It records no implementation or acceptance res
 
 ## Startup and migrations
 
-Control is disabled by default. `SYMPHONY_CONTROL_ENABLED=true` enables its
-supervisor and requires `SYMPHONY_CONTROL_DATABASE_URL` from a dedicated runtime
-secret reference. Mix embeds `config/runtime.exs` in an Elixir escript, evaluates
-it at launch, merges it over the build-time configuration and installs the
-merged values with `persistent: true` before invoking the CLI. `app: nil`
-suppresses automatic application startup; it does not suppress configuration
-loading. The CLI helper retains its explicit environment-validation contract.
-Use the new product's database and role. Do not reuse another application's
-database, credentials or writable state. No database connection is started by
-the control component when disabled.
+Control is disabled by default. The legacy application starts its agent scheduler
+and cannot safely share its process identity with the control database. Setting
+`SYMPHONY_CONTROL_ENABLED=true` configures control and requires a dedicated
+`SYMPHONY_CONTROL_DATABASE_URL`, but the default application and direct agent
+supervisor startup reject that combination with
+`{:error, :control_agent_runtime_unsupported}` before starting their children.
+No supported production control-and-agent composition is provided by this
+foundation. A separately verified OS/container identity boundary is required
+before that combination can be enabled (ARCH-04/SEC-02).
 
-The database URL remains available to the control repository in the Symphony
-process. It is removed from the environment of Codex, all local workspace hooks
-and local SSH clients, including explicit SSH command environment overrides.
-Codex launch commands and local hooks also unset the variable after shell startup,
-so a shell profile cannot reintroduce it into the launched agent or hook. Ordinary
-environment variables and the existing tracker credential filtering are preserved.
-This environment boundary does not grant repository scripts database access;
-configure any required hook credentials separately with their own scopes.
+The same admission check protects individual Codex, workspace hook and SSH
+launches, including direct/custom-named agent supervisor startup and its restart
+callback. Configured control, a retained Repo URL, a live control supervisor,
+and a URL in the current or initial process environment each prohibit a launch.
+On Linux the check reads only `/proc/self/environ`: deleting the current variable
+does not remove the initial bytes that a same-UID child could read. Unreadable or
+missing startup-environment evidence returns
+`{:error, :credential_environment_unverifiable}`. Platforms without this Linux
+proc evidence are not admitted; the existing macOS build target is not evidence
+of support for agent execution. Guards never erase parent Repo configuration or
+include database values in their errors. Existing after-run/before-remove cleanup
+contracts still ignore hook failure; the blocked hook itself never executes.
+
+Credential-free legacy launches remove the URL and force
+`SYMPHONY_CONTROL_ENABLED=false` in System.cmd and Port environments, even when
+an explicit override attempts to enable it. Codex, local hooks and remote SSH
+commands restore this policy after shell/profile initialization. Ordinary
+variables and existing tracker credential filtering are preserved. Hooks needing
+other credentials must receive separately scoped values. Environment filtering
+is defense in depth and does not constitute same-UID process isolation.
+
+The standalone `SymphonyControl.Application` and isolated PostgreSQL component
+fixtures exercise repository/health behavior without admitting agent execution.
+They are trusted developer components, not a control-only production runner or
+proof of isolation. Use the new product's database and role; never reuse another
+application's database, credentials or writable state. No database connection is
+started by the control component when disabled.
+
+Mix embeds `config/runtime.exs` in an Elixir escript, evaluates it at launch,
+merges it over build-time configuration and installs merged values with
+`persistent: true` before invoking the CLI. `app: nil` suppresses automatic
+application startup, not configuration loading. The CLI helper retains its
+explicit environment-validation contract; its normal startup callback then
+applies the admission check described above.
 
 This ordering is defined in [Mix 1.19.6 `escript.build` source](https://github.com/elixir-lang/elixir/blob/v1.19.6/lib/mix/lib/mix/tasks/escript.build.ex)
 by `gen_main/5`, `main_body_for/4`, `load_config/1` and `start_app_for/1`.
@@ -127,6 +152,23 @@ acceptance remain required. The previous source-review P1 assumed an omitted
 runtime merge; source inspection and the configuration-load tests do not support
 that premise for the documented Mix 1.19.6 path. This does not grant release
 approval or replace independent exact-HEAD review and trusted checks.
+
+## Credential regression tests
+
+`control_environment_test.exs` launches real credential-free fixture children,
+including a marked shell profile that reintroduces the URL and enablement flag.
+The final child has no URL and control is false. A trusted child evaluates the
+real `config/runtime.exs` with control disabled while its parent's Repo remains
+configured; it does not start the application or a database connection.
+
+`control_boundary_test.exs` uses only synthetic credentials. In a fresh VM started
+with a synthetic URL, an owned same-UID probe reads only that VM's known PID
+under `/proc` and demonstrates that the initial canary remains readable after
+the current variable is deleted. The product SSH launch and supervisor callback
+then refuse execution. Tests also cover direct startup, live control, local
+hooks, remote launch rejection, preserved cleanup, and missing/unreadable startup
+evidence. This proves rejection of the unsafe combination, not OS isolation,
+packaged entry-point acceptance or production runtime behavior.
 
 ## Release boundary
 
