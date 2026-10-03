@@ -8,7 +8,11 @@ The source PR does **not** install, activate, or certify itself.
 ## Behaviour
 
 A disabled-by-default systemd timer polls every two minutes. One controller,
-one reviewer and one worker at a time; maximum four new attempts per UTC day.
+one reviewer and one worker at a time. Explicit `daily_attempts: null` removes
+the UTC daily attempt ceiling; finite integer values from 1 through 4 remain
+supported, and initial installation defaults to 4. Missing fields, booleans,
+strings, floats and other values are rejected. Unlimited admission keeps all
+attempt accounting, per-attempt bounds and existing review/quality gates.
 Only same-repository open PRs into `main` qualify. Drafts require `snv:verify`.
 Every attempt binds exact PR/HEAD/base/policy. New HEAD creates a new attempt.
 A held attempt is never silently replayed. Evidence lives under the private
@@ -630,3 +634,51 @@ zero failures/errors,actual exit0; log SHA256
 c493e0ce9278ae1400902f592bc82c9c795cbe9fc9c2c15bf1c21c4a23e490dd.
 This is transport evidence; privileged installation/live model/trusted check
 are NOT_RUN by the source writer and remain separate acceptance gates.
+
+## Owner-requested removal of the daily ceiling
+
+The owner requested unlimited daily CI admission after four terminal review
+holds on 2026-10-03. This changes the daily count policy, not the terminal
+reviews, per-attempt execution bounds or the separate source repair budgets.
+The historical finite-budget statements above describe their original runs.
+
+`snci/daily_limit.py` installs the exact independently reviewed five-file
+increment above revision `344ea8d5129b7815c212d8a16c207b937dd825a5`. It binds the
+old installed package/policy and latest PR14 terminal hold, inputs and review
+bytes. It refuses active units, an enabled timer, pending journal rows, drift,
+unrelated source changes or a previously claimed transition. A failed oneshot
+with both MainPID and ControlPID zero is idle; its failure is not reset.
+
+The transition changes only `daily_attempts` to JSON `null` and
+`installed_revision` to the reviewed commit. It preserves every journal row,
+old attempt artifact, receipt and retention reference, captures predecessor
+transition metadata and retains an exact package and private policy backup.
+It starts no units, models or workers; it performs no Docker operation or
+GitHub check write. Unchanged native binary bytes are checked without execution.
+The controller lock, single-use private claim, staged byte verification,
+durable commit intent and policy/package/history readback protect installation.
+
+Run once from the clean root-owned exact reviewed checkout in owner tmux on
+`1c-db`, with the timer already disabled:
+
+```sh
+/usr/bin/python3 -I ci/continuous/snci/daily_limit.py --reviewed-head "$REVIEWED_HEAD"
+```
+
+Success prints `DAILY_LIMIT_REMOVED_PAUSED HEAD` and `VERIFIED_PAUSED` with
+`daily_attempts: null`, the new policy digest and a count with `remaining: null`.
+This certifies the paused policy/package transition, not a successful PR check.
+The latest PR14 `CHANGES_REQUESTED` review remains intact. A policy digest change
+creates new input identities; do not immediately rerun that unchanged rejected
+head or enable the timer. Correct the two high-severity findings first, then
+admit a new source increment through the normal independent review and quality
+gates. Unlimited daily admission never erases or overwrites a held tuple.
+
+If policy writing fails before replacement, the old package is restored and
+the candidate stage plus claim remain for diagnosis. If policy replacement
+succeeded before an error, its matching new package, predecessor and durable
+intent remain paused; no completion is claimed. Preserve evidence and reconcile
+the actual state before any new action. Never delete a claim to replay it,
+rewrite the journal or use a historical recovery completion after adding rows.
+The new completion audit checks preserved rows as an immutable subset, so later
+legitimate attempts do not invalidate the installation's original history.
