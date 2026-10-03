@@ -13,13 +13,15 @@ class Journal:
         self.db.execute('CREATE TABLE IF NOT EXISTS attempts (key TEXT PRIMARY KEY, target TEXT NOT NULL, policy TEXT NOT NULL, day TEXT NOT NULL, state TEXT NOT NULL, data TEXT NOT NULL)')
     def close(self):self.db.close()
     def claim(self,target,policy,limit):
+        require(limit is None or type(limit) is int and 1<=limit<=4,'policy_limits')
         key=sha256(canonical([target,policy]));day=datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.db.execute('BEGIN IMMEDIATE')
         try:
             if self.db.execute('SELECT 1 FROM attempts WHERE key=?',(key,)).fetchone():
                 self.db.rollback();return None
-            n=self.db.execute('SELECT count(*) FROM attempts WHERE day=?',(day,)).fetchone()[0]
-            require(n<limit,'daily_budget')
+            if limit is not None:
+                n=self.db.execute('SELECT count(*) FROM attempts WHERE day=?',(day,)).fetchone()[0]
+                require(n<limit,'daily_budget')
             self.db.execute('INSERT INTO attempts VALUES (?,?,?,?,?,?)',(key,json.dumps(target),policy,day,'running','{}'))
             self.db.commit();return key
         except BaseException:self.db.rollback();raise

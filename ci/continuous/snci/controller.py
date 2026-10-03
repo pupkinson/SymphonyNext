@@ -86,7 +86,9 @@ def process(api,journal,source,target,policy,digest,review_fn=reviewer.review,ru
 
 def validate_policy(p):
     require(p.get('schema')=='snci-policy/v1' and p.get('repository')=='pupkinson/SymphonyNext','policy_identity')
-    require(type(p.get('enabled')) is bool and type(p.get('daily_attempts')) is int and 1<=p['daily_attempts']<=4,'policy_limits')
+    require(type(p.get('enabled')) is bool and 'daily_attempts' in p and
+            (p['daily_attempts'] is None or type(p['daily_attempts']) is int and 1<=p['daily_attempts']<=4),
+            'policy_limits')
     require(1<=len(p.get('profiles',[]))<=4 and p.get('review_seconds')==900,'policy_profile_limits')
     require(isinstance(p.get('codex_binary'),str) and p['codex_binary'].startswith('/usr/')
             and re.fullmatch(r'[0-9a-f]{64}',p.get('codex_sha256','')),'policy_codex')
