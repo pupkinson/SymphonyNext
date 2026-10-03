@@ -7,6 +7,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from snci import controller
 from snci.common import Hold
 from snci.state import Journal
+from snci.reviewer import ReadOnlyContext
+from snci.common import canonical, sha256
 from test_pipeline import API, T
 
 class Source:
@@ -42,6 +44,21 @@ class ControllerFlowTest(unittest.TestCase):
         def fail(*a):raise Hold('worker_failed')
         with self.assertRaisesRegex(Hold,'worker_failed'):self.attempt(worker=fail)
         self.assertFalse(self.api.calls);self.assertFalse(self.attempt())
+    def test_source_denial_is_saved_without_untrusted_argument_values_or_retry(self):
+        ctx=ReadOnlyContext(None,{'x':{}},{'x':{}},['x'])
+        args={'path':'private-canary-value','revision':'head'}
+        def denied(*a):ctx.read(args)
+        ran=[]
+        with self.assertRaisesRegex(Hold,'review_source_only'):
+            self.attempt(denied,lambda *a:ran.append(1))
+        row=self.j.db.execute('SELECT key FROM attempts').fetchone()
+        data=self.j.get(row[0])['data']
+        self.assertEqual(data['reason'],'review_source_only')
+        self.assertEqual(data['review_diagnostic']['category'],'unknown_path')
+        self.assertEqual(data['review_diagnostic']['arguments_sha256'],sha256(canonical(args)))
+        self.assertNotIn('private-canary-value',canonical(data).decode())
+        self.assertFalse(ran);self.assertFalse(self.api.calls);self.assertFalse(self.attempt())
+        self.assertEqual({p.name for p in (self.root/'attempts'/row[0]).iterdir()},{'inputs.json'})
     def test_unknown_post_preserves_durable_intent(self):
         self.api.fail=True
         with self.assertRaises(Hold):self.attempt()
