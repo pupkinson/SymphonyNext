@@ -5,6 +5,12 @@ migrations, health endpoints and an authorization boundary for runtime identity.
 It does not complete the native tracker, Authentik, durable execution or product
 deployment acceptance. The existing Symphony scheduler remains unchanged.
 
+The [canonical requirements excerpt](control-foundation-requirements.md) copies
+the complete assigned SN-004 task, its ARCH/DATA requirements and acceptance rows,
+and selected invariant/security context with the canonical source hashes. This
+small source subset supplies readable review context; the canonical specification
+and backlog remain authoritative. It records no implementation or acceptance result.
+
 ## Startup and migrations
 
 Control is disabled by default. `SYMPHONY_CONTROL_ENABLED=true` enables its
