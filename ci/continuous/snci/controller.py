@@ -78,7 +78,10 @@ def process(api,journal,source,target,policy,digest,review_fn=reviewer.review,ru
     except Exception as e:
         # Publication intent survives EVERY exception for read-only reconciliation.
         row=journal.get(key)
-        if row['state']=='running':journal.set(key,'hold',{'reason':str(e) if isinstance(e,Hold) else 'internal_error'})
+        if row['state']=='running':
+            data={'reason':str(e) if isinstance(e,Hold) else 'internal_error'}
+            if isinstance(e,reviewer.SourceDenial):data['review_diagnostic']=e.diagnostic
+            journal.set(key,'hold',data)
         raise
 
 def validate_policy(p):

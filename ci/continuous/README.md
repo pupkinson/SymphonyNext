@@ -582,3 +582,51 @@ Author source tests:213 total,212passed,one existing native isolation skip,
 0209e133f92ea046ac88683fb7b50cf2e41ba1487156f089f18aef7b81215374.
 Protected native recovery/build/keepers/quality/install/live model/check
 NOT_RUN during source work. Current actor/runtime availability UNKNOWN.
+
+### Exact source paths and absent added/deleted versions
+
+The owner-installed06 launch ended in terminal `review_source_only` before
+review.json/result.json. Its rejected argument and read counters are UNKNOWN.
+Separately reproduced: a base read of an added file, or head read of a deleted
+file, used to abort the whole review. This is not proof of the live cause.
+
+`read_source` now advertises the exact verified path union and head/base aliases.
+A union-known path absent in that revision returns success=false with explicit
+`missing_revision` and available aliases. It reads no blob and satisfies no
+coverage; all available changed versions still require actual reads for READY.
+Missing requests consume the existing400-call budget. Successful read_count and
+total request_count are separate. Unknown/unsafe paths and invalid arguments
+still cause fatal HOLD. Typed source denials retain only category, argument hash,
+valid revision alias and counters in the new hold row; raw argument values are
+not persisted. Other security/identity/quality/publication gates are unchanged.
+
+`snci/repair_source.py` is a single-use paused transition above exact06. It checks
+the recovery proof against the original journal plus exactly the new terminal
+source-only hold, byte-bound inputs, retained images/tags/keepers, unchanged fresh
+receipts, binary/daemon/seed/rules and source/package bytes. Old recovery COMPLETE
+is an immutable pre-run proof; do not call its unchanged completed() after a CI
+row was added or rewrite its history hash to make it current.
+
+The helper stages only the independently accepted bounded delta and runs11
+offline native fake-provider cases as the existing reviewer account. It changes
+only installed_revision, keeps enabled=true and all image/preparation pointers,
+preserves every old claim/proof/row/receipt and creates a new private claim and
+package backup. It never builds, runs quality, starts units or publishes checks.
+Run once from the clean root-owned exact reviewed checkout in owner tmux on1c-db:
+
+```sh
+/usr/bin/python3 -I ci/continuous/snci/repair_source.py --reviewed-head "$REVIEWED_HEAD"
+```
+
+Success is `SOURCE_CONTRACT_INSTALLED_PAUSED HEAD`. Verify its new completion
+proof and remaining daily budget before one corrective live CI launch. The
+timer remains disabled. A terminal hold consumes this final bounded transport
+source repair (2/2); preserve diagnostics and stop instead of replaying it.
+Native fixture evidence:11 cases, actual exit0, unchanged Codex binary SHA256
+0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761;
+probe log SHA256 d33688c0c5271a655643aa27510f08b8413d428ab0358c1fe45b6f19fd90a707.
+Author source suite:233 tests,232 passed,one existing native-isolation skip,
+zero failures/errors,actual exit0; log SHA256
+c493e0ce9278ae1400902f592bc82c9c795cbe9fc9c2c15bf1c21c4a23e490dd.
+This is transport evidence; privileged installation/live model/trusted check
+are NOT_RUN by the source writer and remain separate acceptance gates.

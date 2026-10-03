@@ -84,12 +84,17 @@ def probe(binary,calls,expected,model='fixture-model'):
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,start_new_session=True)
         ctx=ReadOnlyContext(FixtureSource(),{'README.md':{'data':b'FIXTURE_HEAD_SOURCE'}},
                             {'README.md':{'data':b'FIXTURE_BASE_SOURCE'}},['README.md'])
+        if expected=='versions':
+            ctx=ReadOnlyContext(FixtureSource(),
+                {'README.md':{'data':b'FIXTURE_HEAD_SOURCE'},'added.txt':{'data':b'FIXTURE_ADDED_SOURCE'}},
+                {'README.md':{'data':b'FIXTURE_BASE_SOURCE'},'deleted.txt':{'data':b'FIXTURE_DELETED_SOURCE'}},
+                ['README.md','added.txt','deleted.txt'])
         s=Session(p,ctx,30)
-        held=False
+        held=False;reason=None
         try:
             s.rpc('initialize',{'clientInfo':{'name':'snci-native-probe','version':'1'},'capabilities':{'experimentalApi':True}})
             s.send({'method':'initialized','params':{}})
-            params=thread_params(tmp,model);params['modelProvider']='fixture'
+            params=thread_params(tmp,model,paths=ctx.paths);params['modelProvider']='fixture'
             started=s.rpc('thread/start',params);s.thread=started['thread']['id']
             assert started['sandbox']=={'type':'readOnly','networkAccess':False}
             assert started['approvalPolicy']=='never'
@@ -97,7 +102,7 @@ def probe(binary,calls,expected,model='fixture-model'):
             s.rpc('turn/start',{'threadId':s.thread,'environments':[],
                 'input':[{'type':'text','text':'Synthetic fixture: emit the supplied verdict.'}],'outputSchema':SCHEMA})
             try:s.finish(TARGET)
-            except Hold:held=True
+            except Hold as error:held=True;reason=str(error)
             assert REQUESTS
             names=inventory(REQUESTS[0])
             source_name=SOURCE_NAMESPACE+'.read_source'
@@ -109,6 +114,8 @@ def probe(binary,calls,expected,model='fixture-model'):
             source=next(t for t in request_tools(REQUESTS[0]) if t.get('name')==SOURCE_NAMESPACE)['tools'][0]
             assert source['name']=='read_source' and source['type']=='function',source
             assert source['parameters']['required']==['path','revision']
+            assert source['parameters']['properties']['path']['enum']==ctx.paths
+            assert source['parameters']['properties']['revision']['enum']==['head','base']
             for t in request_tools(REQUESTS[0]):
                 if t.get('name')=='functions':
                     for nested in t.get('tools',[]):
@@ -121,18 +128,28 @@ def probe(binary,calls,expected,model='fixture-model'):
             outputs=tool_outputs(REQUESTS[1:])
             if expected=='source':
                 assert not held
-                assert ctx.calls==2 and ctx.complete()
+                assert ctx.calls==2 and ctx.reads==2 and ctx.complete()
                 assert all(x in all_input for x in ('FIXTURE_HEAD_SOURCE','FIXTURE_BASE_SOURCE'))
+            elif expected=='versions':
+                assert not held
+                assert ctx.calls==6 and ctx.reads==4 and ctx.complete()
+                assert ctx.seen=={('head','README.md'),('base','README.md'),('head','added.txt'),('base','deleted.txt')}
+                assert all(x in all_input for x in ('FIXTURE_HEAD_SOURCE','FIXTURE_BASE_SOURCE',
+                                                    'FIXTURE_ADDED_SOURCE','FIXTURE_DELETED_SOURCE'))
+                assert 'missing_revision' in all_input
+                assert any('"revision":"base"' in x and '"path":"added.txt"' in x for x in outputs)
+                assert any('"revision":"head"' in x and '"path":"deleted.txt"' in x for x in outputs)
             else:
                 assert held
                 assert ctx.calls==0 and not ctx.complete()
+                assert reason==('review_source_only' if expected=='outside' else 'review_incomplete_source'),reason
                 if expected=='empty':assert any(json.loads(x).get('skills')==[] for x in outputs)
                 elif expected=='unavailable':assert outputs and 'not available' in outputs[-1]
                 elif expected=='host-disabled':
                     assert outputs and 'code-mode host is disabled' in json.dumps(outputs)
                     assert 'EXECUTED_FIXTURE_CANARY' not in json.dumps(outputs)
-            return {'model':model,'inventory':names,'read_count':ctx.calls,'source_bytes':ctx.bytes,
-                    'verdict_held':held,'result':'PASS'}
+            return {'model':model,'inventory':names,'read_count':ctx.reads,'request_count':ctx.calls,
+                    'source_bytes':ctx.bytes,'verdict_held':held,'hold_reason':reason,'result':'PASS'}
         finally:s.close();server.shutdown();server.server_close()
 
 def main():
@@ -140,8 +157,11 @@ def main():
     source=[{'name':'read_source','namespace':SOURCE_NAMESPACE,
              'arguments':json.dumps({'path':'README.md','revision':rev})} for rev in ('head','base')]
     outside=[dict(source[0],arguments=json.dumps({'path':'/etc/passwd','revision':'head'}))]
+    versions=[{'name':'read_source','namespace':SOURCE_NAMESPACE,'arguments':json.dumps({'path':path,'revision':rev})}
+              for path,rev in [('added.txt','base'),('deleted.txt','head'),('added.txt','head'),
+                               ('deleted.txt','base'),('README.md','head'),('README.md','base')]]
     common=[('unread-ready',[],'denied'),('source-both-versions',source,'source'),
-            ('outside-source',outside,'denied')]
+            ('outside-source',outside,'outside'),('added-deleted-versions',versions,'versions')]
     cases=[('fixture-model',name,calls,expected) for name,calls,expected in common+[
       ('empty-skills',[{'name':'list','namespace':'skills','arguments':json.dumps({'authority':{'kind':'executor'}})}],'empty'),
       ('private-file',[{'name':'read','namespace':'skills','arguments':'{}'}],'unavailable')]]

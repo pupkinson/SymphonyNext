@@ -45,7 +45,10 @@ spawn agents, access secrets, or publish. If information is insufficient return
 HOLD with limitations. READY means this bounded source increment has no critical
 or high/important required changes; it is not proof that tests ran or deployment
 is ready. Return the exact target identity and schema-bound verdict. Never copy
-credentials or private values from source into your conclusion.'''
+credentials or private values from source into your conclusion. Use exact paths
+from head_paths/base_paths and the revision aliases head/base. A missing_revision
+response means a known added/deleted file is absent in that revision; read its
+available version. It provides no source content and does not satisfy coverage.'''
 
 TOOL={'type':'function','name':'read_source','description':'Read a complete verified repository file from the exact head or base. No host filesystem access.',
       'inputSchema':{'type':'object','properties':{'path':{'type':'string'},'revision':{'type':'string','enum':['head','base']}},
@@ -60,32 +63,58 @@ SCHEMA={'type':'object','properties':{
     'limitations':{'type':'array','items':{'type':'string'}}},
     'required':['pr','head','base','tree','verdict','findings','limitations'],'additionalProperties':False}
 
-def thread_params(cwd,model):
+def thread_params(cwd,model,paths=None):
+    tool=json.loads(json.dumps(TOOL))
+    if paths is not None:tool['inputSchema']['properties']['path']['enum']=sorted(set(paths))
     out={'cwd':str(cwd),'ephemeral':True,'environments':[], 'runtimeWorkspaceRoots':[],
          'sandbox':'read-only','approvalPolicy':'never','approvalsReviewer':'user',
          'baseInstructions':INSTRUCTIONS,'developerInstructions':INSTRUCTIONS,
          'selectedCapabilityRoots':[], 'dynamicTools':[{'type':'namespace','name':SOURCE_NAMESPACE,
-             'description':'Verified immutable repository source only. Direct JSON calls; no execution.', 'tools':[TOOL]}],
+             'description':'Verified immutable repository source only. Direct JSON calls; no execution.', 'tools':[tool]}],
          'config':{'features':feature_config(),'agents':{'enabled':False},'web_search':'disabled','mcp_servers':{},
                    'project_doc_max_bytes':0,'project_doc_fallback_filenames':[],
                    'model_reasoning_effort':'high'}}
     if model:out['model']=model
     return out
 
+class SourceDenial(Hold):
+    """Only bounded, value-free source argument diagnostics may be persisted."""
+    def __init__(self,code,diagnostic):
+        super().__init__(code);self.diagnostic=diagnostic
+
+class MissingRevision(Exception):
+    """A verified union-known file has no blob in the requested revision."""
+    def __init__(self,path,revision,available):
+        self.result={'status':'missing_revision','path':path,'revision':revision,'available_revisions':available}
+
 class ReadOnlyContext:
     def __init__(self,source,head,base,changed):
         self.source=source;self.entries={'head':head,'base':base};self.changed=changed
-        self.seen=set();self.calls=0;self.bytes=0
+        self.paths=sorted(set(head)|set(base))
+        self.seen=set();self.calls=0;self.reads=0;self.bytes=0
+    def deny(self,code,category,args):
+        revision=args.get('revision') if isinstance(args,dict) else None
+        raise SourceDenial(code,{'schema':'snci-source-denial/v1','category':category,
+            'arguments_sha256':sha256(canonical(args)),
+            'revision':revision if isinstance(revision,str) and revision in self.entries else None,
+            'read_count':self.reads,'request_count':self.calls,'source_bytes':self.bytes,
+            'complete':self.complete()})
     def read(self,args):
-        require(isinstance(args,dict) and set(args)=={'revision','path'},'review_tool_arguments')
+        if not isinstance(args,dict) or set(args)!={'revision','path'}:
+            self.deny('review_tool_arguments','arguments',args)
         rev=args['revision'];path=args['path']
-        require(rev in self.entries and isinstance(path,str) and path in self.entries[rev],'review_source_only')
+        if not isinstance(rev,str) or rev not in self.entries:
+            self.deny('review_source_only','invalid_revision',args)
+        if not isinstance(path,str):self.deny('review_source_only','path_type',args)
+        if path not in self.paths:self.deny('review_source_only','unknown_path',args)
         self.calls+=1;require(self.calls<=400,'review_call_budget')
+        if path not in self.entries[rev]:
+            raise MissingRevision(path,rev,[r for r in ('head','base') if path in self.entries[r]])
         raw=self.source.blob(self.entries[rev][path]);self.bytes+=len(raw)
         require(self.bytes<=2*1024*1024,'review_context_budget')
         try:content=raw.decode('utf-8')
         except UnicodeError:raise Hold('review_binary_input') from None
-        self.seen.add((rev,path));return content
+        self.reads+=1;self.seen.add((rev,path));return content
     def complete(self):
         return all((rev,p) in self.seen for p in self.changed for rev in ('head','base') if p in self.entries[rev])
 
@@ -109,7 +138,9 @@ def handle_request(message,context,thread):
     p=message.get('params',{})
     require(p.get('threadId')==thread and p.get('tool')=='read_source'
             and p.get('namespace')==SOURCE_NAMESPACE,'review_unexpected_tool')
-    text=context.read(p.get('arguments'))
+    try:text=context.read(p.get('arguments'))
+    except MissingRevision as missing:
+        return {'contentItems':[{'type':'inputText','text':canonical(missing.result).decode()}],'success':False}
     return {'contentItems':[{'type':'inputText','text':text}],'success':True}
 
 def check_event(message):
@@ -196,7 +227,7 @@ def review(target,source,head,base,changed,policy):
         s.send({'method':'initialized','params':{}})
         account=s.rpc('account/read',{'refreshToken':False})
         require(account.get('account',{}).get('type')=='chatgpt','chatgpt_login_required')
-        started=s.rpc('thread/start',thread_params(cwd,policy.get('review_model')))
+        started=s.rpc('thread/start',thread_params(cwd,policy.get('review_model'),paths=context.paths))
         require(started.get('sandbox',{}).get('type')=='readOnly' and started.get('approvalPolicy')=='never'
                 and started.get('instructionSources',[])==[],'review_effective_policy')
         s.thread=started['thread']['id']
@@ -205,6 +236,6 @@ def review(target,source,head,base,changed,policy):
         s.rpc('turn/start',{'threadId':s.thread,'environments':[],'input':[{'type':'text','text':json.dumps(prompt)}],
                             'outputSchema':SCHEMA,'approvalPolicy':'never'})
         result=s.finish(target)
-        return {'verdict':result,'model':started.get('model'),'read_count':context.calls,
+        return {'verdict':result,'model':started.get('model'),'read_count':context.reads,'request_count':context.calls,
                 'read_paths':sorted([list(x) for x in context.seen]),'source_bytes':context.bytes}
     finally:s.close()
