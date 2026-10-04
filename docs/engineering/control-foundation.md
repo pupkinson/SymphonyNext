@@ -120,6 +120,39 @@ bindings, ACLs and the complete registry remain SN-005/006 work.
 
 ## Observable contracts
 
+The standalone component can start its own HTTP listener without the legacy
+agent application. After the trusted embedding process starts the existing
+Ecto/Plug/Bandit dependencies, it calls:
+
+```elixir
+SymphonyControl.Application.start_link(enabled: true, repo: dedicated_repo_options, http: [port: 4328])
+```
+
+HTTP is off when the `http` option is omitted or `nil`. The only accepted HTTP
+option is one integer `port` from 0 through 65535; zero selects an ephemeral port.
+Malformed, duplicate or extra options return
+`{:error, :invalid_control_http_options}` before the supervisor or Repo starts.
+The listener always binds IPv4 loopback `127.0.0.1`; no host override is provided.
+It is a child of the control supervisor, restarts independently, and closes when
+control stops. A Repo failure keeps liveness available and makes readiness fail.
+Listener startup failure also fails control startup and shuts down its Repo.
+No migration runs at startup.
+
+The small `SymphonyControl.Router` reuses the existing health/identity controller
+and exposes only the three GET routes below. Other methods on those paths return
+405 with `Allow: GET`; unknown routes return JSON 404. It exposes no dashboard,
+agent observability, project mutations or refresh operation. Client query
+parameters and headers never create a trusted actor. With no authentication
+middleware installed, this listener supplies no authenticated actor and identity
+is denied by default. SN-005 must supply a reviewed server authentication
+integration before disclosure.
+Loopback binding does not establish isolation from same-host processes.
+
+This opt-in component interface is not a control-only packaged entry point,
+production runner, Authentik integration or deployed web UI. The legacy startup
+guards and execution admission remain unchanged. Existing dashboard port 4327
+is not modified or evidence that this source increment is deployed.
+
 | Endpoint | Result |
 | --- | --- |
 | `GET /health/live` | 200 only while the control supervisor responds; otherwise 503. Body contains only `live`. |
@@ -185,8 +218,15 @@ Run as an unprivileged user with Elixir 1.19/OTP 28 and PostgreSQL tools availab
 ```
 
 The trap stops only that fresh cluster; evidence/data are retained in the printed
-temporary path for investigation. No model turn, production service, TCP listener,
-Docker socket or deployment is involved in this fixture.
+temporary path for investigation. HTTP tests use disposable loopback listeners.
+No model turn, production service, external network listener, Docker socket or
+deployment is involved in this fixture.
+
+`standalone_http_test.exs` exercises real TCP requests against the opt-in control
+listener: clean/migrated/partial schema responses, database loss and reconnect,
+identity denial with spoofed client input, excluded routes, strict configuration,
+listener restart and shutdown. A trusted server-assignment fixture separately
+checks the existing authorized identity response; it is not authentication.
 
 `schema_contract_test.exs` migrates real isolated schemas and changes required
 types, nullability, defaults, primary/unique keys and CHECK constraints. Each
