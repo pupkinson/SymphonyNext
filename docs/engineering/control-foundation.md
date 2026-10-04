@@ -78,13 +78,20 @@ is developed with its owning domain tasks.
 | Endpoint | Result |
 | --- | --- |
 | `GET /health/live` | 200 only while the control supervisor responds; otherwise 503. Body contains only `live`. |
-| `GET /health/ready` | 200 only with a reachable repository, exact supported migration versions and the required project relation columns. Otherwise 503 with `ready`, `database`, `schema` booleans. |
+| `GET /health/ready` | 200 only with a reachable repository, exact supported migration versions and the required projects schema contract. Otherwise 503 with `ready`, `database`, `schema` booleans. |
 | `GET /api/v1/control/identity` | 403 by default. Disclosure requires the configured server authorizer and the server's `current_actor` assignment. Query parameters do not supply authorization. |
 
 Each individual SQL probe has a 500 ms outer timeout, including connection
 checkout. Liveness and SQL probes run sequentially, so 500 ms is not an
-end-to-end readiness deadline. The schema check verifies migration versions
-and the availability of required columns, not their types, indexes or constraints.
+end-to-end readiness deadline. Read-only catalog checks verify the initial
+projects table's required column types, timestamp precision, NOT NULL/defaults,
+UUID primary key, immediate full unique key index and validated nonblank/positive
+CHECK definitions. Missing, partial, invalid or weakened definitions block
+readiness even when the migration version still matches. This is the supported
+initial migration contract, not an audit of every database object; a future
+supported migration must update that contract. CHECK/default expressions use
+PostgreSQL's non-pretty deparser output. An unsupported representation fails
+closed rather than asserting equivalent semantics.
 Readiness is read-only and does not open execution admission.
 Database failure does not by itself make the control supervisor dead. SQL,
 connection strings and exception details are not returned in health responses.
@@ -135,6 +142,12 @@ Run as an unprivileged user with Elixir 1.19/OTP 28 and PostgreSQL tools availab
 The trap stops only that fresh cluster; evidence/data are retained in the printed
 temporary path for investigation. No model turn, production service, TCP listener,
 Docker socket or deployment is involved in this fixture.
+
+`schema_contract_test.exs` migrates real isolated schemas and changes required
+types, nullability, defaults, primary/unique keys and CHECK constraints. Each
+fault must retain liveness and database connectivity while returning readiness
+false and HTTP 503. Existing migration, connection-loss and timeout tests remain
+applicable.
 
 ## Configuration-load tests and limits
 
