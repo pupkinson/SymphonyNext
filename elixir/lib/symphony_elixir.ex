@@ -33,21 +33,24 @@ defmodule SymphonyElixir.Application do
   @doc false
   @spec start_runtime() :: Supervisor.on_start()
   def start_runtime do
-    :ok = SymphonyElixir.LogFile.configure()
+    with :ok <- SymphonyElixir.ControlBoundary.check() do
+      :ok = SymphonyElixir.LogFile.configure()
 
-    children = [
-      {Phoenix.PubSub, name: SymphonyElixir.PubSub},
-      SymphonyElixir.WorkflowStore,
-      SymphonyElixir.AgentRuntimeSupervisor,
-      SymphonyElixir.HttpServer,
-      SymphonyElixir.StatusDashboard
-    ]
+      children = [
+        {Phoenix.PubSub, name: SymphonyElixir.PubSub},
+        SymphonyElixir.WorkflowStore,
+        SymphonyControl.Application,
+        SymphonyElixir.AgentRuntimeSupervisor,
+        SymphonyElixir.HttpServer,
+        SymphonyElixir.StatusDashboard
+      ]
 
-    Supervisor.start_link(
-      children,
-      strategy: :one_for_one,
-      name: SymphonyElixir.Supervisor
-    )
+      Supervisor.start_link(
+        children,
+        strategy: :one_for_one,
+        name: SymphonyElixir.Supervisor
+      )
+    end
   end
 
   @impl true

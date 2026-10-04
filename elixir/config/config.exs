@@ -2,6 +2,10 @@ import Config
 
 config :phoenix, :json_library, Jason
 
+config :symphony_elixir,
+  ecto_repos: [SymphonyControl.Repo],
+  control_enabled: false
+
 config :symphony_elixir, SymphonyElixirWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],

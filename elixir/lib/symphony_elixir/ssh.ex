@@ -1,16 +1,21 @@
 defmodule SymphonyElixir.SSH do
   @moduledoc false
 
+  alias SymphonyElixir.{ControlBoundary, SubprocessEnv}
+
   @spec run(String.t(), String.t(), keyword()) :: {:ok, {String.t(), non_neg_integer()}} | {:error, term()}
   def run(host, command, opts \\ []) when is_binary(host) and is_binary(command) do
-    with {:ok, executable} <- ssh_executable() do
-      {:ok, System.cmd(executable, ssh_args(host, command), opts)}
+    with :ok <- ControlBoundary.check(),
+         {:ok, executable} <- ssh_executable() do
+      opts = Keyword.put(opts, :env, SubprocessEnv.system_cmd_env(Keyword.get(opts, :env, [])))
+      {:ok, System.cmd(executable, ssh_args(host, SubprocessEnv.unset_command() <> " && " <> command), opts)}
     end
   end
 
   @spec start_port(String.t(), String.t(), keyword()) :: {:ok, port()} | {:error, term()}
   def start_port(host, command, opts \\ []) when is_binary(host) and is_binary(command) do
-    with {:ok, executable} <- ssh_executable() do
+    with :ok <- ControlBoundary.check(),
+         {:ok, executable} <- ssh_executable() do
       line_bytes = Keyword.get(opts, :line)
 
       port_opts =
@@ -18,7 +23,8 @@ defmodule SymphonyElixir.SSH do
           :binary,
           :exit_status,
           :stderr_to_stdout,
-          args: Enum.map(ssh_args(host, command), &String.to_charlist/1)
+          args: Enum.map(ssh_args(host, SubprocessEnv.unset_command() <> " && " <> command), &String.to_charlist/1),
+          env: SubprocessEnv.port_env()
         ]
         |> maybe_put_line_option(line_bytes)
 

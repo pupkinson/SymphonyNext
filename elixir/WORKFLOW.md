@@ -41,6 +41,12 @@ codex:
 
 You are working on a Linear ticket `{{ issue.identifier }}`
 
+Agent and hook launches require a credential-free legacy runtime. Symphony refuses
+these launches if control is configured or its database URL remains accessible in
+the current or initial process environment. Permitted children have no
+`SYMPHONY_CONTROL_DATABASE_URL` and have `SYMPHONY_CONTROL_ENABLED=false`, including
+after shell initialization. Hooks must use their own scoped credentials when needed.
+
 {% if attempt %}
 Follow-up context:
 

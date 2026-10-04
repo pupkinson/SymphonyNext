@@ -88,7 +88,7 @@ Symphony ships self-contained executables built with
 [Burrito](https://github.com/burrito-elixir/burrito). They embed Erlang/OTP, Elixir, and Symphony,
 but still expect `codex`, `git`, and the selected tracker credentials on the target machine.
 
-Supported release targets:
+Configured Burrito build targets:
 
 - `macos_arm64`
 - `macos_x86_64`
@@ -98,11 +98,17 @@ Supported release targets:
 `v*` tags publish all four targets with checksums. A manual workflow run builds the same
 artifacts without creating a release.
 
-After downloading the executable for your platform from a release:
+Build targets do not establish runtime support. Startup currently requires Linux
+with readable `/proc/self/environ`, even when control is disabled. The macOS
+targets remain build configurations; agent startup there is rejected with
+`credential_environment_unverifiable` because this Linux evidence is unavailable.
+Linux packaged execution and deployment readiness require separate verification.
+
+For a Linux x86_64 artifact, the launch command has this form:
 
 ```bash
-chmod +x ./symphony-v0.0.1-macos_arm64
-./symphony-v0.0.1-macos_arm64 ./WORKFLOW.md
+chmod +x ./symphony-v0.0.1-linux_x86_64
+./symphony-v0.0.1-linux_x86_64 ./WORKFLOW.md
 ```
 
 ## Configuration
@@ -405,3 +411,30 @@ you.
 ## License
 
 This project is licensed under the [Apache License 2.0](../LICENSE).
+
+## Native control foundation
+
+`SymphonyControl.Application` supplies a PostgreSQL repository and read-only health
+components. Its standalone interface accepts optional `http: [port: 4328]` to
+serve control health, identity and individual project GET routes on `127.0.0.1`;
+HTTP is off by default. `GET /api/v1/projects/:id` reuses the existing project-read
+authorization and returns a versioned field whitelist with UTC timestamps. Project
+responses are not cached. The listener includes no dashboard or authentication
+middleware, so identity and project disclosure remain forbidden until a reviewed
+server authentication integration exists. It is a
+component interface, not a production runner or change to dashboard port 4327.
+The default legacy application and agent supervisor reject control
+enablement or access to its credentials before starting agent children. Individual
+Codex, workspace hook and SSH launch paths enforce the same restriction, including
+a retained URL in Linux's initial `/proc/self/environ`. Missing startup-environment
+evidence fails closed; platforms without this Linux evidence are not admitted.
+A verified OS/container identity boundary is required before control and agents
+can operate together. Parent Repo configuration remains intact.
+
+Credential-free children lose `SYMPHONY_CONTROL_DATABASE_URL` and receive
+`SYMPHONY_CONTROL_ENABLED=false`, including explicit overrides and shell/profile
+initialization. This filtering alone does not provide process isolation.
+Control component tests require isolated PostgreSQL through `SN004_TEST_PG_SOCKET`.
+See [the configuration and test guide](../docs/engineering/control-foundation.md)
+for startup, migration, health, authorization and test limits. Default startup
+keeps control disabled; production tracker and Authentik acceptance remain separate.
