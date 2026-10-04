@@ -88,7 +88,7 @@ Symphony ships self-contained executables built with
 [Burrito](https://github.com/burrito-elixir/burrito). They embed Erlang/OTP, Elixir, and Symphony,
 but still expect `codex`, `git`, and the selected tracker credentials on the target machine.
 
-Supported release targets:
+Configured Burrito build targets:
 
 - `macos_arm64`
 - `macos_x86_64`
@@ -98,11 +98,17 @@ Supported release targets:
 `v*` tags publish all four targets with checksums. A manual workflow run builds the same
 artifacts without creating a release.
 
-After downloading the executable for your platform from a release:
+Build targets do not establish runtime support. Startup currently requires Linux
+with readable `/proc/self/environ`, even when control is disabled. The macOS
+targets remain build configurations; agent startup there is rejected with
+`credential_environment_unverifiable` because this Linux evidence is unavailable.
+Linux packaged execution and deployment readiness require separate verification.
+
+For a Linux x86_64 artifact, the launch command has this form:
 
 ```bash
-chmod +x ./symphony-v0.0.1-macos_arm64
-./symphony-v0.0.1-macos_arm64 ./WORKFLOW.md
+chmod +x ./symphony-v0.0.1-linux_x86_64
+./symphony-v0.0.1-linux_x86_64 ./WORKFLOW.md
 ```
 
 ## Configuration
