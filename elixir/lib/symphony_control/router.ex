@@ -3,11 +3,12 @@ defmodule SymphonyControl.Router do
   Read-only control component routes, independent of the agent dashboard.
 
   No authentication middleware or client-supplied actor is installed here.
-  Identity uses the existing server authorization boundary and defaults to deny.
+  Identity and project reads use server authorization boundaries and default to deny.
   """
 
   use Plug.Router
 
+  alias SymphonyControl.ProjectReadController
   alias SymphonyElixirWeb.ControlHealthController
 
   @known_paths [["health", "live"], ["health", "ready"], ["api", "v1", "control", "identity"]]
@@ -25,6 +26,18 @@ defmodule SymphonyControl.Router do
 
   get "/api/v1/control/identity" do
     ControlHealthController.identity(conn, %{})
+  end
+
+  get "/api/v1/projects/:id" do
+    ProjectReadController.show(conn, %{"id" => id})
+  end
+
+  match "/api/v1/projects/:id" do
+    conn
+    |> put_resp_header("allow", "GET")
+    |> put_resp_header("cache-control", "no-store")
+    |> put_status(:method_not_allowed)
+    |> Phoenix.Controller.json(%{error: "method_not_allowed"})
   end
 
   match _ do

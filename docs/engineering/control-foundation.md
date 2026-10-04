@@ -96,7 +96,8 @@ requires `:project_create` on `:platform`; reading and renaming require
 malformed, denying or throwing authorizers fail closed before database effects.
 The actor must come from trusted server authentication. The fixture authorizer
 is test-only; this callback is not Authentik, membership/RBAC acceptance or an
-agent capability. No new HTTP route or production authorizer is exposed.
+agent capability. The read-only HTTP adapter described below reuses this domain
+authorization; it supplies no production authorizer or mutation endpoint.
 
 Errors contain only `code`, safe `fields` and an optional `reference_id`:
 `invalid_input`, `forbidden`, `not_found`, `conflict`,
@@ -139,13 +140,14 @@ Listener startup failure also fails control startup and shuts down its Repo.
 No migration runs at startup.
 
 The small `SymphonyControl.Router` reuses the existing health/identity controller
-and exposes only the three GET routes below. Other methods on those paths return
+and the project-read adapter exposes only the four GET route patterns below.
+Other methods on those paths return
 405 with `Allow: GET`; unknown routes return JSON 404. It exposes no dashboard,
 agent observability, project mutations or refresh operation. Client query
 parameters and headers never create a trusted actor. With no authentication
 middleware installed, this listener supplies no authenticated actor and identity
-is denied by default. SN-005 must supply a reviewed server authentication
-integration before disclosure.
+and project reads are denied by default. SN-005 must supply a reviewed server
+authentication integration before disclosure.
 Loopback binding does not establish isolation from same-host processes.
 
 This opt-in component interface is not a control-only packaged entry point,
@@ -158,6 +160,46 @@ is not modified or evidence that this source increment is deployed.
 | `GET /health/live` | 200 only while the control supervisor responds; otherwise 503. Body contains only `live`. |
 | `GET /health/ready` | 200 only with a reachable repository, exact supported migration versions and the required projects schema contract. Otherwise 503 with `ready`, `database`, `schema` booleans. |
 | `GET /api/v1/control/identity` | 403 by default. Disclosure requires the configured server authorizer and the server's `current_actor` assignment. Query parameters do not supply authorization. |
+| `GET /api/v1/projects/:id` | 403 without a trusted server actor. A configured project authorizer must permit `:project_read` for the normalized path UUID. Responses have `Cache-Control: no-store`. |
+
+### Individual project read
+
+The project adapter is read-only and calls `Projects.get_project/2`; it never
+creates, edits, lists or admits project work. The path UUID supplies the project
+scope. Client query parameters, headers and bodies cannot create an actor or
+override the path ID. A missing or nil server actor is denied before domain/DB
+access even if a permissive authorizer would accept nil. With a trusted actor,
+the existing domain validates the UUID and authorizes that specific scope before
+querying the repository. Cross-project denial precedes the existence lookup.
+
+Success returns only this versioned representation; timestamps use UTC ISO8601:
+
+```json
+{
+  "schema_version": 1,
+  "project": {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "key": "ALPHA",
+    "name": "Project Alpha",
+    "lock_version": 5,
+    "inserted_at": "2026-10-04T00:00:00.000001Z",
+    "updated_at": "2026-10-04T01:00:00.000002Z"
+  }
+}
+```
+
+Errors contain only `{"error": "code"}`: `invalid_input` is 400, `forbidden`
+403, authorized `not_found` 404 and `dependency_unavailable` 503. Submitted IDs,
+actor values, SQL, exceptions and Ecto metadata are not returned in errors.
+Successful and failed reads, and 405 responses on the individual-project path,
+use `Cache-Control: no-store`. Other methods return 405 with `Allow: GET` without
+database effects. Collection and nested project routes remain JSON 404.
+The adapter assumes the supported migrated schema; readiness remains a separate
+required gate before exposing any product service. A read does not open admission.
+
+Trusted server-assignment fixtures prove the adapter and scope contract, not
+authentication. No Authentik, membership/RBAC acceptance, agent capability or
+production deployment is supplied by this component route.
 
 Each individual SQL probe has a 500 ms outer timeout, including connection
 checkout. Liveness and SQL probes run sequentially, so 500 ms is not an
@@ -233,6 +275,14 @@ types, nullability, defaults, primary/unique keys and CHECK constraints. Each
 fault must retain liveness and database connectivity while returning readiness
 false and HTTP 503. Existing migration, connection-loss and timeout tests remain
 applicable.
+
+`project_read_http_test.exs` uses a real migrated disposable schema and loopback
+HTTP. A test-only trusted embedding plug assigns a fixed server actor; the
+ordinary component listener supplies none. Tests check the versioned whitelist,
+UUID normalization, cross-project and spoofed-input denial, sanitized errors,
+no-store behavior, rejected methods and persisted reads after repository/listener
+restart. No client input authenticates a caller and no project mutation is run
+through HTTP.
 
 ## Configuration-load tests and limits
 

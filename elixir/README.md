@@ -416,9 +416,12 @@ This project is licensed under the [Apache License 2.0](../LICENSE).
 
 `SymphonyControl.Application` supplies a PostgreSQL repository and read-only health
 components. Its standalone interface accepts optional `http: [port: 4328]` to
-serve the three control GET routes on `127.0.0.1`; HTTP is off by default. The
-listener includes no dashboard or authentication middleware, so identity remains
-forbidden until a reviewed server authentication integration exists. It is a
+serve control health, identity and individual project GET routes on `127.0.0.1`;
+HTTP is off by default. `GET /api/v1/projects/:id` reuses the existing project-read
+authorization and returns a versioned field whitelist with UTC timestamps. Project
+responses are not cached. The listener includes no dashboard or authentication
+middleware, so identity and project disclosure remain forbidden until a reviewed
+server authentication integration exists. It is a
 component interface, not a production runner or change to dashboard port 4327.
 The default legacy application and agent supervisor reject control
 enablement or access to its credentials before starting agent children. Individual
