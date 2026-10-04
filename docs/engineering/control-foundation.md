@@ -73,6 +73,51 @@ key, nonblank name, positive revision and UTC timestamps. Memberships, registry
 operations and bindings are separate SN-005/006 work. The complete DATA-02 schema
 is developed with its owning domain tasks.
 
+## Internal project domain
+
+`SymphonyControl.Projects` operates on the existing identity-root schema:
+
+| Function | Contract |
+| --- | --- |
+| `create_project(actor, %{key: key, name: name})` | Creates a UUID, revision 1 and UTC timestamps on the server; accepts only the two atom-keyed text fields. |
+| `get_project(actor, uuid)` | Returns the persisted `SymphonyControl.Project` or a typed error. |
+| `rename_project(actor, uuid, expected_version, name)` | Changes only name and increments revision with a database optimistic lock. Stale and exhausted revisions conflict. |
+
+Each returns `{:ok, project}` or `{:error, %SymphonyControl.Error{}}`. Keys are
+case-sensitive opaque values; text must be valid UTF-8, nonblank and NUL-free.
+No case folding or trimming rewrites submitted names/keys. Caller-supplied UUID,
+revision, timestamp or other fields are rejected. A rename cannot change a key.
+The integer revision never wraps after 2147483647.
+
+The server configures `:project_authorizer`, a module implementing
+`authorize(actor, action, scope)`. Only `:ok` permits the operation. Creation
+requires `:project_create` on `:platform`; reading and renaming require
+`:project_read`/`:project_rename` on the normalized project UUID. Missing,
+malformed, denying or throwing authorizers fail closed before database effects.
+The actor must come from trusted server authentication. The fixture authorizer
+is test-only; this callback is not Authentik, membership/RBAC acceptance or an
+agent capability. No new HTTP route or production authorizer is exposed.
+
+Errors contain only `code`, safe `fields` and an optional `reference_id`:
+`invalid_input`, `forbidden`, `not_found`, `conflict`,
+`dependency_unavailable`, `unknown_outcome`. They do not expose submitted values,
+SQL or driver exceptions. Database query calls have a 500 ms timeout; a 750 ms
+outer database deadline also bounds stalled checkout. Authorization and input
+validation precede that database deadline, so it is not an end-to-end API limit.
+The driver and supervisor may reconnect; the domain never automatically retries
+a mutation. A confirmed stopped Repo is unavailable. Unconfirmed database writes
+return `unknown_outcome` with the generated/known project UUID; a read failure
+returns `dependency_unavailable`. Readback can show current persisted project
+state, but neither absence nor a matching name proves a particular write's
+outcome or makes retry safe. These are not idempotency or durable operation receipts.
+
+Calls own their database work and must not be composed inside another Repo
+transaction. The context does not accept execution commands, perform migrations,
+open admission or implement the future issue/activity/outbox transaction. It
+assumes the supported migrated schema; readiness remains a separate required
+gate before exposing any product service. Project memberships, descriptors,
+bindings, ACLs and the complete registry remain SN-005/006 work.
+
 ## Observable contracts
 
 | Endpoint | Result |
