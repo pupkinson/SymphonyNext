@@ -37,3 +37,11 @@ The legacy agent runtime refuses control enablement or retained database credent
 a verified OS/container identity boundary is required before running both together.
 Permitted children have no `SYMPHONY_CONTROL_DATABASE_URL` and control is disabled.
 Linux startup-environment evidence is required; missing evidence blocks execution.
+
+## Authentik protocol source checkpoint
+
+Task1 adds the disabled Config/Oidc/Clock adapter with exact Oidcc 3.9.0 and real
+disposable HTTPS regression tests. Targeted GREEN does not complete Task1 or SN-005:
+broader coverage, independent review, dependency-compatible protected CI and live
+bindings remain required. Native and Cloud attempt histories and current blockers
+are retained in [authentik-project-access.md](docs/engineering/authentik-project-access.md).

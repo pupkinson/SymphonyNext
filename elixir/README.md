@@ -55,6 +55,28 @@ tracker issue can become a dispatch candidate again after restart.
 
 ## Prerequisites
 
+### Disabled Authentik protocol adapter (Task1)
+
+`SymphonyControl.Auth.Config`, `Oidc` and `Clock` are source-only modules; they are
+not installed in the application supervisor or HTTP pipeline. Authentication stays
+disabled. The adapter pins Oidcc 3.9.0, uses operator-bound HTTPS endpoints, S256,
+one token POST, one key refresh, and a shared maximum 5-second network deadline.
+Secret values are read through owned file references and are never configuration
+fields. Test CA trust is confined to the disposable HTTPS fixture.
+
+Run the focused protocol suite from this directory after `mix setup`:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+The fixture requires an existing `openssl` binary and loopback listeners. Full
+`make all` also requires the existing disposable SN004 PostgreSQL fixture described
+in [control-foundation.md](../docs/engineering/control-foundation.md). Neither a
+focused GREEN nor compilation enables live SSO. Evidence, previous native history
+and the Cloud gate blockers are in
+[authentik-project-access.md](../docs/engineering/authentik-project-access.md).
+
 We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
 
 ```bash
