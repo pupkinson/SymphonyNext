@@ -7,7 +7,7 @@ from pathlib import Path
 import signal
 from .common import API, APP_ID, CHECK, RULESET, Hold, canonical, decode, require, sha256, trusted, write_new
 from .github import GitHub
-from .source import OMITTED_BLOBS, Source, changed_paths, protected_change, select_profile, validate_rules, validate_target
+from .source import OMITTED_BLOBS, Source, changed_paths, protected_change, select_profile, validate_owner_request, validate_rules, validate_target
 from .state import Journal
 from . import reviewer, runner
 
@@ -43,16 +43,21 @@ def publish(api,journal,key,body,guard):
 
 def guard(api,target,policy,policy_digest):
     require(sha256(trusted(POLICY,private=True).read_bytes())==policy_digest,'policy_changed')
-    validate_target(api.request('GET',API+'/pulls/'+str(target['pr'])),target)
+    validate_target(api.request('GET',API+'/pulls/'+str(target['pr'])),target,policy.get('owner_request'))
     validate_rules(api.request('GET',API+'/rulesets/'+str(RULESET)),policy['ruleset'])
 
 def process(api,journal,source,target,policy,digest,review_fn=reviewer.review,run_fn=runner.run):
+    request=policy.get('owner_request')
+    if request is not None:
+        validate_owner_request(request)
+        require(target=={k:request[k] for k in ('pr','head','base')},'owner_request_target')
     key=journal.claim(target,digest,policy['daily_attempts'])
     if not key:return False
     root=STATE/'attempts'/key
     try:
         root.mkdir(mode=0o755)
         tree,head=source.tree(target['head']);base_tree,base=source.tree(target['base'])
+        if request is not None:require(tree==request['tree'],'owner_request_tree')
         target=dict(target,tree=tree)
         paths=changed_paths(head,base);require(paths,'empty_change')
         protected_change(paths,target,policy)
@@ -90,6 +95,7 @@ def validate_policy(p):
             (p['daily_attempts'] is None or type(p['daily_attempts']) is int and 1<=p['daily_attempts']<=4),
             'policy_limits')
     require(1<=len(p.get('profiles',[]))<=4 and p.get('review_seconds')==900,'policy_profile_limits')
+    if 'owner_request' in p:validate_owner_request(p['owner_request'])
     require(isinstance(p.get('codex_binary'),str) and p['codex_binary'].startswith('/usr/')
             and re.fullmatch(r'[0-9a-f]{64}',p.get('codex_sha256','')),'policy_codex')
     require(len({x.get('name') for x in p['profiles']})==len(p['profiles']),'profile_names')
@@ -99,6 +105,16 @@ def validate_policy(p):
         require(any(path.startswith('elixir/test/') and path.endswith('_test.exs') for path in profile['locked']),'profile_locked_suite')
         require(isinstance(profile.get('image'),str) and re.fullmatch(r'sha256:[0-9a-f]{64}',profile['image']),'profile_image')
     validate_rules(p['ruleset'],p['ruleset'])
+
+def targets(api,policy):
+    if 'owner_request' in policy:
+        request=policy['owner_request'];validate_owner_request(request)
+        return [validate_target(api.request('GET',API+'/pulls/'+str(request['pr'])),owner_request=request)]
+    result=[]
+    for pr in api.pages(API+'/pulls?state=open&sort=created&direction=asc'):
+        try:result.append(validate_target(pr))
+        except Hold:continue
+    return result
 
 def tick():
     require(os.geteuid()==0,'controller_identity')
@@ -110,6 +126,9 @@ def tick():
         require(not name.startswith('/') and '..' not in name.split('/'),'installed_path')
         require(sha256(trusted(install/name).read_bytes())==expected,'installed_code_changed')
     raw=trusted(POLICY,private=True).read_bytes();policy=decode(raw);validate_policy(policy);digest=sha256(raw)
+    if 'owner_request' in policy:
+        from .pr75_profile import validate_preparation
+        validate_preparation(STATE,policy,raw)
     lock=open(STATE/'controller.lock','a')
     try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:lock.close();return 'ALREADY_RUNNING'
@@ -128,10 +147,7 @@ def tick():
                 journal.set(row['key'],'hold',{'reason':'interrupted_attempt_no_retry'})
         if not policy['enabled']:return 'DISABLED'
         source=Source(api,STATE/'blobs')
-        prs=api.pages(API+'/pulls?state=open&sort=created&direction=asc')
-        for pr in prs:
-            try:target=validate_target(pr)
-            except Hold:continue
+        for target in targets(api,policy):
             if process(api,journal,source,target,policy,digest):return 'TRUSTED_CHECK_READBACK_PASS'
         return 'NO_NEW_WORK'
     finally:journal.close();lock.close()
