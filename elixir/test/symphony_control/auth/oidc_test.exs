@@ -111,11 +111,62 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert OidcFixture.calls(f, :token) == 0
   end
 
-  test "untrusted certificate and hostname are refused" do
+  test "untrusted certificate is refused" do
     f = OidcFixture.start!()
     cfg = OidcFixture.config(f)
     assert {:error, :dependency_unavailable} == exchange(f, Map.put(cfg, :tls_cacerts, nil))
     assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "trusted CA with wrong SAN is independently refused before HTTP" do
+    f = OidcFixture.start!(wrong_san: true)
+    assert {:error, :dependency_unavailable} == exchange(f)
+    assert OidcFixture.calls(f, :discovery) == 0
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "HTTP202 cannot disclose token material through stop or exception telemetry" do
+    f = OidcFixture.start!(token_status: 202)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    owner = self()
+    handler = make_ref()
+    events = [[:oidcc, :request_token, :stop], [:oidcc, :request_token, :exception]]
+    :ok = :telemetry.attach_many(handler, events, fn event, measurements, metadata, _ -> send(owner, {:token_event, event, measurements, metadata}) end, nil)
+    on_exit(fn -> :telemetry.detach(handler) end)
+    log = capture_log(fn -> assert {:error, _} = Oidc.exchange(OidcFixture.config(f), code, @expectations, deadline()) end)
+    assert_receive {:token_event, [:oidcc, :request_token, :stop], _, metadata}
+    telemetry = inspect(metadata, limit: :infinity)
+    token = Agent.get(f.state, & &1.last_token)
+
+    for payload <- [token, "synthetic-access-canary", "synthetic-client-secret-canary", code] do
+      refute telemetry =~ payload
+      refute log =~ payload
+    end
+
+    refute_receive {:token_event, [:oidcc, :request_token, :exception], _, _}
+    assert OidcFixture.calls(f, :token) == 1
+  end
+
+  for seconds <- [0, -1] do
+    test "unusable access lifetime #{seconds} refuses otherwise valid identity" do
+      f = OidcFixture.start!(expires_in: unquote(seconds))
+      assert {:error, :forbidden} == exchange(f)
+      assert OidcFixture.calls(f, :token) == 1
+    end
+  end
+
+  for fault <- [:additional_audience, :multi_audience_no_azp] do
+    test "#{fault} is outside this client's audience policy" do
+      f = OidcFixture.start!(fault: unquote(fault))
+      assert {:error, :forbidden} == exchange(f)
+      assert OidcFixture.calls(f, :token) == 1
+    end
+  end
+
+  test "single approved audience does not require optional azp" do
+    f = OidcFixture.start!(fault: :single_audience_no_azp)
+    assert {:ok, %{subject: "human-1"}} = exchange(f)
+    assert OidcFixture.calls(f, :token) == 1
   end
 
   test "one absolute deadline includes discovery keys and token without renewal" do
@@ -125,6 +176,41 @@ defmodule SymphonyControl.Auth.OidcTest do
     elapsed = System.monotonic_time(:millisecond) - start
     assert elapsed < 850
     assert OidcFixture.calls(f, :token) == 1
+  end
+
+  test "staged connection dispatch and TLS handshake cannot produce a late POST" do
+    f = OidcFixture.start!()
+    cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
+    started = System.monotonic_time(:millisecond)
+    assert {:error, _} = exchange(f, cfg, 1_500)
+    assert System.monotonic_time(:millisecond) - started < 1_700
+    assert OidcFixture.calls(f, :tls_accept) == 1
+    assert OidcFixture.calls(f, :tls_handshake) == 1
+    Process.sleep(1_000)
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "missing access lifetime uses signed ID expiry without extending it" do
+    f = OidcFixture.start!(omit_expiry: true)
+    assert {:ok, identity} = exchange(f)
+    assert identity.credential_expires_at_ms <= System.system_time(:millisecond) + 120_000
+    assert identity.credential_expires_at_ms > System.system_time(:millisecond)
+  end
+
+  test "malformed discovery documents and throttling fail closed before POST" do
+    for fault <- [:invalid_json, :json_array, :rate_limited] do
+      f = OidcFixture.start!(fault: fault)
+      expected = if fault == :rate_limited, do: :rate_limited, else: :dependency_unavailable
+      assert {:error, ^expected} = exchange(f)
+      assert OidcFixture.calls(f, :token) == 0
+    end
+  end
+
+  test "malformed provider keys are sanitized before token submission" do
+    f = OidcFixture.start!(fault: :malformed_jwks)
+    log = capture_log(fn -> assert {:error, :forbidden} == exchange(f) end)
+    refute log =~ "synthetic-client-secret-canary"
+    assert OidcFixture.calls(f, :token) == 0
   end
 
   test "invalid bounded input and expired deadline make no network calls" do

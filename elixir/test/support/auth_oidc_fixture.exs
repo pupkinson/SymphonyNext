@@ -5,7 +5,8 @@ defmodule SymphonyControl.Auth.OidcFixture do
   alias SymphonyControl.Auth.Config
 
   def start!(opts \\ []) do
-    root = Path.join(System.tmp_dir!(), "sn005-https-#{System.unique_integer([:positive])}")
+    suffix = Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
+    root = Path.join(System.tmp_dir!(), "sn005-https-#{System.pid()}-#{suffix}")
     File.mkdir_p!(root)
     cert = Path.join(root, "cert.pem")
     key = Path.join(root, "key.pem")
@@ -13,7 +14,8 @@ defmodule SymphonyControl.Auth.OidcFixture do
     ca_key = Path.join(root, "ca-key.pem")
     csr = Path.join(root, "server.csr")
     extensions = Path.join(root, "extensions")
-    File.write!(extensions, "subjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n")
+    san = if Keyword.get(opts, :wrong_san), do: "DNS:foreign.example", else: "DNS:localhost,IP:127.0.0.1"
+    File.write!(extensions, "subjectAltName=#{san}\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n")
 
     {_, 0} =
       System.cmd(
@@ -112,6 +114,55 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
   def calls(f, endpoint), do: Agent.get(f.state, &Map.get(&1.counts, endpoint, 0))
 
+  def delayed_token_endpoint(f, connection_delay, handshake_delay) do
+    root = Agent.get(f.state, & &1.root)
+
+    opts = [
+      ip: {127, 0, 0, 1},
+      active: false,
+      backlog: 0,
+      certfile: Path.join(root, "cert.pem"),
+      keyfile: Path.join(root, "key.pem"),
+      sni_fun: fn _ ->
+        Agent.update(f.state, &update_in(&1, [:counts, :tls_handshake], fn count -> (count || 0) + 1 end))
+        Process.sleep(handshake_delay)
+        []
+      end
+    ]
+
+    {:ok, listener} = :ssl.listen(0, opts)
+    {:ok, {_, port}} = :ssl.sockname(listener)
+    {:ok, filler} = :gen_tcp.connect({127, 0, 0, 1}, port, [:binary, active: false], 1_000)
+    url = "https://localhost:#{port}/token"
+    Agent.update(f.state, &Map.put(&1, :token_url, url))
+    ExUnit.Callbacks.on_exit(fn -> :ssl.close(listener) end)
+
+    ExUnit.Callbacks.start_supervised!(
+      {Task,
+       fn ->
+         Process.sleep(connection_delay)
+         {:ok, queued} = :ssl.transport_accept(listener, 2_000)
+         :ssl.close(queued)
+         :gen_tcp.close(filler)
+         {:ok, socket} = :ssl.transport_accept(listener, 2_000)
+         Agent.update(f.state, &update_in(&1, [:counts, :tls_accept], fn count -> (count || 0) + 1 end))
+
+         try do
+           with {:ok, socket} <- :ssl.handshake(socket, 2_000),
+                {:ok, request} <- :ssl.recv(socket, 0, 1_000),
+                true <- String.starts_with?(request, "POST ") do
+             Agent.update(f.state, &update_in(&1, [:counts, :token], fn count -> (count || 0) + 1 end))
+           end
+         after
+           :ssl.close(socket)
+         end
+       end},
+      id: make_ref()
+    )
+
+    Map.put(config(f), :token_url, url)
+  end
+
   def record_log(f, log), do: Agent.update(f.state, &Map.put(&1, :captured_log, log))
 
   def assert_no_secret_echo(f) do
@@ -145,7 +196,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
     document = %{
       "issuer" => data.origin <> "/issuer",
       "authorization_endpoint" => data.origin <> "/authorize",
-      "token_endpoint" => data.origin <> "/token",
+      "token_endpoint" => Map.get(data, :token_url, data.origin <> "/token"),
       "jwks_uri" => data.origin <> "/jwks",
       "end_session_endpoint" => data.origin <> "/logout",
       "response_types_supported" => ["code"],
@@ -162,6 +213,9 @@ defmodule SymphonyControl.Auth.OidcFixture do
       :wrong_discovery_issuer -> json(conn, 200, Map.put(document, "issuer", data.origin <> "/other"))
       :redirect -> conn |> put_resp_header("location", data.origin <> "/other") |> send_resp(302, "")
       :oversized -> json(conn, 200, Map.put(document, "padding", String.duplicate("x", 1_048_577)))
+      :invalid_json -> send_resp(conn, 200, "{")
+      :json_array -> json(conn, 200, [])
+      :rate_limited -> json(conn, 429, %{"error" => "slow_down"})
       _ -> json(conn, 200, document)
     end
   end
@@ -169,7 +223,12 @@ defmodule SymphonyControl.Auth.OidcFixture do
   defp respond(conn, :jwks, _state, data) do
     {_, public} = data.signing |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
     kid = if Keyword.get(data.opts, :fault) == :unknown_kid and Map.get(data.counts, :jwks, 0) == 0, do: "old", else: "current"
-    json(conn, 200, %{"keys" => [Map.put(public, "kid", kid)]})
+
+    if Keyword.get(data.opts, :fault) == :malformed_jwks do
+      json(conn, 200, %{"keys" => [%{"kty" => "RSA", "n" => "?", "e" => "AQAB"}]})
+    else
+      json(conn, 200, %{"keys" => [Map.put(public, "kid", kid)]})
+    end
   end
 
   defp respond(conn, :token, state, data) do
@@ -201,7 +260,17 @@ defmodule SymphonyControl.Auth.OidcFixture do
         json(conn, 200, %{})
 
       true ->
-        json(conn, 200, %{"id_token" => token(data, expectations), "access_token" => "synthetic-access-canary", "token_type" => "Bearer", "expires_in" => 120, "scope" => "openid profile email"})
+        payload = %{
+          "id_token" => token(data, expectations),
+          "access_token" => "synthetic-access-canary",
+          "token_type" => "Bearer",
+          "expires_in" => Keyword.get(data.opts, :expires_in, 120),
+          "scope" => "openid profile email"
+        }
+
+        payload = if Keyword.get(data.opts, :omit_expiry), do: Map.delete(payload, "expires_in"), else: payload
+        Agent.update(state, &Map.put(&1, :last_token, payload["id_token"]))
+        json(conn, Keyword.get(data.opts, :token_status, 200), payload)
     end
   end
 
@@ -243,6 +312,10 @@ defmodule SymphonyControl.Auth.OidcFixture do
     case Map.get(changes, fault) do
       {field, value} -> Map.put(claims, field, value)
       nil when fault == :missing_sub -> Map.delete(claims, "sub")
+      nil when fault == :additional_audience -> Map.put(claims, "aud", ["control-client", "other-client"])
+      nil when fault == :multi_audience_no_azp -> claims |> Map.put("aud", ["control-client", "other-client"]) |> Map.delete("azp")
+      nil when fault == :single_audience_no_azp -> Map.delete(claims, "azp")
+      nil when fault == :malformed_jwks -> claims
       _ -> claims
     end
   end

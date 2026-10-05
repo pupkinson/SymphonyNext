@@ -1,5 +1,119 @@
 # Authentik project access: Task1 dependency preflight
 
+## Cloud repair attempt — 2026-10-05
+
+Status: **BLOCKED — repair allowance exhausted; source gates remain red**.
+Attempt `SN005-AUTH-PROTOCOL-01-CLOUD-REPAIR-20261005` was separately admitted in
+[GH33 comment5991103450](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5991103450)
+and [ACCEPTED before tracked edits](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5991221882).
+Source/base HEAD `d087257670213a545e9dcd5600bcea68b421c327`,
+tree `698307f7ea86a1bdef1559069ce353d731d27ed4`; one Cloud writer, same13-path Task1 allowlist.
+T0 was 2026-10-05T08:46:52.850766Z; deadline 09:16:52.850766Z, 1800 seconds including preflight.
+Repair cycles: **2/2**, profile changes: **0**. Implementation stopped after failed broader gates.
+The preceding native and Cloud reports below retain their original results and budgets.
+
+### Reviewed protocol corrections and wire evidence
+
+The five findings in [review5411919574](https://github.com/pupkinson/SymphonyNext/pull/75#pullrequestreview-5411919574)
+are represented by source corrections or independent wire assertions:
+unsupported token statuses are rejected before response bodies reach Oidcc telemetry;
+a deadline-owned task bounds the exchange and cleanup, with remaining-time checks and a send timeout
+immediately before transmission; zero/negative access lifetime and final expiry at/before current UTC
+are rejected; Oidcc trusted audiences are closed and identity admits only this scalar/singleton client;
+trusted-CA/wrong-SAN refusal is separate from untrusted-CA refusal.
+A single-client token without optional azp remains valid. Multi-audience tokens are all refused.
+Crypto remains owned by Oidcc3.9.0; the dependency and transitive lock are unchanged
+(lock SHA256 `13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`).
+
+Observed semantic RED: **39 tests/5 failures, exit2**, covering202 telemetry disclosure,
+zero/negative lifetime, additional audience and multi-audience/missing-azp.
+RED output SHA256 `444804ab3d9b5fc42575a1c162c6f568d7e5cd7a5e8201b8755bc69c244aae84`.
+The real staged TCP/TLS test fills a private listener's accept queue, releases it after600ms,
+then delays TLS SNI handling700ms. On original d087257 with a1500ms deadline, return took2534ms:
+**1 test/1 failure, exit2**, output SHA256
+`61fa05c559fa324fa3d8861687096604521b55de51251db1f7777953369e75e4`.
+That diagnostic worktree used current test/fixture overlays only; original product and lock stayed pinned,
+and the overlays were restored afterwards. The corrected source passes the bound and observes no POST,
+including after the delayed peer resumes.
+
+Final targeted command from elixir:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+Result: **43 tests/0 failures, exit0**, SHA256
+`a4047512447cfee4cb1c20d863de2baf25cb2888baea8fa5acea23e0ab058779`.
+HTTP202 captures stop/exception telemetry and logs and checks actual ID/access/code/secret canaries
+with one POST. Encrypted-only unsigned rejection, DPoP/lost-response one-POST and one unknown-kid
+refresh remain passing. Missing access expiry, malformed discovery/keys and429 were additionally exercised.
+The wrong-SAN finding was a missing proof; its new wire assertion passes with existing Mint hostname verification.
+
+A FIFO deadline probe passed on the original source and was not semantic RED.
+Its writer cleanup hung; the run was killed. A later fixture-directory collision reused a retained FIFO
+because unique_integer is only VM-local; fixture roots now include OS PID and random bytes.
+Both terminated runs and the unsuccessful probe are retained in the evidence directory.
+A malformed-discovery regression then failed with a forbidden projection; decoding failures now return
+the fixed dependency_unavailable reason. No ignored errors or coverage exemptions were introduced.
+
+### Cloud PostgreSQL and unchanged CoreTest comparison
+
+PostgreSQL17.11 Debian tools were downloaded/extracted into the owned evidence directory without
+system installation, root/sudo or protected-profile changes. Private cluster/data and Unix socket0700,
+listen_addresses='', port55474, role sn004_fixture/database sn004_test; version readback and SELECT1
+both exited0. Only SN004_TEST_PG_SOCKET selects this disposable fixture.
+The cluster is stopped at handoff; retained data/logs belong to this attempt.
+
+The same three unchanged CoreTest lines1022/1062/1102 were run with seed20261005 on isolated
+a2deb11 and d087257 worktrees, preserving each lock, and on the repaired source.
+Each run had **3 tests/2 failures, exit2**: normal continuation retry and progressive abnormal retry
+missed their remaining-time assertions; first abnormal retry passed in the focused comparison.
+Output SHA256s: baseline `17fbd96098266b4d78b34b90c878c29dcca545c36c101a03955ce4c5e2038517`,
+original `556c81d6756503ee18ec84cf327f30622e398b5348961d16629296e820b267c5`,
+repaired `4c6a14afac0fa5403fa5efbcd5a569c40b4c89e6fd2d73e6376dc24f42666a7c`.
+These results reproduce two baseline failures; they do not justify changing CoreTest/orchestrator or its timings.
+The broad run also failed first abnormal retry; that case's broad baseline status remains UNKNOWN.
+
+### Actual gates and remaining blockers
+
+| Command | Actual result |
+| --- | --- |
+| elixir --version / mix --version | exit0; Elixir/Mix1.19.5, OTP28/ERTS16.4 |
+| mix setup, baseline setup, original setup | exit0 |
+| mix format --check-formatted within make all | exit0 |
+| mix build within make all | exit0; escript built, not executed |
+| mix specs.check | exit0 |
+| mix credo --strict | exit12; six findings |
+| mix dialyzer --format short | exit2; one error |
+| make all with PostgreSQL fixture | exit2 at strict lint |
+| mix test --cover with PostgreSQL fixture | exit3; 456 tests/3 failures/6 existing skips |
+| bootstrap snapshot unittest | exit0; 12/0 |
+| unchanged MCP input contract unittest | exit0; 11/0 |
+
+Full coverage is **99.64%**, Oidc **97.24%**, Config/Clock **100%**.
+Full-run output SHA256 `27333c521e837becbd09896885df112106add7b67046eab33300dbb5368ccf96`.
+All76 PostgreSQL fixture failures from the prior Cloud attempt are cleared; remaining full-suite failures
+are the three named CoreTest timing cases. Coverage100 remains required and unachieved.
+Line-level HTML coverage is retained; no threshold/exclusion/skip change occurred.
+Credo reports long lines at Oidc159/216 and test134, nested bounded task creation, and two fixture
+respond functions above the complexity limit. Dialyzer rejects create_redirect_url's options contract:
+trusted_audiences was added to the shared authorization/exchange options map.
+The exhausted repair allowance prevents another correction in this attempt.
+
+Evidence root: `/workspace/scratch/SN005-AUTH-PROTOCOL-01-CLOUD-REPAIR-20261005`.
+Command records contain UTC start/end, argv/cwd, actual exit and output hashes; checkpoint and evidence
+manifest contain the final HEAD/tree, changed paths, fixture and source hashes, PR identity and cleanup.
+Manifest/diff/actual PR-body checks and exact-HEAD follow-up results are recorded there and in GH33.
+**VERIFIED:** targeted assertions, fixture/readbacks and the actual failures above.
+**INFERRED:** source corrections implement the reviewed refusal contracts; independent approval is absent.
+**UNKNOWN:** unexecuted broad baseline status of the third timing failure and production bindings.
+**BLOCKED:** Task1 source acceptance by lint/Dialyzer/coverage, independent new-HEAD review and trusted check.
+Protected dependency-compatible profile, trusted status, independent review and live acceptance remain **NOT_RUN**.
+Production auth remains disabled. Task2–5, CI policy/profile edits, merge and deployment were not performed.
+Rollback before merge is the preserved d087257 source; no runtime/schema rollback is needed.
+Next bounded action requires separate admission for the remaining Task1 gate defects; CoreTest repair needs its own scope.
+
+
 ## Cloud attempt — 2026-10-04
 
 **Current status: targeted GREEN; Task1 acceptance remains BLOCKED by broader source gates.**

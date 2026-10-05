@@ -14,7 +14,7 @@ defmodule SymphonyControl.Auth.Oidc do
 
   @spec authorization_url(Config.t(), map(), integer()) :: {:ok, String.t()} | {:error, Config.reason()}
   def authorization_url(%Config{} = cfg, input, deadline) do
-    guarded(fn ->
+    bounded(deadline, :get, fn deadline ->
       with :ok <- validate_input(input, true),
            {:ok, context, transport} <- context(cfg, deadline),
            {:ok, url} <- Oidcc.Authorization.create_redirect_url(context, Map.merge(options(cfg, input, transport), %{state: input.state, scopes: ["openid", "profile", "email"]})) do
@@ -25,7 +25,7 @@ defmodule SymphonyControl.Auth.Oidc do
 
   @spec exchange(Config.t(), binary(), map(), integer()) :: {:ok, verified_identity()} | {:error, Config.reason()}
   def exchange(%Config{} = cfg, code, input, deadline) do
-    guarded(fn ->
+    bounded(deadline, :post, fn deadline ->
       with true <- is_binary(code) and byte_size(code) in 1..4096,
            :ok <- validate_input(input, false),
            {:ok, context, transport} <- context(cfg, deadline),
@@ -38,6 +38,21 @@ defmodule SymphonyControl.Auth.Oidc do
         error -> error
       end
     end)
+  end
+
+  defp bounded(deadline, method, fun) do
+    deadline = min(deadline, now() + 5_000)
+
+    if deadline <= now() do
+      transport_error(:get)
+    else
+      task = Task.async(fn -> guarded(fn -> fun.(deadline) end) end)
+
+      case Task.yield(task, max(deadline - now(), 0)) || Task.shutdown(task, :brutal_kill) do
+        {:ok, result} -> result
+        _ -> transport_error(method)
+      end
+    end
   end
 
   defp exchange_options(cfg, input, transport) do
@@ -124,25 +139,27 @@ defmodule SymphonyControl.Auth.Oidc do
   end
 
   defp options(cfg, input, transport),
-    do: %{redirect_uri: cfg.callback_uri, nonce: input.nonce, pkce_verifier: input.verifier, require_pkce: true, request_opts: %{http_adapter: {__MODULE__, transport}}}
+    do: %{redirect_uri: cfg.callback_uri, nonce: input.nonce, pkce_verifier: input.verifier, require_pkce: true, trusted_audiences: [], request_opts: %{http_adapter: {__MODULE__, transport}}}
 
   defp refresh_keys(cfg, transport) do
     with {:ok, keys} <- get_json(cfg.jwks_url, transport), do: {:ok, JOSE.JWK.to_record(JOSE.JWK.from_map(keys))}
   end
 
   defp identity(cfg, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}} = token, deadline) do
-    current = System.system_time(:second)
+    current_ms = System.system_time(:millisecond)
+    current = div(current_ms, 1_000)
 
-    valid = valid_identity_claims?(claims, current) and now() < deadline
+    access_expiry =
+      case token.access do
+        %Oidcc.Token.Access{expires: seconds} when is_integer(seconds) -> current_ms + seconds * 1_000
+        _ -> claims["exp"] * 1_000
+      end
+
+    expiry = min(claims["exp"] * 1_000, access_expiry)
+    valid = valid_identity_claims?(claims, current) and claims["aud"] in [cfg.client_id, [cfg.client_id]] and expiry > current_ms and now() < deadline
 
     if valid do
-      access_expiry =
-        case token.access do
-          %Oidcc.Token.Access{expires: seconds} when is_integer(seconds) -> (current + seconds) * 1_000
-          _ -> claims["exp"] * 1_000
-        end
-
-      {:ok, %{issuer: cfg.issuer, subject: claims["sub"], sid: claims["sid"], credential_expires_at_ms: min(claims["exp"] * 1_000, access_expiry), tokens: %{id: token.id.token, access: token.access}}}
+      {:ok, %{issuer: cfg.issuer, subject: claims["sub"], sid: claims["sid"], credential_expires_at_ms: expiry, tokens: %{id: token.id.token, access: token.access}}}
     else
       {:error, :forbidden}
     end
@@ -160,7 +177,7 @@ defmodule SymphonyControl.Auth.Oidc do
          {:ok, document} when is_map(document) <- Jason.decode(body) do
       {:ok, document}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, reason} when reason in @reasons -> {:error, reason}
       _ -> {:error, :dependency_unavailable}
     end
   end
@@ -195,11 +212,13 @@ defmodule SymphonyControl.Auth.Oidc do
 
           verb = method |> Atom.to_string() |> String.upcase()
 
-          case Mint.HTTP1.request(conn, verb, uri.path || "/", headers, body) do
-            {:ok, conn, ref} ->
-              response = %{status: nil, headers: [], body: [], bytes: 0}
-              receive_response(conn, ref, transport, method, response)
-
+          with true <- remaining(transport) > 0,
+               :ok <- :ssl.setopts(Mint.HTTP1.get_socket(conn), send_timeout: remaining(transport), send_timeout_close: true),
+               true <- remaining(transport) > 0,
+               {:ok, conn, ref} <- Mint.HTTP1.request(conn, verb, uri.path || "/", headers, body) do
+            response = %{status: nil, headers: [], body: [], bytes: 0}
+            receive_response(conn, ref, transport, method, response)
+          else
             _ ->
               transport_error(method)
           end
@@ -247,11 +266,19 @@ defmodule SymphonyControl.Auth.Oidc do
   defp finish(%{status: status} = response, method, transport) when status in 200..299 do
     body = response.body |> Enum.reverse() |> IO.iodata_to_binary()
 
-    if method == :post and not signed_token?(body, transport.config.allowed_algorithms) do
-      {:error, :forbidden}
-    else
-      headers = Enum.map(response.headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
-      {:ok, {{~c"HTTP/1.1", status, ~c""}, headers, body}}
+    cond do
+      remaining(transport) <= 0 ->
+        transport_error(method)
+
+      method == :post and status not in [200, 201] ->
+        transport_error(method)
+
+      method == :post and not signed_token?(body, transport.config.allowed_algorithms) ->
+        {:error, :forbidden}
+
+      true ->
+        headers = Enum.map(response.headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
+        {:ok, {{~c"HTTP/1.1", status, ~c""}, headers, body}}
     end
   end
 

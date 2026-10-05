@@ -45,3 +45,7 @@ disposable HTTPS regression tests. Targeted GREEN does not complete Task1 or SN-
 broader coverage, independent review, dependency-compatible protected CI and live
 bindings remain required. Native and Cloud attempt histories and current blockers
 are retained in [authentik-project-access.md](docs/engineering/authentik-project-access.md).
+
+The separately admitted 2026-10-05 Cloud repair has 43/0 targeted tests and a real
+isolated PostgreSQL fixture. It remains BLOCKED by strict lint, Dialyzer, 99.64%
+coverage and existing CoreTest timing failures; its two repair cycles are consumed.
