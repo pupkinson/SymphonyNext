@@ -116,6 +116,14 @@ def targets(api,policy):
         except Hold:continue
     return result
 
+def validate_owner_preparation(state,policy,raw):
+    from . import pr75_profile, repair_review_paging
+    profile=next(p for p in policy['profiles'] if p['name']=='sn004')
+    if (profile.get('preparation')=='refresh-'+repair_review_paging.BASE+'/sn004/acceptance.json'
+            and policy['installed_revision']!=repair_review_paging.BASE):
+        return repair_review_paging.validate_preparation(state,policy,raw)
+    return pr75_profile.validate_preparation(state,policy,raw)
+
 def tick():
     require(os.geteuid()==0,'controller_identity')
     trusted(STATE,private=True,directory=True)
@@ -127,8 +135,7 @@ def tick():
         require(sha256(trusted(install/name).read_bytes())==expected,'installed_code_changed')
     raw=trusted(POLICY,private=True).read_bytes();policy=decode(raw);validate_policy(policy);digest=sha256(raw)
     if 'owner_request' in policy:
-        from .pr75_profile import validate_preparation
-        validate_preparation(STATE,policy,raw)
+        validate_owner_preparation(STATE,policy,raw)
     lock=open(STATE/'controller.lock','a')
     try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:lock.close();return 'ALREADY_RUNNING'

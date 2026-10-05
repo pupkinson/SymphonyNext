@@ -745,3 +745,83 @@ It never starts the service, enables scheduling, changes product auth, merges or
 A protected one-shot is a later concrete owner handoff and must freshly read back its exact
 inputs/review/result/check identities. The owner-reserved retention namespace and original
 Docker concurrency limitations still apply; the helper does not repair unavailable history.
+
+## Bounded source pages and preserved PR75 preparation
+
+The owner-reported PR75 attempt under policy
+`f50569540724f2be86dd77b529e6d0eb73d2ae0c8b6b23de27d354b859a2f414`
+held because the independent reviewer could not see the changed middle of both
+CoreTest versions. A source read counted by the coordinator does not establish
+that the native model received the entire tool output. The precise native
+truncation mechanism remains unverified by this source-only repair.
+
+`snci_source.read_source` now requires exactly `path`, `revision` and integer
+`page`, starting at zero. Each `snci-source-page/v1` response identifies the
+Git blob, full-source SHA256 and byte length, page index/count, byte offsets,
+page SHA256, content and `next_page`. Text is strict UTF-8 and preserves original
+newlines and bytes when reconstructed. Even an empty file has one page. The
+complete serialized contentItems result stays at most8192 bytes, including
+JSON escaping; partitioning additionally reserves256 bytes for the RPC wrapper.
+A long line is split at character boundaries. Binary input holds.
+
+Follow `next_page` to null and read every page of both available changed versions.
+Any unchanged context version whose reading begins must also be finished.
+Missing middle pages, repeated last pages and incomplete page sets cannot
+establish completion. After every page has been read, order does not affect
+completion. Known added/deleted absent versions retain the explicit
+`missing_revision` response and supply no coverage. Invalid pages/arguments or
+unknown paths are sanitized fatal denials. The unchanged400-request/2MiB served
+source/900-second review limits count duplicate pages and actual served bytes;
+`read_pages` records successful page identities. All role, capability, target,
+verdict and publication gates remain in force.
+
+The offline native probe retains all11 earlier direct and gpt-6-astra catalog
+cases and adds six: exact legacy whole-file characterization, large paged
+head/base reconstruction from actual captured provider requests, and missing
+middle-page rejection, for each catalog. Its fixture contains start/middle/end,
+Unicode, escaping and long-line content. `--baseline-package` is mandatory and
+pins the old e7 reviewer blob `4c95bbda74aea0541c54e0c3524ed2eb64bf5ca7`.
+The helper supplies the original still-installed package only after verifying
+its full manifest. Local decoder tests exercise complete, truncated, missing
+and altered captured pages; they do not run the canonical native Codex binary.
+The previous generic preparation commands are historical routes, not routes
+for this paging candidate: their probe invocation lacks this baseline binding.
+
+`snci/repair_review_paging.py` is a separate single-use owner maintenance leaf
+above exact CI source `e7f87ede8b4e93fd7ae2d83b8b19ab58dbb93207`. It requires
+the exact reported policy, complete original PR75 preparation, image/keeper and
+receipt bindings, original2f predecessor, unchanged rules/native binary,
+current PR75 identity and immutable terminal journal. Its14-path source delta
+includes only the admitted reviewer/maintenance/test/docs/manifest paths.
+No product, owner installer, profile definition, locks or worker path is allowed.
+Service must be inactive/dead or failed/failed with both PIDs zero; timer must
+be disabled/inactive/dead, workers absent and no publication pending.
+
+After independent source review and a separate concrete owner admission, this
+leaf may be invoked from its clean root-owned exact-SHA checkout on1c-db:
+
+```sh
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/repair_review_paging.py install --reviewed-head <ci-package-sha>
+```
+
+It claims `review-paging-<sha>` once, stages the closed package, runs the17-case
+probe as existing snci-review with fresh unauthenticated homes, and requires
+provider-byte acceptance on the unchanged pinned binary. It then rechecks all
+inputs, archives e7 at `symphony-next-ci-before-review-paging-<sha>`, records
+durable intent and changes **only** `installed_revision` in policy. Both profiles,
+receipt pointers/bytes/timestamps, unlimited budget accounting and owner request
+are preserved. No image build, quality rerun, login change or model switch occurs.
+
+Read-only completion validates current and archived package bytes, the original
+e7 completion against the archive and its original2f predecessor, all historical
+rows/files, exact HOLD101338df/input/review digests and the full native probe log.
+The controller requires this new completion before attempting the unchanged
+product tuple. New publishing rows may be reconciled without changing old rows.
+`COMPLETE.json` alone cannot hide actual package mutation. A failed/unknown write
+retains claim, intent and evidence for investigation; no replay is admitted.
+`verify --reviewed-head <ci-package-sha>` is a separate paused readback action.
+
+Source admission6002349621 does not execute that leaf. Native characterization,
+paged delivery, owner installation and a new trusted exact-HEAD check remain
+NOT_RUN. The old HOLD101338df remains immutable. Timer, service, production auth,
+Task2–5, merge and deploy remain outside this source-only repair.

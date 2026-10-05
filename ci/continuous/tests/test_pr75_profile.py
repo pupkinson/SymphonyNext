@@ -260,6 +260,22 @@ class TransitionTests(unittest.TestCase):
         with self.assertRaisesRegex(Hold, 'pr75_quality_already_claimed'):
             self.m.install(self.owner, CI_HEAD, None, self.source)
 
+    def test_archived_profile_proof_uses_actual_archive_without_rebinding_predecessor(self):
+        self.m.prepare(self.owner, CI_HEAD, None, self.source)
+        self.m.install(self.owner, CI_HEAD, None, self.source)
+        raw = (self.etc / 'policy.json').read_bytes(); policy = decode(raw)
+        archive = self.inst.with_name('archived-current')
+        self.inst.rename(archive)
+        self.inst.mkdir(); (self.inst / 'worker.py').write_bytes(b'different current package')
+        try:
+            proof = self.m.validate_preparation(self.state, policy, raw, package=archive)
+        except TypeError:
+            self.fail('Profile proof cannot validate its original archived package')
+        self.assertEqual(proof['status'], 'PR75_PROFILE_INSTALLED_PAUSED')
+        (archive / 'worker.py').write_bytes(b'changed archived worker')
+        with self.assertRaisesRegex(Hold, 'daily_limit_package'):
+            self.m.validate_preparation(self.state, policy, raw, package=archive)
+
     def test_prepared_source_tampering_cannot_start_quality_or_change_policy(self):
         self.m.prepare(self.owner, CI_HEAD, None, self.source)
         directory = self.m.paths(CI_HEAD)[0]

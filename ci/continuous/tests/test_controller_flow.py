@@ -46,7 +46,7 @@ class ControllerFlowTest(unittest.TestCase):
         self.assertFalse(self.api.calls);self.assertFalse(self.attempt())
     def test_source_denial_is_saved_without_untrusted_argument_values_or_retry(self):
         ctx=ReadOnlyContext(None,{'x':{}},{'x':{}},['x'])
-        args={'path':'private-canary-value','revision':'head'}
+        args={'path':'private-canary-value','revision':'head','page':0}
         def denied(*a):ctx.read(args)
         ran=[]
         with self.assertRaisesRegex(Hold,'review_source_only'):
@@ -64,5 +64,29 @@ class ControllerFlowTest(unittest.TestCase):
         with self.assertRaises(Hold):self.attempt()
         self.assertEqual(self.j.pending()[0]['state'],'publishing')
         self.assertFalse(self.attempt())
+
+class OwnerPreparationDispatchTests(unittest.TestCase):
+    def validate(self, policy):
+        self.assertTrue(hasattr(controller, 'validate_owner_preparation'),
+                        'Controller cannot distinguish a preserved original receipt from package maintenance')
+        return controller.validate_owner_preparation(Path('/fixture-state'), policy, canonical(policy))
+
+    def test_maintenance_requires_its_own_completion_before_any_attempt(self):
+        from snci import pr75_profile, repair_review_paging as repair
+        policy = {'installed_revision':'a'*40, 'profiles':[{'name':'sn004',
+            'preparation':'refresh-'+repair.BASE+'/sn004/acceptance.json'}]}
+        with patch.object(pr75_profile, 'validate_preparation') as ordinary, \
+             patch.object(repair, 'validate_preparation', side_effect=Hold('missing_paging_completion')) as maintained:
+            with self.assertRaisesRegex(Hold, 'missing_paging_completion'): self.validate(policy)
+            ordinary.assert_not_called(); maintained.assert_called_once()
+
+    def test_original_e7_profile_keeps_original_gate(self):
+        from snci import pr75_profile, repair_review_paging as repair
+        policy = {'installed_revision':repair.BASE, 'profiles':[{'name':'sn004',
+            'preparation':'refresh-'+repair.BASE+'/sn004/acceptance.json'}]}
+        with patch.object(pr75_profile, 'validate_preparation', return_value='original-proof') as ordinary, \
+             patch.object(repair, 'validate_preparation') as maintained:
+            self.assertEqual(self.validate(policy), 'original-proof')
+            ordinary.assert_called_once(); maintained.assert_not_called()
 
 if __name__=='__main__':unittest.main()
