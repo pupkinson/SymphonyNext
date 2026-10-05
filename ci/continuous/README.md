@@ -682,3 +682,66 @@ the actual state before any new action. Never delete a claim to replay it,
 rewrite the journal or use a historical recovery completion after adding rows.
 The new completion audit checks preserved rows as an immutable subset, so later
 legitimate attempts do not invalidate the installation's original history.
+
+## Closed PR75 profile transition
+
+The installed unlimited-admission revision `2f40275cd7f2f6a2f2147c195acfab79e434cfa6`
+with policy digest `8438cf3f0b6854b2659b9375757fb58483d8baeb085730dec6a3e89b75d278e4`
+can be advanced only by the separately reviewed CI-owner helper `snci/pr75_profile.py`.
+The source approval is recorded in GH33 comment5993885820, following design5993826196.
+This source approval does not execute native preparation, installation or a trusted check.
+
+`profiles-pr75.json` binds product head `be5371e71db363d5a07c7109d6dd010a6ceca7ef`,
+tree `b0f828141ca90851f6e037d6f1741aaaa28496de`, four reviewed dependency/helper/CoreTest
+blob advances and all68 quality/test inputs. It retains name `sn004` for the existing
+private PostgreSQL fixture. Native quality requires at least462 tests, at most6 skips,
+zero failures, configured coverage100%, all protected stage exits0, Dialyzer0 and
+verified cleanup/source before-and-after. The `main` profile remains identical.
+The existing worker, dependency Docker recipe, container capabilities, offline quality,
+resources, GitHub App and branch ruleset are unchanged.
+
+The owner request is closed to PR75 in repository1381693716, exact head/ref above and
+base `233dda1878533a425574074b8d34344b50d41cf7` on
+`docs/sn005-authentik-project-access-20261004`, with explicit draft admission. While
+installed it selects only that target; changed head/base/ref/tree/repository or request
+shape holds. Labels cannot enlarge its scope. Without this root-installed request the
+original main-only/draft-label policy applies. No branch is retargeted, and this check
+will not certify a later main integration or any other HEAD/base tuple.
+
+The concrete reviewed owner handoff must provide the CI package commit before using:
+
+```sh
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/pr75_profile.py prepare --reviewed-head <ci-package-sha>
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/pr75_profile.py install --reviewed-head <ci-package-sha>
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/pr75_profile.py verify --reviewed-head <ci-package-sha>
+```
+
+These are three distinct owner actions, not a shell chain or native admission. The first
+claims a new private `refresh-<ci-package-sha>` directory, snapshots predecessor artifacts,
+stages exact CI bytes, probes the dedicated native transport and builds/retains a new
+image. `PREPARED.json` means IMAGE_PREPARED_ONLY: it has no quality receipt or installation
+acceptance. The second freshly rechecks stopped units, policy/package/source, old terminal
+journal, receipts/images/keepers, seed and daemon, then claims quality exactly once. Only
+actual protected quality can produce the new receipt, atomic allowed policy/package delta
+and matching `COMPLETE.json`. The third reads that completion while units remain paused.
+The completion audit rehashes every manifest-listed file in both the current installed
+package and its predecessor. A changed current worker is rejected even when `installed.json`
+and `revision` remain unchanged; the saved completion, policy and historical evidence are
+preserved. This regression and fixup are admitted separately in GH33 comment5994649363.
+Each native leaf has a whole-process1800s deadline and shortened subprocess timeouts with
+120s reserved for cleanup/readback. Run owner leaves under their own tmux/log/exit receipts.
+
+Old attempt/source/receipt/transition bytes and journal rows remain immutable; newly
+publishing check rows can still be reconciled read-only. Existing source directories are
+0755 within private0700 state and are hashed without falsely requiring every source file
+be0600. Missing images/keepers/seed, busy units, drift, existing claims or failed quality
+hold and preserve evidence. A response lost after policy replacement preserves the matching
+new package and durable intent; there is no automatic write replay or inferred completion.
+The controller requires the installed-policy/package-bound completion before admitting
+this owner request. Repeated preparation or quality is rejected.
+
+The transition retains unlimited daily admission, enabled policy and a disabled timer.
+It never starts the service, enables scheduling, changes product auth, merges or deploys.
+A protected one-shot is a later concrete owner handoff and must freshly read back its exact
+inputs/review/result/check identities. The owner-reserved retention namespace and original
+Docker concurrency limitations still apply; the helper does not repair unavailable history.

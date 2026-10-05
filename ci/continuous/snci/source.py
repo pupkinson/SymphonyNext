@@ -2,12 +2,24 @@
 import base64
 from pathlib import Path
 import re
-from .common import API, APP_ID, CHECK, REPO, REPO_ID, RULESET, SHA, Hold, blob_hash, require, write_new
+from .common import API, APP_ID, CHECK, REPO, REPO_ID, RULESET, SHA, Hold, blob_hash, canonical, require, write_new
 
 # One pre-existing inert video is metadata-pinned, never downloaded/executed.
 # A change, deletion, mode change or another large asset requires owner policy work.
 OMITTED_BLOBS={'.github/media/symphony-demo.mp4':{
     'sha':'32b1f857f45eb901905ea24355b599fb417f53c5','mode':'100644','size':30446771}}
+
+# A separately owner-reviewed request, not a generic non-main/draft exception.
+PR75_REQUEST = {'pr': 75, 'head': 'be5371e71db363d5a07c7109d6dd010a6ceca7ef',
+    'base': '233dda1878533a425574074b8d34344b50d41cf7',
+    'tree': 'b0f828141ca90851f6e037d6f1741aaaa28496de',
+    'head_ref': 'feat/sn005-oidc-protocol-20261004',
+    'base_ref': 'docs/sn005-authentik-project-access-20261004',
+    'repository_id': REPO_ID, 'draft': True}
+
+def validate_owner_request(request):
+    require(isinstance(request,dict) and canonical(request)==canonical(PR75_REQUEST),
+            'owner_request_scope')
 
 def safe_path(path):
     return (isinstance(path,str) and len(path)<240 and
@@ -43,16 +55,26 @@ def verify_blob(data, expected):
     require(len(raw)==data.get('size') and len(raw)<=700000 and blob_hash(raw)==expected,'blob_hash')
     return raw
 
-def validate_target(pr, expected=None):
+def validate_target(pr, expected=None, owner_request=None):
     require(pr.get('state')=='open' and pr.get('merged') is not True,'pr_closed')
     require(type(pr.get('number')) is int and pr['number']>0,'pr_number')
-    require(not pr.get('draft') or 'snv:verify' in [l.get('name') for l in pr.get('labels',[])],'draft_not_requested')
+    if owner_request is not None:
+        validate_owner_request(owner_request)
+        require(pr['number']==owner_request['pr'] and pr.get('draft') is owner_request['draft'],
+                'owner_request_target')
+    else:
+        require(not pr.get('draft') or 'snv:verify' in [l.get('name') for l in pr.get('labels',[])],'draft_not_requested')
     for side in ('head','base'):
         value=pr.get(side,{})
         require(value.get('repo',{}).get('id')==REPO_ID,'foreign_repository')
         require(SHA.fullmatch(value.get('sha','')) is not None,'target_sha')
-    require(pr['base'].get('ref')=='main','base_branch')
     target={'pr':pr['number'],'head':pr['head']['sha'],'base':pr['base']['sha']}
+    if owner_request is not None:
+        require(all(target[k]==owner_request[k] for k in target)
+                and all(pr[side].get('ref')==owner_request[side+'_ref'] for side in ('head','base')),
+                'owner_request_target')
+    else:
+        require(pr['base'].get('ref')=='main','base_branch')
     if expected:
         require(all(target[k]==expected[k] for k in target),'stale_target')
     return target
