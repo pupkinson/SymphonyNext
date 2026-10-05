@@ -251,6 +251,7 @@ def validate_preparation(state, policy, raw):
             digest(directory / 'native-codex.log'), 'pr75_completion_receipt')
     require(proof.get('manifest_sha256') == sha256(trusted(INSTALL / 'installed.json').read_bytes())
             and trusted(INSTALL / 'revision').read_text() == head, 'pr75_completion_package')
+    daily_limit.verify_manifest(INSTALL, proof['manifest_sha256'], head)
     daily_limit.verify_manifest(INSTALL.with_name(INSTALL.name + '-before-pr75-' + head), saved['old_manifest'], BASE)
     verify_history(saved['history'])
     return proof

@@ -724,6 +724,10 @@ acceptance. The second freshly rechecks stopped units, policy/package/source, ol
 journal, receipts/images/keepers, seed and daemon, then claims quality exactly once. Only
 actual protected quality can produce the new receipt, atomic allowed policy/package delta
 and matching `COMPLETE.json`. The third reads that completion while units remain paused.
+The completion audit rehashes every manifest-listed file in both the current installed
+package and its predecessor. A changed current worker is rejected even when `installed.json`
+and `revision` remain unchanged; the saved completion, policy and historical evidence are
+preserved. This regression and fixup are admitted separately in GH33 comment5994649363.
 Each native leaf has a whole-process1800s deadline and shortened subprocess timeouts with
 120s reserved for cleanup/readback. Run owner leaves under their own tmux/log/exit receipts.
 

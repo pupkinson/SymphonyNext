@@ -231,6 +231,25 @@ class TransitionTests(unittest.TestCase):
         j.set(key, 'publishing', {'check_body': 'synthetic'}); j.close()
         self.m.validate_preparation(self.state, new, canonical(new))
 
+    def test_completed_owner_verification_rejects_current_package_tampering(self):
+        self.m.prepare(self.owner, CI_HEAD, None, self.source)
+        self.m.install(self.owner, CI_HEAD, None, self.source)
+        raw = (self.etc / 'policy.json').read_bytes(); policy = decode(raw)
+        previous = self.m.paths(CI_HEAD)[2]
+        self.assertEqual(self.m.validate_preparation(self.state, policy, raw)['status'],
+                         'PR75_PROFILE_INSTALLED_PAUSED')
+        preserved = {path: path.read_bytes() for root in (self.state, previous)
+                     for path in root.rglob('*') if path.is_file()}
+        preserved.update({path: path.read_bytes() for path in
+                          (self.etc / 'policy.json', self.inst / 'installed.json', self.inst / 'revision')})
+        worker = self.inst / 'worker.py'; original_stat = worker.stat()
+        worker.write_bytes(b'changed current installed worker')
+        self.assertEqual((worker.stat().st_uid, worker.stat().st_mode),
+                         (original_stat.st_uid, original_stat.st_mode))
+        with self.assertRaisesRegex(Hold, 'daily_limit_package'):
+            self.m.validate_preparation(self.state, policy, raw)
+        self.assertEqual({path: path.read_bytes() for path in preserved}, preserved)
+
     def test_quality_failure_leaves_old_policy_and_blocks_replay(self):
         self.m.prepare(self.owner, CI_HEAD, None, self.source)
         bad = quality(); bad['cleanup'] = 1
