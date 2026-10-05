@@ -31,7 +31,7 @@ defmodule SymphonyControl.Auth.Oidc do
            {:ok, context, transport} <- context(cfg, deadline),
            opts = exchange_options(cfg, input, transport),
            {:ok, token, _refresh} <- Oidcc.Token.retrieve_with_refresh(code, context, opts),
-           {:ok, identity} <- identity(cfg, token, transport.deadline) do
+           {:ok, identity} <- identity(cfg, token, transport) do
         {:ok, identity}
       else
         false -> {:error, :invalid_request}
@@ -46,17 +46,28 @@ defmodule SymphonyControl.Auth.Oidc do
     if deadline <= now() do
       transport_error(:get)
     else
-      task = Task.async(fn -> guarded(fn -> fun.(deadline) end) end)
+      task = Task.async(fn -> run_guarded(fun, deadline) end)
 
-      case Task.yield(task, max(deadline - now(), 0)) || Task.shutdown(task, :brutal_kill) do
-        {:ok, result} -> result
-        _ -> transport_error(method)
+      case Task.yield(task, max(deadline - now(), 0)) do
+        {:ok, result} ->
+          accept_result(result, deadline, method)
+
+        nil ->
+          Task.shutdown(task, :brutal_kill)
+          transport_error(method)
       end
     end
   end
 
+  defp accept_result(result, deadline, method),
+    do: if(now() < deadline, do: result, else: transport_error(method))
+
+  defp run_guarded(fun, deadline), do: guarded(fn -> fun.(deadline) end)
+
   defp exchange_options(cfg, input, transport) do
-    Map.put(options(cfg, input, transport), :refresh_jwks, fn _old, _kid -> refresh_keys(cfg, transport) end)
+    options(cfg, input, transport)
+    |> Map.put(:trusted_audiences, [])
+    |> Map.put(:refresh_jwks, fn _old, _kid -> refresh_keys(cfg, transport) end)
   end
 
   defp validate_input(input, state?) when is_map(input) do
@@ -76,24 +87,20 @@ defmodule SymphonyControl.Auth.Oidc do
       {:error, reason} when reason in @reasons -> {:error, reason}
       _ -> {:error, :forbidden}
     end
-  rescue
-    _ -> {:error, :forbidden}
   catch
     _, _ -> {:error, :forbidden}
   end
 
   defp context(cfg, deadline) do
-    transport = %{config: cfg, deadline: min(deadline, now() + 5_000), posts: :atomics.new(1, [])}
+    transport = %{config: cfg, deadline: deadline, posts: :atomics.new(1, []), received_at: :atomics.new(1, [])}
 
-    with true <- remaining(transport) > 0,
-         {:ok, document} <- get_json(cfg.discovery_url, transport),
+    with {:ok, document} <- get_json(cfg.discovery_url, transport),
          :ok <- validate_document(cfg, document),
          {:ok, provider} <- Oidcc.ProviderConfiguration.decode_configuration(safe_document(cfg, document)),
          {:ok, keys} <- get_json(cfg.jwks_url, transport),
          {:ok, secret} <- read_secret(cfg.client_secret_ref) do
       {:ok, Oidcc.ClientContext.from_manual(provider, JOSE.JWK.from_map(keys), cfg.client_id, secret), transport}
     else
-      false -> {:error, :dependency_unavailable}
       error -> error
     end
   end
@@ -139,24 +146,28 @@ defmodule SymphonyControl.Auth.Oidc do
   end
 
   defp options(cfg, input, transport),
-    do: %{redirect_uri: cfg.callback_uri, nonce: input.nonce, pkce_verifier: input.verifier, require_pkce: true, trusted_audiences: [], request_opts: %{http_adapter: {__MODULE__, transport}}}
+    do: %{redirect_uri: cfg.callback_uri, nonce: input.nonce, pkce_verifier: input.verifier, require_pkce: true, request_opts: %{http_adapter: {__MODULE__, transport}}}
 
   defp refresh_keys(cfg, transport) do
     with {:ok, keys} <- get_json(cfg.jwks_url, transport), do: {:ok, JOSE.JWK.to_record(JOSE.JWK.from_map(keys))}
   end
 
-  defp identity(cfg, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}} = token, deadline) do
+  defp identity(cfg, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}} = token, transport) do
     current_ms = System.system_time(:millisecond)
     current = div(current_ms, 1_000)
 
     access_expiry =
       case token.access do
-        %Oidcc.Token.Access{expires: seconds} when is_integer(seconds) -> current_ms + seconds * 1_000
+        %Oidcc.Token.Access{expires: seconds} when is_integer(seconds) -> :atomics.get(transport.received_at, 1) + seconds * 1_000
         _ -> claims["exp"] * 1_000
       end
 
     expiry = min(claims["exp"] * 1_000, access_expiry)
-    valid = valid_identity_claims?(claims, current) and claims["aud"] in [cfg.client_id, [cfg.client_id]] and expiry > current_ms and now() < deadline
+
+    valid =
+      valid_identity_claims?(claims, current) and
+        claims["aud"] in [cfg.client_id, [cfg.client_id]] and
+        expiry > current_ms and now() < transport.deadline
 
     if valid do
       {:ok, %{issuer: cfg.issuer, subject: claims["sub"], sid: claims["sid"], credential_expires_at_ms: expiry, tokens: %{id: token.id.token, access: token.access}}}
@@ -184,6 +195,10 @@ defmodule SymphonyControl.Auth.Oidc do
 
   @impl true
   def request(method, request, _http_opts, _request_opts, transport) do
+    guarded(fn -> dispatch(method, request, transport) end)
+  end
+
+  defp dispatch(method, request, transport) do
     url = request |> elem(0) |> to_string()
     cfg = transport.config
     allowed = allowed_request?(method, url, cfg)
@@ -213,7 +228,11 @@ defmodule SymphonyControl.Auth.Oidc do
           verb = method |> Atom.to_string() |> String.upcase()
 
           with true <- remaining(transport) > 0,
-               :ok <- :ssl.setopts(Mint.HTTP1.get_socket(conn), send_timeout: remaining(transport), send_timeout_close: true),
+               :ok <-
+                 :ssl.setopts(Mint.HTTP1.get_socket(conn),
+                   send_timeout: remaining(transport),
+                   send_timeout_close: true
+                 ),
                true <- remaining(transport) > 0,
                {:ok, conn, ref} <- Mint.HTTP1.request(conn, verb, uri.path || "/", headers, body) do
             response = %{status: nil, headers: [], body: [], bytes: 0}
@@ -264,12 +283,10 @@ defmodule SymphonyControl.Auth.Oidc do
   end
 
   defp finish(%{status: status} = response, method, transport) when status in 200..299 do
+    received_at = System.system_time(:millisecond)
     body = response.body |> Enum.reverse() |> IO.iodata_to_binary()
 
     cond do
-      remaining(transport) <= 0 ->
-        transport_error(method)
-
       method == :post and status not in [200, 201] ->
         transport_error(method)
 
@@ -278,6 +295,7 @@ defmodule SymphonyControl.Auth.Oidc do
 
       true ->
         headers = Enum.map(response.headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
+        if method == :post, do: :atomics.put(transport.received_at, 1, received_at)
         {:ok, {{~c"HTTP/1.1", status, ~c""}, headers, body}}
     end
   end

@@ -131,7 +131,8 @@ defmodule SymphonyControl.Auth.OidcTest do
     owner = self()
     handler = make_ref()
     events = [[:oidcc, :request_token, :stop], [:oidcc, :request_token, :exception]]
-    :ok = :telemetry.attach_many(handler, events, fn event, measurements, metadata, _ -> send(owner, {:token_event, event, measurements, metadata}) end, nil)
+    callback = fn event, measurements, metadata, _ -> send(owner, {:token_event, event, measurements, metadata}) end
+    :ok = :telemetry.attach_many(handler, events, callback, nil)
     on_exit(fn -> :telemetry.detach(handler) end)
     log = capture_log(fn -> assert {:error, _} = Oidc.exchange(OidcFixture.config(f), code, @expectations, deadline()) end)
     assert_receive {:token_event, [:oidcc, :request_token, :stop], _, metadata}
@@ -144,6 +145,84 @@ defmodule SymphonyControl.Auth.OidcTest do
     end
 
     refute_receive {:token_event, [:oidcc, :request_token, :exception], _, _}
+    assert OidcFixture.calls(f, :token) == 1
+  end
+
+  test "non UTF8 response header cannot expose real credentials through exception telemetry" do
+    f = OidcFixture.start!(fault: :non_utf8_header)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    owner = self()
+    handler = make_ref()
+    events = [[:oidcc, :request_token, :stop], [:oidcc, :request_token, :exception]]
+
+    callback = fn event, _, metadata, _ -> send(owner, {:header_event, event, metadata}) end
+    :ok = :telemetry.attach_many(handler, events, callback, nil)
+    on_exit(fn -> :telemetry.detach(handler) end)
+    log = capture_log(fn -> assert {:error, _} = Oidc.exchange(OidcFixture.config(f), code, @expectations, deadline()) end)
+    assert_receive {:header_event, event, metadata}
+    telemetry = inspect(metadata, limit: :infinity, printable_limit: :infinity)
+    token = Agent.get(f.state, & &1.last_token)
+
+    for canary <- [token, "synthetic-access-canary", "synthetic-client-secret-canary", code] do
+      refute telemetry =~ canary
+      refute log =~ canary
+    end
+
+    assert event == [:oidcc, :request_token, :stop]
+    refute_receive {:header_event, [:oidcc, :request_token, :exception], _}
+    assert OidcFixture.calls(f, :token) == 1
+  end
+
+  test "completed worker result queued until after deadline is refused and worker is gone" do
+    f = OidcFixture.start!(hold_jwks: self())
+    cfg = OidcFixture.config(f)
+    input = Map.put(@expectations, :state, String.duplicate("s", 43))
+    expires = deadline(1_000)
+    caller = Task.async(fn -> Oidc.authorization_url(cfg, input, expires) end)
+    assert_receive {:jwks_waiting, provider}, 700
+    :erlang.suspend_process(caller.pid)
+    on_exit(fn -> if Process.alive?(caller.pid), do: :erlang.resume_process(caller.pid) end)
+    {:links, links} = Process.info(caller.pid, :links)
+    worker = Enum.find(links, &(&1 != self()))
+    monitor = Process.monitor(worker)
+    send(provider, :release_jwks)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :normal}, 700
+    Process.sleep(max(expires - System.monotonic_time(:millisecond), 0) + 20)
+    :erlang.resume_process(caller.pid)
+    assert Task.await(caller) == {:error, :dependency_unavailable}
+    refute Process.alive?(worker)
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "timeout kills held protocol worker and discards its later completion" do
+    f = OidcFixture.start!(hold_jwks: self())
+    cfg = OidcFixture.config(f)
+    input = Map.put(@expectations, :state, String.duplicate("s", 43))
+    caller = Task.async(fn -> Oidc.authorization_url(cfg, input, deadline(700)) end)
+    assert_receive {:jwks_waiting, provider}, 500
+    {:links, links} = Process.info(caller.pid, :links)
+    worker = Enum.find(links, &(&1 != self()))
+    monitor = Process.monitor(worker)
+    assert Task.await(caller) == {:error, :dependency_unavailable}
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+    send(provider, :release_jwks)
+    refute Process.alive?(worker)
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "invalid outgoing header is refused before any token request is sent" do
+    f = OidcFixture.start!()
+    cfg = OidcFixture.config(f)
+    transport = %{config: cfg, deadline: deadline(), posts: :atomics.new(1, [])}
+    request = {cfg.token_url, [{~c"x-invalid", ~c"canary\r\n"}], ~c"application/json", "{}"}
+    assert {:error, :unknown_outcome} == Oidc.request(:post, request, [], [], transport)
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "access lifetime elapsed during successful JWKS refresh is refused" do
+    f = OidcFixture.start!(fault: :unknown_kid, expires_in: 1, refresh_delay_ms: 1_200)
+    assert {:error, :forbidden} == exchange(f)
+    assert OidcFixture.calls(f, :jwks) == 2
     assert OidcFixture.calls(f, :token) == 1
   end
 

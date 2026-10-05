@@ -1,5 +1,108 @@
 # Authentik project access: Task1 dependency preflight
 
+## Cloud gates attempt — 2026-10-05
+
+Status: **BLOCKED by reproduced baseline CoreTest failures; Task1 protocol regressions GREEN**.
+Attempt `SN005-AUTH-PROTOCOL-01-CLOUD-GATES-20261005` is separately approved in
+[admission5991961338](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5991961338),
+with [ACCEPTED5992031893](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5992031893)
+published before tracked edits. Initial HEAD `366eeb1ce8542016b56cb82ac3adfd7f2e6cb3f3`,
+tree `507838760b2fdd6ee8bf8ea5f1ac6116f4e5bbc7`; branch `feat/sn005-oidc-protocol-20261004`.
+T0 `2026-10-05T09:43:46.470138Z`; deadline `2026-10-05T10:13:46.470138Z`.
+One Cloud writer, Task1's original13-path allowlist, **one repair cycle, zero profile changes**.
+Previous reports below, their stopped budgets and refusals are retained verbatim.
+
+### Three review findings: observed RED and GREEN
+
+[Review5412576418](https://github.com/pupkinson/SymphonyNext/pull/75#pullrequestreview-5412576418)
+is represented by real HTTPS/public-API regressions. The otherwise valid signed-token response carries
+actual synthetic ID/access/code/client-secret canaries followed by a nonUTF8 byte in its header.
+The old request callback raised UnicodeConversionError into Oidcc exception telemetry. Adapter request
+exceptions now receive a fixed safe projection before crossing that telemetry boundary. Stop/exception
+metadata and logs are checked for every canary; one real token POST is observed.
+
+A controlled caller suspension lets a completed protocol worker queue its successful authorization
+result before the deadline, then resumes the caller after expiry. The old API accepted it. The caller
+now checks the absolute deadline before acceptance; a yield timeout uses shutdown only for cleanup,
+discarding its result. A separate held-JWKS timeout proves worker termination and zero token POSTs.
+This proves fail-closed acceptance, not OS scheduling guarantees under arbitrary suspension.
+The existing staged TCP/TLS and pre-send/send-timeout assertions remain in place.
+
+With a valid signed ID token, expires_in=1 and an unknown kid, the fixture delays only the refresh
+response by1200ms. The old API restarted the access lifetime after refresh. Receipt UTC is now captured
+at the completed token response before validation/refresh, and expiry is anchored to that receipt.
+An already elapsed lifetime is refused; refresh count2 and token POST count1 are asserted.
+
+Targeted command from elixir:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+Observed RED: **46 tests/3 semantic failures, exit2**, SHA256 `e4a26debc3cae490bf459e1ea38f7b3dbd9eb11e6060fc525fb0d490fc86a579`.
+First GREEN: **46/0, exit0**, SHA256 `8edc9b794e2573fd906aaade987cdcdea69da31a95861abde1f02f7563e938e8`.
+Additional timeout-cleanup and invalid-outgoing-header checks: **48/0, exit0**, SHA256 `f41e4927ca116e63b67c2db6dbc23d972f3383494efb17b89d895ad7df078183`.
+Encrypted-only unsigned token rejection, DPoP nonce challenge and lost-response at-most-one POST remain GREEN.
+The candidate removed redundant context/finish deadline branches: dispatch checks the shared deadline
+before networking, receive checks it while reading, and the caller rejects completion after expiry.
+The duplicate rescue/catch projection is one catch for error/exit/throw. Actual malformed-JWKS/header
+exceptions and failed outbound-header submission cover meaningful error behavior; no artificial coverage
+calls, test weakening, new ignores/exclusions/skips or threshold changes were introduced.
+
+### Strict gates and broad baseline comparison
+
+Token-only trusted_audiences=[] belongs to exchange options; authorization now uses only its pinned
+Oidcc contract. All existing strictCredo findings are closed by line splitting and smaller fixture/helper
+functions. Credo exit0/no findings; Dialyzer exit0/**0 errors,0 skipped**.
+The unchanged configured coverage threshold100 is met: **total100%, Config100%, Clock100%, Oidc100%**.
+The exact Oidcc3.9.0 pin and transitive lock remain unchanged:
+lock SHA256 `13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`.
+Fresh mix setup exited0 on Elixir/Mix1.19.5 and Erlang/OTP28.5.
+
+Fresh owned PostgreSQL17.11 data/socket directories0700 use no TCP, port55474,
+role sn004_fixture/database sn004_test. Existing owned Cloud developer binaries were reused without
+system installation, cache-copy, root/sudo or profile change. Version/SELECT1 readiness exited0.
+SN004_TEST_PG_SOCKET selects only this attempt's fixture. Its data/logs and own-cluster stop are retained.
+
+Broad comparisons used each source's original lock and the same private fixture, with:
+
+```sh
+SN004_TEST_PG_SOCKET=<this-attempt-private-socket> mix test --cover --seed 20261005
+```
+
+Baseline `a2deb11d0be829ffca201b2b81a7505fe354d0a6` in its isolated clean worktree:
+**413 tests/3 failures/6 existing skips, total100%, exit2**, SHA256 `c67142349d45cd615761594646ab3410633477eb17b1fabe1b04518eeedb1842`.
+Candidate: **461 tests/3 failures/6 existing skips, total100%, exit2**, SHA256 `4dd93be2a2231af64d2e57e299438e0a5089d2379e755d9729002412f06deda4`.
+Both runs fail the same unchanged CoreTest cases:
+
+| Case | Broad baseline remaining ms | Candidate remaining ms | Minimum ms |
+| --- | ---: | ---: | ---: |
+| first abnormal worker exit waits before retrying | 7916 | 7921 | 9000 |
+| normal worker exit schedules active-state continuation retry | -2103 | -3128 | 500 |
+| abnormal worker exit increments retry attempt progressively | 37922 | 37921 | 39500 |
+
+Thus the previously unknown third broad-baseline outcome is observed RED as well.
+These are diagnostics under the current Cloud environment, not permission to repair CoreTest,
+orchestrator/shared support, timings or assertions. Their source is unchanged; all PostgreSQL tests pass.
+
+The final committed-source commands, UTC/cwd/exits, output hashes, sourceHEAD/tree and cleanup readback
+are recorded in the evidence checkpoint and GH33. Precommit format/specs, strictCredo, Dialyzer,
+bootstrap12/0 and MCP input-contract11/0 exited0. Full makeall with the private PostgreSQL fixture: **exit2 at coverage**,461/3/6, coverage100%,
+output SHA256 `73ae5506fd3db455e9f3ba92125c76bd29052824cacfb7a07d119c0c559636d0`. Setup/build/format/specs/strictCredo succeeded; make's
+Dialyzer target was **NOT_RUN** after coverage failure, so Dialyzer was run separately with exit0.
+Evidence root: `/workspace/scratch/SN005-AUTH-PROTOCOL-01-CLOUD-GATES-20261005`.
+Raw logs, failed preflight/lint probes and HTML coverage are preserved; evidence manifest hashes them.
+
+**VERIFIED:** three semantic RED-to-GREEN regressions, targeted48/0, strict lint/Dialyzer/coverage100,
+and all three timing failures on both broad baseline and candidate.
+**INFERRED:** corrections meet the reviewed refusal contracts; independent new-HEAD approval is absent.
+**UNKNOWN:** live IdP bindings, production isolation/revocation and arbitrary scheduling behavior.
+**BLOCKED:** full Task1 acceptance while the unchanged CoreTest source gate is red; independent exact-HEAD
+review and protected dependency-compatible trusted check remain **NOT_RUN** separate stages.
+Auth stays disabled; Task2–5, dependencies, protected CI/profile/status, merge/deploy were not changed.
+Rollback before merge is the preserved366eeb1 source; no runtime/schema rollback is required.
+Next bounded action is independent new-HEAD review plus separately scoped CoreTest/environment diagnosis.
+
 ## Cloud repair attempt — 2026-10-05
 
 Status: **BLOCKED — repair allowance exhausted; source gates remain red**.

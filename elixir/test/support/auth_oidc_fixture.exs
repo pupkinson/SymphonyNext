@@ -208,19 +208,11 @@ defmodule SymphonyControl.Auth.OidcFixture do
       "code_challenge_methods_supported" => if(Keyword.get(data.opts, :pkce) == :plain, do: ["plain"], else: ["S256"])
     }
 
-    case Keyword.get(data.opts, :fault) do
-      :foreign_endpoint -> json(conn, 200, Map.put(document, "token_endpoint", "https://foreign.example/token"))
-      :wrong_discovery_issuer -> json(conn, 200, Map.put(document, "issuer", data.origin <> "/other"))
-      :redirect -> conn |> put_resp_header("location", data.origin <> "/other") |> send_resp(302, "")
-      :oversized -> json(conn, 200, Map.put(document, "padding", String.duplicate("x", 1_048_577)))
-      :invalid_json -> send_resp(conn, 200, "{")
-      :json_array -> json(conn, 200, [])
-      :rate_limited -> json(conn, 429, %{"error" => "slow_down"})
-      _ -> json(conn, 200, document)
-    end
+    discovery_response(conn, data, document)
   end
 
   defp respond(conn, :jwks, _state, data) do
+    wait_for_keys(data)
     {_, public} = data.signing |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
     kid = if Keyword.get(data.opts, :fault) == :unknown_kid and Map.get(data.counts, :jwks, 0) == 0, do: "old", else: "current"
 
@@ -252,14 +244,52 @@ defmodule SymphonyControl.Auth.OidcFixture do
       params["grant_type"] != "authorization_code" or params["redirect_uri"] != "https://control.example/auth/callback" or params["code_verifier"] != expectations.verifier ->
         json(conn, 400, %{"error" => "invalid_grant"})
 
-      Keyword.get(data.opts, :fault) == :dpop_nonce ->
+      true ->
+        token_response(conn, state, data, expectations, params)
+    end
+  end
+
+  defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+
+  defp discovery_response(conn, data, document) do
+    case Keyword.get(data.opts, :fault) do
+      :foreign_endpoint -> json(conn, 200, Map.put(document, "token_endpoint", "https://foreign.example/token"))
+      :wrong_discovery_issuer -> json(conn, 200, Map.put(document, "issuer", data.origin <> "/other"))
+      :redirect -> conn |> put_resp_header("location", data.origin <> "/other") |> send_resp(302, "")
+      :oversized -> json(conn, 200, Map.put(document, "padding", String.duplicate("x", 1_048_577)))
+      :invalid_json -> send_resp(conn, 200, "{")
+      :json_array -> json(conn, 200, [])
+      :rate_limited -> json(conn, 429, %{"error" => "slow_down"})
+      _ -> json(conn, 200, document)
+    end
+  end
+
+  defp wait_for_keys(data) do
+    if owner = Keyword.get(data.opts, :hold_jwks) do
+      send(owner, {:jwks_waiting, self()})
+
+      receive do
+        :release_jwks -> :ok
+      after
+        5_000 -> raise "fixture JWKS release missing"
+      end
+    end
+
+    if Map.get(data.counts, :jwks, 0) > 0 do
+      Process.sleep(Keyword.get(data.opts, :refresh_delay_ms, 0))
+    end
+  end
+
+  defp token_response(conn, state, data, expectations, params) do
+    case Keyword.get(data.opts, :fault) do
+      :dpop_nonce ->
         conn |> put_resp_header("dpop-nonce", "synthetic-nonce") |> json(400, %{"error" => "use_dpop_nonce"})
 
-      Keyword.get(data.opts, :fault) == :lost_response ->
+      :lost_response ->
         Process.sleep(1_000)
         json(conn, 200, %{})
 
-      true ->
+      _ ->
         payload = %{
           "id_token" => token(data, expectations),
           "access_token" => "synthetic-access-canary",
@@ -270,11 +300,19 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
         payload = if Keyword.get(data.opts, :omit_expiry), do: Map.delete(payload, "expires_in"), else: payload
         Agent.update(state, &Map.put(&1, :last_token, payload["id_token"]))
+        conn = canary_header(conn, data, payload, params)
         json(conn, Keyword.get(data.opts, :token_status, 200), payload)
     end
   end
 
-  defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+  defp canary_header(conn, data, payload, params) do
+    if Keyword.get(data.opts, :fault) == :non_utf8_header do
+      canaries = Enum.join([payload["id_token"], payload["access_token"], params["code"], "synthetic-client-secret-canary"], " ")
+      put_resp_header(conn, "x-canary", canaries <> <<255>>)
+    else
+      conn
+    end
+  end
 
   defp token(data, expectations) do
     now = System.system_time(:second)

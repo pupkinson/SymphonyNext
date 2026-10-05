@@ -77,10 +77,12 @@ focused GREEN nor compilation enables live SSO. Evidence, previous native histor
 and the Cloud gate blockers are in
 [authentik-project-access.md](../docs/engineering/authentik-project-access.md).
 
-The 2026-10-05 repair independently tests HTTP202 telemetry redaction, combined
-TCP/TLS delays, unusable access lifetime, additional audiences and trusted-CA/wrong-SAN
-refusal. Targeted tests are 43/0; full source acceptance is BLOCKED by lint/Dialyzer,
-coverage99.64% and three unchanged CoreTest timing failures. Authentication stays disabled.
+The separately approved 2026-10-05 gates attempt adds real nonUTF8-header telemetry,
+late-completion/worker-cleanup and delayed-JWKS access-expiry regressions. Targeted48/0,
+strict Credo/Dialyzer GREEN and configured total/Oidc coverage100% are observed.
+Broad baseline and candidate with seed20261005 reproduce all three unchanged CoreTest
+timing failures; full acceptance remains BLOCKED. Pin/lock/coverage policy are unchanged.
+Authentication stays disabled; previous native and Cloud histories remain in the report.
 
 We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
 

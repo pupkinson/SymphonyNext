@@ -46,6 +46,9 @@ broader coverage, independent review, dependency-compatible protected CI and liv
 bindings remain required. Native and Cloud attempt histories and current blockers
 are retained in [authentik-project-access.md](docs/engineering/authentik-project-access.md).
 
-The separately admitted 2026-10-05 Cloud repair has 43/0 targeted tests and a real
-isolated PostgreSQL fixture. It remains BLOCKED by strict lint, Dialyzer, 99.64%
-coverage and existing CoreTest timing failures; its two repair cycles are consumed.
+The separately admitted 2026-10-05 Cloud gates attempt has 48/0 targeted tests,
+strict Credo/Dialyzer GREEN and configured coverage100%, with a private PostgreSQL fixture.
+Full acceptance remains BLOCKED by three CoreTest timing failures reproduced on broad
+baseline and candidate with seed20261005, plus independent review and trusted checks.
+Adapter telemetry exceptions are sanitized before Oidcc; expired completions and
+access lifetimes elapsed during key refresh are refused. Authentication stays disabled.
