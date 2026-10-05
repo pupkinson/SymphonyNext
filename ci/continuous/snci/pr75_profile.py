@@ -232,8 +232,9 @@ def commit(owner, stage, previous, snapshot, future):
     require(trusted(ETC / 'policy.json', private=True).read_bytes() == future_raw, 'pr75_policy_readback')
 
 
-def validate_preparation(state, policy, raw):
+def validate_preparation(state, policy, raw, *, package=None):
     """Read-only gate; pending NEW check publications must remain reconcilable."""
+    package = INSTALL if package is None else Path(package)
     head = policy['installed_revision']; directory = Path(state) / ('refresh-' + head)
     before = trusted(directory / 'policy-before.json', private=True).read_bytes()
     require(sha256(before) == POLICY_SHA and raw == canonical(policy), 'pr75_completion_policy')
@@ -249,9 +250,9 @@ def validate_preparation(state, policy, raw):
     receipt = refresh.read_acceptance(state, profile, policy['codex_sha256'], time.time(), fresh=False)
     require(receipt.get('refresh_revision') == head and receipt.get('native_probe_sha256') ==
             digest(directory / 'native-codex.log'), 'pr75_completion_receipt')
-    require(proof.get('manifest_sha256') == sha256(trusted(INSTALL / 'installed.json').read_bytes())
-            and trusted(INSTALL / 'revision').read_text() == head, 'pr75_completion_package')
-    daily_limit.verify_manifest(INSTALL, proof['manifest_sha256'], head)
+    require(proof.get('manifest_sha256') == sha256(trusted(package / 'installed.json').read_bytes())
+            and trusted(package / 'revision').read_text() == head, 'pr75_completion_package')
+    daily_limit.verify_manifest(package, proof['manifest_sha256'], head)
     daily_limit.verify_manifest(INSTALL.with_name(INSTALL.name + '-before-pr75-' + head), saved['old_manifest'], BASE)
     verify_history(saved['history'])
     return proof

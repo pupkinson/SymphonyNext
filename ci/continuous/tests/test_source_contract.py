@@ -25,7 +25,7 @@ class SourceContractTests(unittest.TestCase):
     def call(self,path,revision):
         return handle_request({'id':7,'method':'item/tool/call','params':{
             'threadId':'t','namespace':'snci_source','tool':'read_source',
-            'arguments':{'path':path,'revision':revision}}},self.ctx,'t')
+            'arguments':{'page':0,'path':path,'revision':revision}}},self.ctx,'t')
 
     def test_added_base_and_deleted_head_are_explicit_nonfatal_misses(self):
         for path,revision,available in [('added.txt','base',['head']),('deleted.txt','head',['base'])]:
@@ -67,7 +67,7 @@ class SourceContractTests(unittest.TestCase):
             diagnostic=raised.exception.diagnostic
             self.assertEqual(diagnostic['schema'],'snci-source-denial/v1')
             self.assertEqual(diagnostic['category'],'unknown_path')
-            self.assertEqual(diagnostic['arguments_sha256'],sha256(canonical({'path':path,'revision':'head'})))
+            self.assertEqual(diagnostic['arguments_sha256'],sha256(canonical({'page':0,'path':path,'revision':'head'})))
             self.assertNotIn(path,canonical(diagnostic).decode())
         self.assertEqual(self.source.reads,[])
 
@@ -80,7 +80,7 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual(self.source.reads,[])
 
     def test_argument_shape_denial_has_no_argument_values(self):
-        args={'path':'private-value','revision':'head','extra':'private-value'}
+        args={'page':0,'path':'private-value','revision':'head','extra':'private-value'}
         with self.assertRaisesRegex(Hold,'review_tool_arguments') as raised:self.ctx.read(args)
         self.assertEqual(raised.exception.diagnostic['category'],'arguments')
         self.assertNotIn('private-value',canonical(raised.exception.diagnostic).decode())
