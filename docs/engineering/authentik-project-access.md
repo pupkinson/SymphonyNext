@@ -1,5 +1,102 @@
 # Authentik project access: Task1 dependency preflight
 
+## Cloud fixup attempt — 2026-10-05
+
+Status: **auth protocol and local retry fixtures GREEN; independent acceptance pending**.
+Attempt `SN005-AUTH-PROTOCOL-01-CLOUD-FIXUP-20261005` follows
+[admission5992821181](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5992821181)
+and [independent review5413148652](https://github.com/pupkinson/SymphonyNext/pull/75#pullrequestreview-5413148652).
+[ACCEPTED5992887315](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-5992887315)
+preceded tracked edits. Source HEAD `d6d029915dd45685092e2bbd08e9ad16559af6b8`,
+tree `2ee1ebf979173923fdf56de05248363e7d8cd4ed`; branch `feat/sn005-oidc-protocol-20261004`.
+Actual T0 `2026-10-05T10:42:16.822537Z`; deadline `2026-10-05T11:12:16.822537Z`.
+One writer, **one repair cycle, zero profile changes**, exact eight-path allowlist.
+Final committed-source gates/HEAD/tree, immutable command records, cleanup and evidence hashes are
+in this attempt's checkpoint and [existing workpad33](https://github.com/pupkinson/SymphonyNext/issues/33).
+No earlier attempt's allowance or outcome is reset; all previous report bodies below are preserved.
+
+### Byte-compatible UTF8 headers and structural telemetry regression
+
+The reviewed trigger is a valid signed HTTP200 token response with a quoted Content-Type parameter
+containing actual synthetic ID/access/code/client-secret canaries and valid UTF8 U+0100.
+The old String.to_charlist conversion succeeded but produced integer256. Oidcc's downstream
+iolist_to_binary then raised inside its telemetry span and exposed the canary-bearing BIF argument list.
+The real HTTPS regression walks metadata maps/tuples/lists/binaries and decodes integer-list/charlist
+representations structurally. A substring search of inspect(metadata) is insufficient for this case.
+
+Response-header names retain Oidcc's expected string representation; values now retain their original
+binary bytes after a callback-local UTF8 validity check. Invalid UTF8 still fails closed within the
+existing guard, before any exception reaches Oidcc. Valid UTF8 parameters are byte-compatible and
+allow the otherwise valid signed identity. The new test checks stop/exception metadata and logs,
+asserts no exception telemetry and exactly one real token POST. Existing nonUTF8/status/TLS/algorithm/
+audience/size/deadline/lifetime/one-POST safeguards remain in place.
+
+From elixir:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+Observed semantic RED: **49 tests/1 failure, exit2**, SHA256 `8f5fe7b6cc6306229b0e7ebe9b3c6ca3b6a58f7b093d45b25ce923ac67285a80`.
+GREEN: **49/0, exit0**, SHA256 `cfe3bfdb404fafbd0c2faebef2708cb6081c4cc400b51bab8b9a9bc1d63a2643`.
+The RED is credential disclosure detected structurally in integer-list telemetry, not fixture failure.
+Encrypted-only unsigned tokens remain rejected; DPoP nonce/lost response remain at most one POST;
+unknown-kid refresh is bounded; expiry remains anchored before refresh; late success is refused.
+
+### Only three test-local empty memory fixtures
+
+Before the change, focused CoreTest lines1022/1062/1102 with seed20261005 produced **3/2, exit2**:
+normal continuation and progressive abnormal retry failed; initial abnormal retry passed.
+Output SHA256 `f2b7339d11d56bf038635f21a3a315c01a49d81af4316e06556dac83d9634253`. Observed durations were2134.5/4186.9/375.8ms respectively.
+Orchestrator startup schedules an immediate poll; the unchanged shared test workflow selects Linear.
+Synchronous external polling is the source-supported delay hypothesis, not independently traced causality.
+
+Only the three admitted test bodies select tracker_kind=memory in their owned workflow and bind an
+empty issue list before starting their named orchestrator. Their cleanup stops only that owned process
+and restores the prior memory issues. Production Orchestrator/tracker and global test support are unchanged.
+Every existing assertion, completion/claim/attempt/error check, real timer and sleep remains unchanged,
+including remaining-time ranges500..1100/39500..40500/9000..10500ms. Byte comparison proves all code
+outside these three tests and their original assertion/timer bodies unchanged after removing only
+local fixture setup/cleanup delta.
+
+Focused memory run at lines1022/1067/1112: **3/0, exit0**, SHA256 `cc704f0b653064b2eaf3c8f9d110be05b76f40e009359ed10b067d8643f125ed`;
+durations58.5/57.3/75.0ms for continuation/progressive/initial retry.
+Full CoreTest `mix test test/symphony_elixir/core_test.exs --seed 20261005 --trace`:
+**52/0, exit0**, SHA256 `7702c83e1f815ed761a8def220666cda6618f718f5f448a3f93cfb68cbab3212`.
+These observations support the local fixture correction without weakening timer assertions.
+
+### Broad evidence, frozen controls and handoff
+
+The prior evidence manifest's3656 entries were checked without modifying that evidence root.
+Historical baseline413/3/6 and d6d0299 candidate461/3/6 remain retained results, not rewritten as GREEN.
+The old PostgreSQL recorder wrapperexit1 and original child stop exit **NOT_RECORDED** remain intact.
+The new recorder persists the child command exit before optional Git metadata and uses a valid cwd.
+
+A fresh owned PostgreSQL17.11 cluster has private0700 data/socket paths, noTCP,port55474,
+role sn004_fixture/database sn004_test. Existing owned unprivileged Cloud developer binaries are reused;
+no installation/cache-copy/native/root/sudo/shared database or profile change. Version/SELECT1 readiness
+exited0; SN004_TEST_PG_SOCKET points only to this attempt. Own-cluster stop/readback and retained data/logs
+are recorded in the final checkpoint.
+
+Precommit full `mix test --cover --seed 20261005` with that fixture: **462/0/6, exit0**,
+configured total/Config/Clock/Oidc **100%**, SHA256 `44e8e41fdaa0801e9840486269dcbb533f256dd7dd98923aebd7b32da26aa19e`.
+StrictCredo exit0/no findings; Dialyzer exit0/0errors/0skips; bootstrap12/0 and MCP input-contract11/0 exit0.
+Final makeall/privatePG, fixed-seed full coverage and committed-source command bindings are retained in
+the checkpoint; a missing command is never inferred PASS. PinOidcc==3.9.0 and transitive lock remain frozen,
+lock SHA256 `13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`.
+Configured coverage threshold/exclusions and all six existing skips are unchanged.
+
+Evidence root: `/workspace/scratch/SN005-AUTH-PROTOCOL-01-CLOUD-FIXUP-20261005`.
+**VERIFIED:** authored HTTPS RED/GREEN, focused/full CoreTest, broad coverage100 and exact fixture-only delta.
+**INFERRED:** external synchronous polling explains the prior timing delay; runtime calls were not independently traced.
+**UNKNOWN:** live IdP bindings, production isolation/revocation and arbitrary scheduling behavior.
+**BLOCKED:** independent exact-HEAD acceptance, dependency-compatible protected profile/trusted check and
+live acceptance remain separate **NOT_RUN** stages. Source GREEN does not activate auth or admit SN005 live acceptance.
+Config/Clock/testhelper/dependencies/shared support/production code/CI/status/profile remain frozen;
+Task2–5, auth activation, merge and deploy were not performed.
+Rollback source is the preservedd6d0299; no runtime/schema rollback is needed.
+Next bounded action is independent new-HEAD source review and separately prepared trusted exact-HEAD check.
+
 ## Cloud gates attempt — 2026-10-05
 
 Status: **BLOCKED by reproduced baseline CoreTest failures; Task1 protocol regressions GREEN**.

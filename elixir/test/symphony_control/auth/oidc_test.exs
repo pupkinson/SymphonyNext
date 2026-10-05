@@ -194,6 +194,56 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert OidcFixture.calls(f, :token) == 0
   end
 
+  test "UTF8 Content-Type parameter preserves byte representation without credential telemetry" do
+    f = OidcFixture.start!(fault: :utf8_content_type)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    owner = self()
+    handler = make_ref()
+    events = [[:oidcc, :request_token, :stop], [:oidcc, :request_token, :exception]]
+    callback = fn event, _, metadata, _ -> send(owner, {:utf8_event, event, metadata}) end
+    :ok = :telemetry.attach_many(handler, events, callback, nil)
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    log =
+      capture_log(fn ->
+        result = Oidc.exchange(OidcFixture.config(f), code, @expectations, deadline())
+        send(owner, {:utf8_exchange_result, result})
+      end)
+
+    assert_receive {:utf8_event, event, metadata}
+    token = Agent.get(f.state, & &1.last_token)
+    canaries = [token, "synthetic-access-canary", "synthetic-client-secret-canary", code]
+    assert_no_canaries(metadata, canaries)
+    assert_no_canaries(log, canaries)
+    assert event == [:oidcc, :request_token, :stop]
+    refute_receive {:utf8_event, [:oidcc, :request_token, :exception], _}
+    assert_receive {:utf8_exchange_result, {:ok, %{subject: "human-1"}}}
+    assert OidcFixture.calls(f, :token) == 1
+  end
+
+  defp assert_no_canaries(value, canaries) when is_binary(value) do
+    for canary <- canaries, do: refute(value =~ canary)
+  end
+
+  defp assert_no_canaries(value, canaries) when is_list(value) do
+    if Enum.all?(value, &is_integer/1) do
+      case :unicode.characters_to_binary(value) do
+        binary when is_binary(binary) -> assert_no_canaries(binary, canaries)
+        {_, prefix, _} -> assert_no_canaries(prefix, canaries)
+      end
+    end
+
+    Enum.each(value, &assert_no_canaries(&1, canaries))
+  end
+
+  defp assert_no_canaries(value, canaries) when is_tuple(value),
+    do: value |> Tuple.to_list() |> assert_no_canaries(canaries)
+
+  defp assert_no_canaries(value, canaries) when is_map(value),
+    do: value |> Map.to_list() |> assert_no_canaries(canaries)
+
+  defp assert_no_canaries(_, _), do: :ok
+
   test "timeout kills held protocol worker and discards its later completion" do
     f = OidcFixture.start!(hold_jwks: self())
     cfg = OidcFixture.config(f)

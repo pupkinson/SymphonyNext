@@ -1020,6 +1020,9 @@ defmodule SymphonyElixir.CoreTest do
   end
 
   test "normal worker exit schedules active-state continuation retry" do
+    previous_memory_issues = Application.get_env(:symphony_elixir, :memory_tracker_issues)
+    write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "memory")
+    Application.put_env(:symphony_elixir, :memory_tracker_issues, [])
     issue_id = "issue-resume"
     ref = make_ref()
     orchestrator_name = Module.concat(__MODULE__, :ContinuationOrchestrator)
@@ -1027,8 +1030,10 @@ defmodule SymphonyElixir.CoreTest do
 
     on_exit(fn ->
       if Process.alive?(pid) do
-        Process.exit(pid, :normal)
+        GenServer.stop(pid, :normal)
       end
+
+      restore_app_env(:memory_tracker_issues, previous_memory_issues)
     end)
 
     initial_state = :sys.get_state(pid)
@@ -1060,6 +1065,9 @@ defmodule SymphonyElixir.CoreTest do
   end
 
   test "abnormal worker exit increments retry attempt progressively" do
+    previous_memory_issues = Application.get_env(:symphony_elixir, :memory_tracker_issues)
+    write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "memory")
+    Application.put_env(:symphony_elixir, :memory_tracker_issues, [])
     issue_id = "issue-crash"
     ref = make_ref()
     orchestrator_name = Module.concat(__MODULE__, :CrashRetryOrchestrator)
@@ -1067,8 +1075,10 @@ defmodule SymphonyElixir.CoreTest do
 
     on_exit(fn ->
       if Process.alive?(pid) do
-        Process.exit(pid, :normal)
+        GenServer.stop(pid, :normal)
       end
+
+      restore_app_env(:memory_tracker_issues, previous_memory_issues)
     end)
 
     initial_state = :sys.get_state(pid)
@@ -1100,6 +1110,9 @@ defmodule SymphonyElixir.CoreTest do
   end
 
   test "first abnormal worker exit waits before retrying" do
+    previous_memory_issues = Application.get_env(:symphony_elixir, :memory_tracker_issues)
+    write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "memory")
+    Application.put_env(:symphony_elixir, :memory_tracker_issues, [])
     issue_id = "issue-crash-initial"
     ref = make_ref()
     orchestrator_name = Module.concat(__MODULE__, :InitialCrashRetryOrchestrator)
@@ -1107,8 +1120,10 @@ defmodule SymphonyElixir.CoreTest do
 
     on_exit(fn ->
       if Process.alive?(pid) do
-        Process.exit(pid, :normal)
+        GenServer.stop(pid, :normal)
       end
+
+      restore_app_env(:memory_tracker_issues, previous_memory_issues)
     end)
 
     initial_state = :sys.get_state(pid)

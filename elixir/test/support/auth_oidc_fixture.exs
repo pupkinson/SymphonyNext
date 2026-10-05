@@ -301,7 +301,16 @@ defmodule SymphonyControl.Auth.OidcFixture do
         payload = if Keyword.get(data.opts, :omit_expiry), do: Map.delete(payload, "expires_in"), else: payload
         Agent.update(state, &Map.put(&1, :last_token, payload["id_token"]))
         conn = canary_header(conn, data, payload, params)
-        json(conn, Keyword.get(data.opts, :token_status, 200), payload)
+
+        if Keyword.get(data.opts, :fault) == :utf8_content_type do
+          canaries = Enum.join([payload["id_token"], payload["access_token"], params["code"], "synthetic-client-secret-canary"], " ")
+
+          conn
+          |> put_resp_header("content-type", "application/json; x-canary=\"#{canaries} Ā\"")
+          |> send_resp(200, Jason.encode!(payload))
+        else
+          json(conn, Keyword.get(data.opts, :token_status, 200), payload)
+        end
     end
   end
 

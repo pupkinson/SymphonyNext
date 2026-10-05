@@ -294,7 +294,12 @@ defmodule SymphonyControl.Auth.Oidc do
         {:error, :forbidden}
 
       true ->
-        headers = Enum.map(response.headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
+        headers =
+          Enum.map(response.headers, fn {k, v} ->
+            true = String.valid?(v)
+            {String.to_charlist(k), v}
+          end)
+
         if method == :post, do: :atomics.put(transport.received_at, 1, received_at)
         {:ok, {{~c"HTTP/1.1", status, ~c""}, headers, body}}
     end

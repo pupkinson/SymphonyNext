@@ -77,12 +77,14 @@ focused GREEN nor compilation enables live SSO. Evidence, previous native histor
 and the Cloud gate blockers are in
 [authentik-project-access.md](../docs/engineering/authentik-project-access.md).
 
-The separately approved 2026-10-05 gates attempt adds real nonUTF8-header telemetry,
-late-completion/worker-cleanup and delayed-JWKS access-expiry regressions. Targeted48/0,
-strict Credo/Dialyzer GREEN and configured total/Oidc coverage100% are observed.
-Broad baseline and candidate with seed20261005 reproduce all three unchanged CoreTest
-timing failures; full acceptance remains BLOCKED. Pin/lock/coverage policy are unchanged.
-Authentication stays disabled; previous native and Cloud histories remain in the report.
+The separately approved 2026-10-05 fixup adds a valid UTF8 Content-Type parameter
+regression with structural binary/integer-list telemetry checks. Header values preserve
+wire bytes, while nonUTF8 values are refused inside the adapter callback. Targeted49/0,
+full CoreTest52/0 and broad462/0/6 with coverage100% are observed. Only three CoreTest
+retry cases select local empty memory fixtures; assertions/timers/ranges are unchanged.
+Final exact-source gates and owned PostgreSQL cleanup are in the checkpoint/workpad.
+Pin/lock/coverage policy and prior histories are preserved. Authentication stays disabled;
+independent review/trusted checks/live acceptance remain separate.
 
 We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
 
