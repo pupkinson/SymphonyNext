@@ -766,8 +766,9 @@ A long line is split at character boundaries. Binary input holds.
 
 Follow `next_page` to null and read every page of both available changed versions.
 Any unchanged context version whose reading begins must also be finished.
-Missing middle pages, repeated last pages and partial/out-of-order reads cannot
-establish completion. Known added/deleted absent versions retain the explicit
+Missing middle pages, repeated last pages and incomplete page sets cannot
+establish completion. After every page has been read, order does not affect
+completion. Known added/deleted absent versions retain the explicit
 `missing_revision` response and supply no coverage. Invalid pages/arguments or
 unknown paths are sanitized fatal denials. The unchanged400-request/2MiB served
 source/900-second review limits count duplicate pages and actual served bytes;
