@@ -1,0 +1,158 @@
+{
+  "schema": "symphony-next-task-refinement/v1",
+  "revision": "SN-031-r2",
+  "base_backlog": "planning/backlog.json",
+  "base_backlog_sha256": "c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0",
+  "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
+  "spec": "docs/superpowers/specs/2026-09-23-chatgpt-mcp-parity-design.md",
+  "implementation_plan": "docs/superpowers/plans/2026-09-23-chatgpt-mcp-execution.md",
+  "status": "review_candidate",
+  "dispatch_enabled": false,
+  "scope": "Refinement of SN-031 only; not a second queue, admission, implementation or runtime loader.",
+  "task_overrides": [
+    {
+      "id": "SN-031",
+      "expected_depends_on": [
+        "SN-005",
+        "SN-014",
+        "SN-029"
+      ],
+      "depends_on": [
+        "SN-031.W06"
+      ],
+      "execution_kind": "aggregate_only",
+      "admitted": false,
+      "requirements_add": [
+        "MCP-07",
+        "MCP-08",
+        "MCP-09",
+        "MCP-10",
+        "MCP-11",
+        "MCP-12",
+        "MCP-13",
+        "MCP-14",
+        "MCP-15",
+        "MCP-16",
+        "MCP-17",
+        "MCP-18",
+        "MCP-19",
+        "MCP-20",
+        "MCP-21",
+        "MCP-22",
+        "MCP-23",
+        "MCP-24",
+        "MCP-25",
+        "MCP-26"
+      ],
+      "acceptance_ids_add": [
+        "AC-MCP-01",
+        "AC-MCP-02",
+        "AC-MCP-03",
+        "AC-MCP-04",
+        "AC-MCP-05",
+        "AC-MCP-06",
+        "AC-MCP-07",
+        "AC-MCP-08",
+        "AC-MCP-09",
+        "AC-MCP-10",
+        "AC-MCP-11",
+        "AC-MCP-12",
+        "AC-MCP-13",
+        "AC-MCP-14",
+        "AC-MCP-15",
+        "AC-MCP-16",
+        "AC-MCP-17",
+        "AC-MCP-18",
+        "AC-MCP-19",
+        "AC-MCP-20"
+      ]
+    },
+    {
+      "id": "SN-032",
+      "expected_depends_on": [
+        "SN-006",
+        "SN-014",
+        "SN-031"
+      ],
+      "depends_on": [
+        "SN-006",
+        "SN-014",
+        "SN-031.W02.02"
+      ],
+      "reason": "Provisioning needs the MCP command/auth substrate, not its own future MCP tools. Break SN-031 -> W04.04 -> SN-032 -> SN-031 cycle without dropping final acceptance. Both depends_on and interfaces.consumes are replaced together after exact baseline preconditions, preventing a semantic input-contract cycle.",
+      "expected_interfaces_consumes": [
+        {
+          "task": "SN-006",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-014",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-031",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        }
+      ],
+      "interfaces_consumes": [
+        {
+          "task": "SN-006",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-014",
+          "contract": "accepted deliverable and exact-version evidence; read that task card before implementation"
+        },
+        {
+          "task": "SN-031.W02.02",
+          "contract": "accepted MCP command/auth transport substrate and exact-version evidence from SN-031.W02.02; includes authenticated typed commands, idempotent operation receipt and authoritative readback; full SN-031/W06 business-operation parity is not an input to provisioning and remains mandatory for final milestones"
+        }
+      ]
+    }
+  ],
+  "external_acceptance_gates": [
+    {
+      "id": "health-recovery-domain-ready",
+      "applies_to": [
+        "SN-031.W04.03",
+        "SN-031.W06"
+      ],
+      "source_pr": 3,
+      "status": "not_attested",
+      "policy": "Required full domain capabilities must be accepted before full MCP acceptance. Core transport work is not blocked by this external gate."
+    },
+    {
+      "id": "cloud-chatgpt-client-ready",
+      "applies_to": [
+        "SN-031.W06"
+      ],
+      "status": "not_attested",
+      "policy": "Record actual account/client/OAuth/profile/date and read/write results; do not infer from docs or CLI."
+    }
+  ],
+  "preserved_controls": [
+    "All remaining base task dependencies/statuses/admission are unchanged.",
+    "W01 retains all original SN-031 prerequisites; missing prerequisites block dispatch.",
+    "All child tasks inherit applicable SN-031 requirements, limits, release policy and non_goals; aggregate is never paid-dispatched.",
+    "SN-042 keeps SN-031 as prerequisite and therefore waits for W06; SN-043/SN-044 inherit this barrier.",
+    "No rerun of consumed BOOT-P01 and no bypass of the historical specifically refused operations.",
+    "This file is consumed by planning after branch acceptance; stock Symphony does not automatically load it."
+  ],
+  "schema_file": "schemas/task-refinement.schema.json",
+  "tasks": [
+    {"id":"SN-031.W01","parent":"SN-031","title":"Реестр бизнес-команд и проверка UI/REST/MCP-покрытия","depends_on":["SN-005","SN-014","SN-029"],"requirements":["MCP-08","MCP-09","MCP-18"],"acceptance_ids":["AC-MCP-02","AC-MCP-06"],"implementation_paths":["elixir/lib/symphony_control/mcp/registry.ex","elixir/lib/symphony_control/mcp/domain.ex","schemas/capabilities.json","schemas/mcp-tools.json"],"test_path":"elixir/test/symphony_control/mcp/registry_test.exs","fixture":"Полный реестр бизнес-команд трёх каналов; новая UI-only команда; reader/operator/admin.","acceptance_assertions":["Ни одна обязательная бизнес-команда не теряется; исключения требуют явно принятого основания.","Реестр возможностей не выдаёт права: ACL проверяется при каждом вызове."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/registry_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W02.01","parent":"SN-031","title":"OAuth resource profile и общая проверка личности","depends_on":["SN-031.W01","SN-005"],"requirements":["MCP-15","MCP-16","MCP-20"],"acceptance_ids":["AC-MCP-03","AC-MCP-04","AC-MCP-13"],"implementation_paths":["elixir/lib/symphony_control/mcp/authorization.ex","mcp-gateway/src/authorization.ts","docs/integrations/mcp-oauth.md"],"test_path":"elixir/test/symphony_control/mcp/authorization_test.exs","fixture":"Два пользователя в двух проектах; неверные aud/issuer/expiry, revoked grant, replay code, downgrade PKCE.","acceptance_assertions":["Actor выводится из проверенного bearer, не из тела запроса.","SSO веб-панели не засчитывается как успешный MCP OAuth; значения секретов не выдаются."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/authorization_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W02.02","parent":"SN-031","title":"Remote MCP transport и типизированный мост к Domain API","depends_on":["SN-031.W02.01","SN-014"],"requirements":["MCP-09","MCP-17","MCP-18","MCP-22","MCP-23"],"acceptance_ids":["AC-MCP-03","AC-MCP-08","AC-MCP-12","AC-MCP-16","AC-MCP-18"],"implementation_paths":["mcp-gateway/src/server.ts","mcp-gateway/src/domain-client.ts","mcp-gateway/src/catalog.ts","mcp-gateway/package.json","mcp-gateway/package-lock.json","elixir/lib/symphony_control/mcp.ex"],"test_path":"mcp-gateway/test/transport.test.ts","fixture":"Реальные HTTP initialize/tools/list/tools/call; unknown tool, stale schema, client disconnect и повтор idempotency key.","acceptance_assertions":["Прикладная логика и ACL остаются в Elixir; gateway не имеет административного service token.","Долгая операция возвращает durable operation_id; потеря соединения не отменяет и не дублирует её."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd mcp-gateway && npm ci && npm test -- transport","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W03.01","parent":"SN-031","title":"Проекты, карточки, комментарии, версии ТЗ и планы","depends_on":["SN-031.W02.02","SN-006","SN-007","SN-008","SN-029"],"requirements":["MCP-10","MCP-11","MCP-19","MCP-21"],"acceptance_ids":["AC-MCP-05","AC-MCP-06","AC-MCP-07","AC-MCP-12"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/tracker.ex","elixir/lib/symphony_control/mcp/tools/specifications.ex"],"test_path":"elixir/test/symphony_control/mcp/tracker_parity_test.exs","fixture":"MCP создаёт проект/задачу/comment/revision; UI/REST читают те же ID; повтор mutation и stale expected_version.","acceptance_assertions":["Все записи проходят существующие domain services и одну БД.","Новая версия требований не меняет snapshot уже работающей attempt незаметно."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/tracker_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W03.02","parent":"SN-031","title":"Иерархия, поиск, milestones, циклы, views и архив","depends_on":["SN-031.W03.01","SN-010","SN-011","SN-013"],"requirements":["MCP-10","MCP-19"],"acceptance_ids":["AC-MCP-02","AC-MCP-06"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/planning.ex","elixir/lib/symphony_control/mcp/tools/search.ex","elixir/lib/symphony_control/mcp/tools/archive.ex"],"test_path":"elixir/test/symphony_control/mcp/planning_parity_test.exs","fixture":"Цикл зависимостей, недоступная родительская задача, границы страниц, archive/restore и сохранённый фильтр.","acceptance_assertions":["MCP и UI отклоняют одинаковые циклы/конфликты.","Поиск не раскрывает чужие названия, количество скрытых задач или вложения."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/planning_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W03.03","parent":"SN-031","title":"Вложения и защищённый импорт/экспорт","depends_on":["SN-031.W03.01","SN-009","SN-013"],"requirements":["MCP-10","MCP-19","MCP-20","MCP-22"],"acceptance_ids":["AC-MCP-03","AC-MCP-17"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/artifacts.ex","elixir/lib/symphony_control/mcp/tools/transfer.ex"],"test_path":"elixir/test/symphony_control/mcp/attachments_parity_test.exs","fixture":"Настоящие synthetic bytes; opaque sandbox path без файла; чужой upload grant; MIME/size/quarantine/SSRF.","acceptance_assertions":["Сервер подтверждает реально полученные bytes и hash, а не имя файла.","Защищённая передача не превращается в произвольный URL fetch."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/attachments_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.01","parent":"SN-031","title":"Выполнение, вопросы, pause/cancel/interrupt и reconciliation","depends_on":["SN-031.W02.02","SN-015","SN-020","SN-021"],"requirements":["MCP-11","MCP-12","MCP-16","MCP-17","MCP-21","MCP-26"],"acceptance_ids":["AC-MCP-08","AC-MCP-09","AC-MCP-12","AC-MCP-13","AC-MCP-14"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/execution.ex","elixir/lib/symphony_control/mcp/tools/decisions.ex"],"test_path":"elixir/test/symphony_control/mcp/execution_parity_test.exs","fixture":"Очередь и активная attempt; ручная пауза; потерянный ответ; отзыв роли между preview и commit.","acceptance_assertions":["Pause intake, cancel queued и interrupt run — разные типизированные действия.","Повтор или reconnect не создаёт второго writer и не сбрасывает бюджет."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/execution_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.02","parent":"SN-031","title":"Настройки, агентные профили, routing, бюджеты и handoff","depends_on":["SN-031.W02.02","SN-019","SN-025","SN-026","SN-028"],"requirements":["MCP-12","MCP-13","MCP-16","MCP-21"],"acceptance_ids":["AC-MCP-10","AC-MCP-11","AC-MCP-13"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/settings.ex","elixir/lib/symphony_control/mcp/tools/models.ex","elixir/lib/symphony_control/mcp/tools/budgets.ex"],"test_path":"elixir/test/symphony_control/mcp/settings_parity_test.exs","fixture":"Два конкурирующих изменения; работающая attempt; denied дорогая модель; UNKNOWN цена; смена лимита.","acceptance_assertions":["Desired/effective config разделены; stale version отклонена.","Routing не расширяет права и не подменяет неизвестную стоимость нулём."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/settings_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.03","parent":"SN-031","title":"Health, диагностика и разрешённое восстановление","depends_on":["SN-031.W02.02","SN-021","SN-022","SN-023","SN-024","SN-041"],"requirements":["MCP-12","MCP-14","MCP-17","MCP-21","MCP-23","MCP-26"],"acceptance_ids":["AC-MCP-14","AC-MCP-15","AC-MCP-16"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/health.ex","elixir/lib/symphony_control/mcp/tools/incidents.ex","elixir/lib/symphony_control/mcp/tools/recovery.ex"],"test_path":"elixir/test/symphony_control/mcp/recovery_parity_test.exs","fixture":"Отказ зависимости, потерянный ack restart, устаревшая телеметрия, ручная maintenance пауза и restart MCP gateway.","acceptance_assertions":["Recovery исполняет существующий ограниченный executor, не shell/MCP handler.","История запуска не становится not_started после interrupt; непроверенные компоненты показываются UNKNOWN."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/recovery_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.04","parent":"SN-031","title":"Интеграции, provisioning, роли и secret enrollment","depends_on":["SN-031.W02.02","SN-005","SN-006","SN-032"],"requirements":["MCP-15","MCP-16","MCP-20","MCP-21","MCP-22"],"acceptance_ids":["AC-MCP-03","AC-MCP-04","AC-MCP-13"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/integrations.ex","elixir/lib/symphony_control/mcp/tools/access.ex"],"test_path":"elixir/test/symphony_control/mcp/administration_parity_test.exs","fixture":"Два resource manifest; попытка повысить собственную роль; отозванная delegation; завершение browser secret flow.","acceptance_assertions":["Модель не может утвердить личный consent флагом approve=true.","Secret metadata доступна по правам, raw token не входит в schemas/results/logs."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/administration_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.05","parent":"SN-031","title":"Review, release, backup и безопасный restore","depends_on":["SN-031.W02.02","SN-030","SN-034","SN-039"],"requirements":["MCP-14","MCP-16","MCP-17","MCP-20","MCP-21"],"acceptance_ids":["AC-MCP-12","AC-MCP-13","AC-MCP-15","AC-MCP-17"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/quality.ex","elixir/lib/symphony_control/mcp/tools/releases.ex","elixir/lib/symphony_control/mcp/tools/backups.ex"],"test_path":"elixir/test/symphony_control/mcp/release_restore_parity_test.exs","fixture":"Поменявшийся HEAD, отсутствующий trusted check, несовместимая схема, неизвестный restore outcome.","acceptance_assertions":["Нет bypass review/CI через MCP.","Destructive restore не выполняется без применимого личного подтверждения; rollback требует совместимого predecessor."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/release_restore_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W04.06","parent":"SN-031","title":"Уведомления, состояние подключения и история операций","depends_on":["SN-031.W02.02","SN-012","SN-037","SN-041"],"requirements":["MCP-12","MCP-19","MCP-21","MCP-23","MCP-26"],"acceptance_ids":["AC-MCP-08","AC-MCP-14","AC-MCP-16","AC-MCP-20"],"implementation_paths":["elixir/lib/symphony_control/mcp/tools/notifications.ex","elixir/lib/symphony_control/mcp/tools/operations.ex","elixir/lib/symphony_control/mcp/tools/connection.ex"],"test_path":"elixir/test/symphony_control/mcp/notifications_parity_test.exs","fixture":"Закрытый чат, недоступный канал доставки, stale tools/list, завершённая operation после reconnect.","acceptance_assertions":["Сохранено/доставлено/прочитано — разные статусы.","Наличие MCP не выдаётся за возможность написать в закрытый чат."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["cd elixir && MIX_ENV=test mix test test/symphony_control/mcp/notifications_parity_test.exs --trace","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W05","parent":"SN-031","title":"Пакет плагина, onboarding и воспроизводимая Docker-поставка","depends_on":["SN-031.W03.01","SN-031.W04.01","SN-033"],"requirements":["MCP-07","MCP-18","MCP-19","MCP-24","MCP-25","MCP-26"],"acceptance_ids":["AC-MCP-01","AC-MCP-08","AC-MCP-18","AC-MCP-19","AC-MCP-20"],"implementation_paths":["plugin/README.md","plugin/skills/symphony-next/SKILL.md","mcp-gateway/Dockerfile","deploy/mcp.compose.yaml","docs/integrations/chatgpt-setup.md"],"test_path":"test/e2e/mcp-install.spec.ts","fixture":"Новый сервер Coolify, GitHub App, новые домен/secret refs; healthcheck и metadata refresh; нет файлов 1c-db.","acceptance_assertions":["Deploy не объявляется созданием подключения/consent в аккаунте ChatGPT.","Обязательные функции доступны текстовыми tools без обязательного виджета."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["npm exec --offline -- playwright test test/e2e/mcp-install.spec.ts","git diff --check"],"command_status":"specified_not_run_for_product"},
+    {"id":"SN-031.W06","parent":"SN-031","title":"Полная приёмка UI/REST/MCP и настоящий облачный ChatGPT","depends_on":["SN-031.W05","SN-031.W03.02","SN-031.W03.03","SN-031.W04.02","SN-031.W04.03","SN-031.W04.04","SN-031.W04.05","SN-031.W04.06","SN-035","SN-036","SN-038","SN-041"],"requirements":["MCP-07","MCP-08","MCP-25","MCP-26"],"acceptance_ids":["AC-MCP-01","AC-MCP-02","AC-MCP-03","AC-MCP-04","AC-MCP-05","AC-MCP-06","AC-MCP-07","AC-MCP-08","AC-MCP-09","AC-MCP-10","AC-MCP-11","AC-MCP-12","AC-MCP-13","AC-MCP-14","AC-MCP-15","AC-MCP-16","AC-MCP-17","AC-MCP-18","AC-MCP-19","AC-MCP-20","AC-77","AC-78","AC-83"],"implementation_paths":["test/e2e/mcp-parity.spec.ts","docs/acceptance/mcp-client-matrix.json","docs/acceptance/mcp-evidence.json"],"test_path":"test/e2e/mcp-parity.spec.ts","fixture":"Cloud ChatGPT reader/operator/admin, два проекта, disconnect, отзыв OAuth, обновление схемы и длинная операция.","acceptance_assertions":["Каждая обязательная UI-команда имеет MCP-путь и доказательство; Inspector/CLI не заменяет cloud E2E.","Полный acceptance включает принятый Health/Recovery contract; unsupported client не объявляется PASS."],"status":"planned","admitted":false,"risk":"high","implementation_state":"NOT_IMPLEMENTED","test_state":"NOT_RUN","commands":["npm exec --offline -- playwright test test/e2e/mcp-parity.spec.ts","git diff --check"],"command_status":"specified_not_run_for_product"}
+  ]
+}

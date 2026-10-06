@@ -1,0 +1,1227 @@
+{
+  "schema": "symphony-next-traceability/v1",
+  "requirements": {
+    "ADM-01": "SN-015",
+    "ADM-02": "SN-015",
+    "ADM-03": "SN-015",
+    "ADM-04": "SN-015",
+    "ADM-05": "SN-015",
+    "API-01": "SN-031",
+    "API-02": "SN-031",
+    "API-03": "SN-031",
+    "API-04": "SN-031",
+    "API-05": "SN-031",
+    "API-06": "SN-031",
+    "API-07": "SN-031",
+    "API-08": "SN-031",
+    "ARCH-01": "SN-004",
+    "ARCH-02": "SN-004",
+    "ARCH-03": "SN-004",
+    "ARCH-04": "SN-004",
+    "ARCH-05": "SN-004",
+    "ARCH-06": "SN-004",
+    "ARCH-07": "SN-004",
+    "AUTH-01": "SN-005",
+    "AUTH-02": "SN-005",
+    "AUTH-03": "SN-005",
+    "AUTH-04": "SN-005",
+    "AUTH-05": "SN-005",
+    "AUTH-06": "SN-005",
+    "AUTH-07": "SN-005",
+    "AUTH-08": "SN-005",
+    "AUTH-09": "SN-005",
+    "AUTO-01": "SN-033",
+    "AUTO-02": "SN-033",
+    "AUTO-03": "SN-033",
+    "AUTO-04": "SN-033",
+    "BOOT-01": "SN-002",
+    "BOOT-02": "SN-002",
+    "BOOT-03": "SN-002",
+    "BOOT-04": "SN-002",
+    "BOOT-05": "SN-002",
+    "BOOT-06": "SN-002",
+    "BOOT-07": "SN-043",
+    "BOOT-08": "SN-002",
+    "BUD-01": "SN-025",
+    "BUD-02": "SN-025",
+    "BUD-03": "SN-025",
+    "BUD-04": "SN-025",
+    "BUD-05": "SN-025",
+    "BUD-06": "SN-025",
+    "BUD-07": "SN-025",
+    "CMD-01": "SN-014",
+    "CMD-02": "SN-014",
+    "CMD-03": "SN-014",
+    "CTX-01": "SN-027",
+    "CTX-02": "SN-027",
+    "CTX-03": "SN-027",
+    "CTX-04": "SN-027",
+    "DATA-01": "SN-004",
+    "DATA-02": "SN-004",
+    "DATA-03": "SN-004",
+    "DATA-04": "SN-004",
+    "DATA-05": "SN-004",
+    "DATA-06": "SN-004",
+    "DATA-07": "SN-004",
+    "DATA-08": "SN-004",
+    "DATA-09": "SN-004",
+    "DEC-01": "SN-006",
+    "DEC-02": "SN-006",
+    "DEC-03": "SN-006",
+    "DEC-04": "SN-006",
+    "DEC-05": "SN-006",
+    "DEC-06": "SN-006",
+    "DEC-07": "SN-006",
+    "DEP-01": "SN-033",
+    "DEP-02": "SN-033",
+    "DEP-03": "SN-033",
+    "DEP-04": "SN-033",
+    "DEP-05": "SN-034",
+    "DEP-06": "SN-034",
+    "DEP-07": "SN-034",
+    "DIAG-01": "SN-022",
+    "DIAG-02": "SN-022",
+    "DIAG-03": "SN-022",
+    "DIAG-04": "SN-023",
+    "DIAG-05": "SN-023",
+    "DIAG-06": "SN-023",
+    "DIAG-07": "SN-024",
+    "DIAG-08": "SN-024",
+    "DIAG-09": "SN-022",
+    "DIAG-10": "SN-044",
+    "ENG-01": "SN-019",
+    "ENG-02": "SN-016",
+    "ENG-03": "SN-019",
+    "ENG-04": "SN-019",
+    "ENG-05": "SN-026",
+    "ENG-06": "SN-016",
+    "ENG-07": "SN-018",
+    "ENG-08": "SN-028",
+    "ENG-09": "SN-028",
+    "ENG-10": "SN-019",
+    "EVAL-01": "SN-040",
+    "EVAL-02": "SN-040",
+    "EVAL-03": "SN-040",
+    "EVAL-04": "SN-040",
+    "FLOW-01": "SN-029",
+    "FLOW-02": "SN-029",
+    "FLOW-03": "SN-029",
+    "FLOW-04": "SN-029",
+    "INT-01": "SN-031",
+    "INT-02": "SN-031",
+    "INT-03": "SN-031",
+    "INT-04": "SN-031",
+    "INT-05": "SN-031",
+    "INT-06": "SN-031",
+    "INT-07": "SN-031",
+    "INT-08": "SN-031",
+    "INT-09": "SN-031",
+    "INV-01": "SN-002",
+    "INV-02": "SN-002",
+    "INV-03": "SN-002",
+    "INV-04": "SN-002",
+    "INV-05": "SN-002",
+    "MCP-01": "SN-031",
+    "MCP-02": "SN-031",
+    "MCP-03": "SN-031",
+    "MCP-04": "SN-031",
+    "MCP-05": "SN-031",
+    "MCP-06": "SN-031",
+    "MOB-01": "SN-036",
+    "MOB-02": "SN-036",
+    "MOB-03": "SN-036",
+    "MOB-04": "SN-036",
+    "MOB-05": "SN-036",
+    "MOB-06": "SN-036",
+    "MOB-07": "SN-037",
+    "MOB-08": "SN-037",
+    "MOB-09": "SN-036",
+    "MOB-10": "SN-035",
+    "NFR-01": "SN-041",
+    "NFR-02": "SN-041",
+    "NFR-03": "SN-041",
+    "NFR-04": "SN-041",
+    "NFR-05": "SN-041",
+    "NFR-06": "SN-041",
+    "NFR-07": "SN-041",
+    "NFR-08": "SN-041",
+    "NFR-09": "SN-041",
+    "NFR-10": "SN-041",
+    "NFR-11": "SN-041",
+    "NFR-12": "SN-041",
+    "NFR-13": "SN-041",
+    "NFR-14": "SN-041",
+    "NFR-15": "SN-041",
+    "OBS-01": "SN-041",
+    "OBS-02": "SN-041",
+    "OBS-03": "SN-041",
+    "OBS-04": "SN-041",
+    "OBS-05": "SN-041",
+    "OPS-01": "SN-039",
+    "OPS-02": "SN-039",
+    "OPS-03": "SN-039",
+    "OPS-04": "SN-039",
+    "OPS-05": "SN-039",
+    "OPS-06": "SN-039",
+    "OPS-07": "SN-039",
+    "OPS-08": "SN-039",
+    "OPS-09": "SN-039",
+    "OPS-10": "SN-039",
+    "OPS-11": "SN-039",
+    "OPS-12": "SN-039",
+    "PLAN-01": "SN-029",
+    "PLAN-02": "SN-029",
+    "PLAN-03": "SN-029",
+    "PLAN-04": "SN-029",
+    "PLAN-05": "SN-029",
+    "PLAN-06": "SN-042",
+    "PLAN-07": "SN-030",
+    "PLAN-08": "SN-042",
+    "PLAN-09": "SN-029",
+    "PRJ-01": "SN-006",
+    "PRJ-02": "SN-006",
+    "PRJ-03": "SN-006",
+    "PRJ-04": "SN-006",
+    "PRJ-05": "SN-006",
+    "PROTO-01": "SN-016",
+    "PROTO-02": "SN-016",
+    "PROTO-03": "SN-016",
+    "PROTO-04": "SN-016",
+    "PROTO-05": "SN-016",
+    "PROTO-06": "SN-016",
+    "PROTO-07": "SN-016",
+    "PROTO-08": "SN-016",
+    "PROTO-09": "SN-016",
+    "PROTO-10": "SN-016",
+    "PROV-01": "SN-032",
+    "PROV-02": "SN-032",
+    "PROV-03": "SN-032",
+    "PROV-04": "SN-032",
+    "QUAL-01": "SN-030",
+    "QUAL-02": "SN-030",
+    "QUAL-03": "SN-030",
+    "QUAL-04": "SN-030",
+    "REL-01": "SN-021",
+    "REL-02": "SN-021",
+    "REL-03": "SN-021",
+    "REL-04": "SN-021",
+    "REL-05": "SN-021",
+    "REL-06": "SN-021",
+    "REL-07": "SN-021",
+    "REL-08": "SN-021",
+    "ROUT-01": "SN-026",
+    "ROUT-02": "SN-026",
+    "ROUT-03": "SN-026",
+    "ROUT-04": "SN-026",
+    "ROUT-05": "SN-026",
+    "ROUT-06": "SN-026",
+    "ROUT-07": "SN-026",
+    "ROUT-08": "SN-026",
+    "ROUT-09": "SN-026",
+    "SCH-01": "SN-015",
+    "SCH-02": "SN-015",
+    "SCH-03": "SN-015",
+    "SCH-04": "SN-015",
+    "SCH-05": "SN-015",
+    "SEC-01": "SN-005",
+    "SEC-02": "SN-005",
+    "SEC-03": "SN-005",
+    "SEC-04": "SN-005",
+    "SEC-05": "SN-005",
+    "SEC-06": "SN-005",
+    "SEC-07": "SN-005",
+    "SEC-08": "SN-005",
+    "SEC-09": "SN-009",
+    "SEC-10": "SN-005",
+    "STATE-01": "SN-014",
+    "STATE-02": "SN-014",
+    "STATE-03": "SN-014",
+    "STATE-04": "SN-014",
+    "STATE-05": "SN-014",
+    "STATE-06": "SN-014",
+    "STATE-07": "SN-014",
+    "TSK-01": "SN-007",
+    "TSK-02": "SN-007",
+    "TSK-03": "SN-007",
+    "TSK-04": "SN-011",
+    "TSK-05": "SN-007",
+    "TSK-06": "SN-010",
+    "TSK-07": "SN-006",
+    "TSK-08": "SN-008",
+    "TSK-09": "SN-011",
+    "TSK-10": "SN-011",
+    "TSK-11": "SN-010",
+    "TSK-12": "SN-012",
+    "TSK-13": "SN-009",
+    "TSK-14": "SN-013",
+    "TSK-15": "SN-013",
+    "TSK-16": "SN-007",
+    "TSK-17": "SN-041",
+    "TSK-18": "SN-029",
+    "UI-01": "SN-035",
+    "UI-02": "SN-035",
+    "UI-03": "SN-035",
+    "UI-04": "SN-035",
+    "UI-05": "SN-035",
+    "UI-06": "SN-035",
+    "WF-01": "SN-029",
+    "WF-02": "SN-029",
+    "WF-03": "SN-029"
+  },
+  "acceptance": {
+    "AC-01": {
+      "primary_task": "SN-002",
+      "supporting_tasks": [
+        "SN-002"
+      ],
+      "scenario": "Отдельный новый контур",
+      "expected": "Нет shared writable mounts, credentials и доступа к очереди/репозиторию DF Assistant; существующий контур не менялся",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-02": {
+      "primary_task": "SN-005",
+      "supporting_tasks": [
+        "SN-005"
+      ],
+      "scenario": "Неавторизованный браузер/API/WS",
+      "expected": "Нет утечки private данных; mutations запрещены; origin/session проверены",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-03": {
+      "primary_task": "SN-005",
+      "supporting_tasks": [
+        "SN-005"
+      ],
+      "scenario": "Роли и межпроектный доступ",
+      "expected": "Viewer не пишет; Contributor не enqueue; Operator не approve без роли; чужой project ID не обходит policy",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-04": {
+      "primary_task": "SN-014",
+      "supporting_tasks": [
+        "SN-014"
+      ],
+      "scenario": "Две вкладки / повтор HTTP",
+      "expected": "Одна durable команда и один эффект; conflict при несовпадающем payload/version",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-05": {
+      "primary_task": "SN-015",
+      "supporting_tasks": [
+        "SN-015"
+      ],
+      "scenario": "Два control / одна задача",
+      "expected": "Один owner и один runner; stale epoch не публикует изменения",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-06": {
+      "primary_task": "SN-015",
+      "supporting_tasks": [
+        "SN-015"
+      ],
+      "scenario": "Pause intake",
+      "expected": "Новые задачи не стартуют; текущая не остановлена; состояние переживает restart",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-07": {
+      "primary_task": "SN-016",
+      "supporting_tasks": [
+        "SN-016",
+        "SN-024"
+      ],
+      "scenario": "Interrupt / forced stop",
+      "expected": "Stopping виден до подтверждения; прекращается только зарегистрированная attempt; внешние эффекты перечислены",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-08": {
+      "primary_task": "SN-017",
+      "supporting_tasks": [
+        "SN-017",
+        "SN-020"
+      ],
+      "scenario": "Живой вопрос агента",
+      "expected": "Вопрос появляется; ответ доставлен по exact request; агент продолжает; связь с запросом доказана",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-09": {
+      "primary_task": "SN-017",
+      "supporting_tasks": [
+        "SN-017",
+        "SN-020"
+      ],
+      "scenario": "Approval и deny",
+      "expected": "Разрешённая операция выполняется только после допустимого решения; запрещённая остаётся deny",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-10": {
+      "primary_task": "SN-020",
+      "supporting_tasks": [
+        "SN-020"
+      ],
+      "scenario": "Устаревший approval",
+      "expected": "Ответ после окончания turn/reconnect/TTL отвергается; старое решение не воспроизводится",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-11": {
+      "primary_task": "SN-014",
+      "supporting_tasks": [
+        "SN-014",
+        "SN-021"
+      ],
+      "scenario": "Crash control во время ожидания",
+      "expected": "Timeline/решения сохранены; admission закрыт; безопасное сопоставление живой runner-сессии либо recovery_required",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-12": {
+      "primary_task": "SN-017",
+      "supporting_tasks": [
+        "SN-017",
+        "SN-021"
+      ],
+      "scenario": "Crash App Server",
+      "expected": "Pending RPC инвалидирован; нет blind restart; resume/context и новая attempt различимы",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-13": {
+      "primary_task": "SN-023",
+      "supporting_tasks": [
+        "SN-023"
+      ],
+      "scenario": "Timeout после Git push/PR write",
+      "expected": "Readback определяет эффект либо unknown; повторный PR/пуш не создаётся без проверки",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-14": {
+      "primary_task": "SN-022",
+      "supporting_tasks": [
+        "SN-022",
+        "SN-023",
+        "SN-041"
+      ],
+      "scenario": "Model/Git недоступны",
+      "expected": "Типизированная ошибка, bounded retries, tracker остаётся доступен; нет restart storm",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-15": {
+      "primary_task": "SN-004",
+      "supporting_tasks": [
+        "SN-004",
+        "SN-014",
+        "SN-024",
+        "SN-041"
+      ],
+      "scenario": "DB down / disk full",
+      "expected": "Нет фиктивно принятых команд; fail-closed admission; восстановление через reconciliation",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-16": {
+      "primary_task": "SN-009",
+      "supporting_tasks": [
+        "SN-009",
+        "SN-022",
+        "SN-027"
+      ],
+      "scenario": "Секреты и недоверенный контент",
+      "expected": "Canary secret не попадает в events/logs/UI/artifacts; traversal/XSS/SSRF/prompt privilege escalation заблокированы",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-17": {
+      "primary_task": "SN-033",
+      "supporting_tasks": [
+        "SN-033",
+        "SN-034",
+        "SN-042"
+      ],
+      "scenario": "End-to-end инженерная задача",
+      "expected": "Native issue → один worker → related commit → PR → checks exact HEAD → независимый review → delegated merge → webhook deploy → exact runtime и functional acceptance; завершение review не подменяет deploy",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-18": {
+      "primary_task": "SN-012",
+      "supporting_tasks": [
+        "SN-012",
+        "SN-037"
+      ],
+      "scenario": "Уведомление",
+      "expected": "Durable inbox/read/ack проверены; для opt-in внешнего канала отдельное delivery evidence; ошибка не потеряна",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-19": {
+      "primary_task": "SN-004",
+      "supporting_tasks": [
+        "SN-004",
+        "SN-021",
+        "SN-034",
+        "SN-041"
+      ],
+      "scenario": "Deploy/restart/reboot",
+      "expected": "Exact image/commit/config известны; persistence есть; intake не открывается до reconciliation",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-20": {
+      "primary_task": "SN-034",
+      "supporting_tasks": [
+        "SN-034",
+        "SN-039"
+      ],
+      "scenario": "Restore / rollback drill",
+      "expected": "Данные восстановлены в изолированной среде, внешние эффекты сверены, повторное выполнение не началось автоматически",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-21": {
+      "primary_task": "SN-029",
+      "supporting_tasks": [
+        "SN-029"
+      ],
+      "scenario": "Workflow draft/activation",
+      "expected": "Invalid draft не меняет active config; новый run pin-ит новую версию; старый не получает silent policy expansion",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-22": {
+      "primary_task": "SN-005",
+      "supporting_tasks": [
+        "SN-005"
+      ],
+      "scenario": "Revocation",
+      "expected": "Отозванная роль/session не может действовать из старой вкладки в пределах NFR-04",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-23": {
+      "primary_task": "SN-038",
+      "supporting_tasks": [
+        "SN-038"
+      ],
+      "scenario": "Два реальных проекта одновременно",
+      "expected": "Разные native project_id/issue_id и repo bindings; перекрывающиеся по времени live turns A/B в разных runner; у каждого свой commit/PR/workflow",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-24": {
+      "primary_task": "SN-006",
+      "supporting_tasks": [
+        "SN-006",
+        "SN-016",
+        "SN-038"
+      ],
+      "scenario": "Межпроектная изоляция",
+      "expected": "A не читает и не меняет workflow/secrets/workspace/requests/events/artifacts B через UI/API/tools/network; подмена project_id/runner identity отклонена",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-25": {
+      "primary_task": "SN-038",
+      "supporting_tasks": [
+        "SN-038"
+      ],
+      "scenario": "Блокировка или crash проекта A",
+      "expected": "Waiting approval/остановка/crash A не останавливает B при исправных общих зависимостях; нет повторного worker A",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-26": {
+      "primary_task": "SN-033",
+      "supporting_tasks": [
+        "SN-033",
+        "SN-038"
+      ],
+      "scenario": "Обновление runner A",
+      "expected": "Штатный webhook обновляет только согласованный ресурс A; process/attempt/image B не изменились; нет fan-out restart",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-27": {
+      "primary_task": "SN-038",
+      "supporting_tasks": [
+        "SN-038"
+      ],
+      "scenario": "Workflow A и B",
+      "expected": "Активация новой версии A не меняет B и active run A; каждый run имеет правильные project/version/hash",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-28": {
+      "primary_task": "SN-006",
+      "supporting_tasks": [
+        "SN-006",
+        "SN-032",
+        "SN-038"
+      ],
+      "scenario": "Подключение третьего проекта",
+      "expected": "Новый descriptor и отдельный runner добавлены без изменения source code; scopes проверены, readiness подтверждена; global limit соблюдён",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-29": {
+      "primary_task": "SN-025",
+      "supporting_tasks": [
+        "SN-025",
+        "SN-038"
+      ],
+      "scenario": "Квоты и fairness",
+      "expected": "Лимиты enforced в runtime; поток A не вытесняет B бессрочно; общий provider pool учтён; UNKNOWN budget не показан как точный ноль",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-30": {
+      "primary_task": "SN-005",
+      "supporting_tasks": [
+        "SN-005"
+      ],
+      "scenario": "Повторное использование Authentik",
+      "expected": "SSO/MFA/roles/logout нового приложения работают; существующие providers/flows не изменены; контрольная чужая SSO-интеграция не регрессировала",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-31": {
+      "primary_task": "SN-016",
+      "supporting_tasks": [
+        "SN-016",
+        "SN-032"
+      ],
+      "scenario": "Provisioning и права",
+      "expected": "UI не может создать arbitrary контейнер/mount; новый проект не стартует до scoped runner readback; отсутствуют Docker socket и широкий Coolify token",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-32": {
+      "primary_task": "SN-039",
+      "supporting_tasks": [
+        "SN-039"
+      ],
+      "scenario": "Restore нескольких проектов",
+      "expected": "После восстановления точные project bindings/roles/workflow сохранены; чужие данные не подмешаны; admission закрыт до reconciliation",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-33": {
+      "primary_task": "SN-006",
+      "supporting_tasks": [
+        "SN-006"
+      ],
+      "scenario": "Конфликт bindings",
+      "expected": "Повторная регистрация той же исходной задачи/repo в другом проекте отклонена; DF Assistant остаётся запрещённым target",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-34": {
+      "primary_task": "SN-042",
+      "supporting_tasks": [
+        "SN-042"
+      ],
+      "scenario": "Работа без Linear",
+      "expected": "Чистый install без Linear token/config, egress к Linear запрещён; create→enqueue→выбранный agent→PR→review проходит на own tracker",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-35": {
+      "primary_task": "SN-007",
+      "supporting_tasks": [
+        "SN-007",
+        "SN-011",
+        "SN-035"
+      ],
+      "scenario": "Полноценный локальный tracker",
+      "expected": "CRUD, ID, priority/assignee/labels, comments, docs; list/board/filters показывают один набор записей; ручная задача не требует runner",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-36": {
+      "primary_task": "SN-007",
+      "supporting_tasks": [
+        "SN-007",
+        "SN-008"
+      ],
+      "scenario": "Конкурентное редактирование",
+      "expected": "Две версии карточки/повтор create/comment: одна запись или явный conflict; ни потерянного изменения, ни дубля outbox",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-37": {
+      "primary_task": "SN-007",
+      "supporting_tasks": [
+        "SN-007",
+        "SN-015"
+      ],
+      "scenario": "Статус отдельно от admission",
+      "expected": "Todo/drag-and-drop/назначение/импорт не запускают агент; явный admission запускает только актуальный snapshot",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-38": {
+      "primary_task": "SN-010",
+      "supporting_tasks": [
+        "SN-010",
+        "SN-029"
+      ],
+      "scenario": "Зависимости и циклы",
+      "expected": "Self/cycle/invalid duplicate отвергнуты; canceled blocker не удовлетворяет dependency; изменение/reopen не даёт неверный запуск",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-39": {
+      "primary_task": "SN-029",
+      "supporting_tasks": [
+        "SN-029",
+        "SN-042"
+      ],
+      "scenario": "Native tools агента",
+      "expected": "Разрешённый workpad/evidence проходит; чужая issue/role/policy/Done/самодопуск запрещены; draft defect не запускается рекурсивно",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-40": {
+      "primary_task": "SN-008",
+      "supporting_tasks": [
+        "SN-008",
+        "SN-029"
+      ],
+      "scenario": "Изменение задания при выполнении",
+      "expected": "Старый snapshot сохранён; scope diff виден; повторный допуск/steer только явно; текст комментария не исполняется командой",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-41": {
+      "primary_task": "SN-009",
+      "supporting_tasks": [
+        "SN-009"
+      ],
+      "scenario": "Вложения и выдача",
+      "expected": "Без login/чужой проект не читает bytes; XSS/traversal/quota проверены; агенту выдаётся только разрешённый snapshot",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-42": {
+      "primary_task": "SN-011",
+      "supporting_tasks": [
+        "SN-011",
+        "SN-012",
+        "SN-035"
+      ],
+      "scenario": "Поиск, views и inbox",
+      "expected": "Русский/английский текст и ID находятся локально; snippets/counts/export/live events не раскрывают закрытый проект после revocation",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-43": {
+      "primary_task": "SN-013",
+      "supporting_tasks": [
+        "SN-013",
+        "SN-043"
+      ],
+      "scenario": "Bootstrap и round-trip",
+      "expected": "Git backlog импортируется один раз; restore сохраняет ID, обычный импорт — ID mapping/связи/авторов; нет дублей и включённого admission",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-44": {
+      "primary_task": "SN-013",
+      "supporting_tasks": [
+        "SN-013",
+        "SN-039"
+      ],
+      "scenario": "Restore всего tracker",
+      "expected": "Issue revisions/comments/docs/attachments сверены по manifest/hash; история доступна после удаления run logs; старые права не оживают",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-45": {
+      "primary_task": "SN-007",
+      "supporting_tasks": [
+        "SN-007",
+        "SN-011",
+        "SN-041"
+      ],
+      "scenario": "Работа людей при остановке AI",
+      "expected": "Model/runner недоступны: разрешённые CRUD/board/search/comments работают; runtime честно blocked; DB outage не даёт ложного saved",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-46": {
+      "primary_task": "SN-010",
+      "supporting_tasks": [
+        "SN-010"
+      ],
+      "scenario": "Этапы, циклы и отчёты",
+      "expected": "Задачи/сроки/перенос остатка/progress воспроизводимы; canceled/review/Done различаются; метрики имеют явные формулы",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-47": {
+      "primary_task": "SN-013",
+      "supporting_tasks": [
+        "SN-013"
+      ],
+      "scenario": "Архив и перенос",
+      "expected": "Active issue нельзя перенести/удалить; после drain новый project copy не переносит secrets/approvals; archive не удаляет evidence",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-48": {
+      "primary_task": "SN-014",
+      "supporting_tasks": [
+        "SN-014",
+        "SN-015"
+      ],
+      "scenario": "Гонка claim и revoke",
+      "expected": "Одновременные enqueue, изменение blocker/scope и отмена admission сериализуются; stale task version/epoch не запускает новую attempt",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-49": {
+      "primary_task": "SN-018",
+      "supporting_tasks": [
+        "SN-018",
+        "SN-038"
+      ],
+      "scenario": "Два разных движка",
+      "expected": "Codex и второй accepted engine выполняют live задачи разных проектов с перекрытием turns; native tools/PR/evidence; две модели одного CLI не заменяют тест.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-50": {
+      "primary_task": "SN-017",
+      "supporting_tasks": [
+        "SN-017",
+        "SN-018",
+        "SN-019"
+      ],
+      "scenario": "Capability matrix",
+      "expected": "У start/approval/stop/resume/usage есть actual-version evidence; unsupported операция не вызывается и не эмулируется terminal input.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-51": {
+      "primary_task": "SN-017",
+      "supporting_tasks": [
+        "SN-017",
+        "SN-019",
+        "SN-026"
+      ],
+      "scenario": "Ручной pin и model identity",
+      "expected": "Разрешённый engine/model выбран оператором и подтверждён доступным native signal; запрещённый override отклонён, alias uncertainty явно UNKNOWN.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-52": {
+      "primary_task": "SN-026",
+      "supporting_tasks": [
+        "SN-026"
+      ],
+      "scenario": "Auto и Explain",
+      "expected": "Один snapshot даёт воспроизводимый маршрут; сохранены candidate exclusions/risk/policy/catalog; Manual и Recommend не начинают Auto скрыто.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-53": {
+      "primary_task": "SN-026",
+      "supporting_tasks": [
+        "SN-026"
+      ],
+      "scenario": "Risk floor и неоднозначность",
+      "expected": "Однострочный auth-fix и неясная задача не попадают в low-risk только из-за размера; отсутствующий сигнал приводит к gate/hold.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-54": {
+      "primary_task": "SN-026",
+      "supporting_tasks": [
+        "SN-026",
+        "SN-042"
+      ],
+      "scenario": "No-LLM / stage routing",
+      "expected": "Детерминированный lint не расходует model calls; plan/implement/review имеют явные profiles, один writer и отдельные evidence.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-55": {
+      "primary_task": "SN-023",
+      "supporting_tasks": [
+        "SN-023",
+        "SN-026"
+      ],
+      "scenario": "Эскалация и зацикливание",
+      "expected": "Лимит repair cycles/смены профиля соблюдён; auth/tool error не запускает дорогой retry; exhausted budget даёт hold.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-56": {
+      "primary_task": "SN-026",
+      "supporting_tasks": [
+        "SN-026"
+      ],
+      "scenario": "Provider outage и конфиденциальность",
+      "expected": "Fallback возможен только по accepted allowlist/trust/data rules; неразрешённый provider не получает ни код, ни summary.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-57": {
+      "primary_task": "SN-028",
+      "supporting_tasks": [
+        "SN-028"
+      ],
+      "scenario": "Междвижковый handoff",
+      "expected": "Старый worker прекращён/изолирован; exact SHA/dirty patch/tests/known operations сохранены; новая attempt не наследует credentials/approvals.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-58": {
+      "primary_task": "SN-016",
+      "supporting_tasks": [
+        "SN-016",
+        "SN-018",
+        "SN-028"
+      ],
+      "scenario": "Изоляция разных SDK",
+      "expected": "Engine B не читает HOME/session/секреты A; скрытый subagent/model fallback запрещён либо учитывается; unaccounted профиль исключён из Auto.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-59": {
+      "primary_task": "SN-019",
+      "supporting_tasks": [
+        "SN-019"
+      ],
+      "scenario": "Обновление adapter",
+      "expected": "Новая версия проходит contracts/canary; regression отменяет новые admissions; active attempt не получает silent upgrade.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-60": {
+      "primary_task": "SN-025",
+      "supporting_tasks": [
+        "SN-025"
+      ],
+      "scenario": "Usage и оценка",
+      "expected": "Cumulative events не удваивают cost; cache/reasoning правильно учтены; missing model price и SDK estimates не выдаются за ноль/invoice.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-61": {
+      "primary_task": "SN-025",
+      "supporting_tasks": [
+        "SN-025"
+      ],
+      "scenario": "Общий бюджет",
+      "expected": "Два проекта атомарно резервируют общий pool; retries/handoff/review не сбрасывают task total; raise limit требует прав и audit.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-62": {
+      "primary_task": "SN-025",
+      "supporting_tasks": [
+        "SN-025"
+      ],
+      "scenario": "Правдивый cap",
+      "expected": "Estimate-only profile не маркируется hard cap; strict mode блокирует unsupported enforcement; in-flight/late charges явно учитываются.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-63": {
+      "primary_task": "SN-040",
+      "supporting_tasks": [
+        "SN-040"
+      ],
+      "scenario": "Сравнение маршрутов",
+      "expected": "Версионированный набор/holdout, фиксированный baseline, failures и costs учтены; shadow mode не создаёт второй side effect.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-64": {
+      "primary_task": "SN-035",
+      "supporting_tasks": [
+        "SN-035"
+      ],
+      "scenario": "Мобильный рабочий цикл",
+      "expected": "На реальных целевых Android/iOS: task→profile→enqueue→question→answer→review без SSH; viewport 360–430, touch/zoom/keyboard проверены.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-65": {
+      "primary_task": "SN-020",
+      "supporting_tasks": [
+        "SN-020",
+        "SN-036"
+      ],
+      "scenario": "Мобильный approval",
+      "expected": "Preview точный и актуальный; stale/expired/revoked request отклонён; push/комментарий/голос не подменяют scoped решение.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-66": {
+      "primary_task": "SN-036",
+      "supporting_tasks": [
+        "SN-036"
+      ],
+      "scenario": "Потеря сети и повторное нажатие",
+      "expected": "После reconnect один command outcome по idempotency key; offline approval не ставится в очередь; UNKNOWN не показан applied.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-67": {
+      "primary_task": "SN-037",
+      "supporting_tasks": [
+        "SN-037"
+      ],
+      "scenario": "Push и закрытый телефон",
+      "expected": "Реальная доставка на согласованное устройство, generic payload и auth deep link; enqueue/send/open/ack различаются, provider зависимость отражена.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-68": {
+      "primary_task": "SN-036",
+      "supporting_tasks": [
+        "SN-036",
+        "SN-037"
+      ],
+      "scenario": "Потерянный телефон",
+      "expected": "Session/device/push revoke прекращают доступ старой вкладки; private cache отсутствует/очищен; чужая сессия не видит предыдущее содержимое.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-69": {
+      "primary_task": "SN-030",
+      "supporting_tasks": [
+        "SN-030"
+      ],
+      "scenario": "Независимый reviewer",
+      "expected": "Отдельный read-only stage на exact HEAD; reviewer не меняет код/приёмку сам; изменение HEAD делает прежнее evidence устаревшим.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-70": {
+      "primary_task": "SN-030",
+      "supporting_tasks": [
+        "SN-030"
+      ],
+      "scenario": "Качество и вмешательство в тесты",
+      "expected": "Заявление модели не закрывает acceptance; удалённые/ослабленные проверки и scope expansion выявляются; UI trace защищён.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-71": {
+      "primary_task": "SN-027",
+      "supporting_tasks": [
+        "SN-027"
+      ],
+      "scenario": "Context provenance",
+      "expected": "Manifest содержит source versions и verified/draft; закрытый проект исключён до retrieval/summarization; handoff не переносит скрытую историю.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-72": {
+      "primary_task": "SN-026",
+      "supporting_tasks": [
+        "SN-026",
+        "SN-029",
+        "SN-042"
+      ],
+      "scenario": "Ступени автономии",
+      "expected": "Economy/Quality не меняют A0–A3. A3 включён только делегацией проекта; агент не расширяет её. Подзадача проходит deterministic admission и DAG/budget gates, а не рекурсивный self-launch.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-73": {
+      "primary_task": "SN-012",
+      "supporting_tasks": [
+        "SN-012",
+        "SN-035",
+        "SN-042"
+      ],
+      "scenario": "Независимость ручного tracker",
+      "expected": "Отказ router/provider/agent не блокирует разрешённые локальные CRUD/search/inbox; нет обращения к Linear.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-74": {
+      "primary_task": "SN-021",
+      "supporting_tasks": [
+        "SN-021",
+        "SN-028",
+        "SN-039"
+      ],
+      "scenario": "Восстановление multi-engine state",
+      "expected": "Restore сохраняет profile/policy/catalog/budget/handoff provenance и закрывает admission; старые reservations сверяются, approvals не оживают.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-75": {
+      "primary_task": "SN-040",
+      "supporting_tasks": [
+        "SN-040"
+      ],
+      "scenario": "Стоимость принятого результата",
+      "expected": "Считаются все failures/retries/review в когорте; при нуле accepted результат undefined; нет вымышленного процента экономии.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-76": {
+      "primary_task": "SN-044",
+      "supporting_tasks": [
+        "SN-044"
+      ],
+      "scenario": "Bounded multi-engine soak",
+      "expected": "24h сценарий с двумя движками/проектами, waiting/reconnect/restart/budget; нет duplicate writer, secret leak или необъяснённого auto-upgrade.",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-77": {
+      "primary_task": "SN-031",
+      "supporting_tasks": [
+        "SN-031",
+        "SN-042"
+      ],
+      "scenario": "ChatGPT/MCP создание проекта",
+      "expected": "В поддерживаемом клиенте реальный tool call создаёт одну scoped карточку; повтор key даёт тот же ID; отсутствующая voice capability показана явно",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-78": {
+      "primary_task": "SN-008",
+      "supporting_tasks": [
+        "SN-008",
+        "SN-029",
+        "SN-031"
+      ],
+      "scenario": "Версии ТЗ",
+      "expected": "Изменение accepted scope создаёт revision; активный attempt сохраняет старый snapshot и видит explicit change hold",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-79": {
+      "primary_task": "SN-001",
+      "supporting_tasks": [
+        "SN-001",
+        "SN-029"
+      ],
+      "scenario": "Planner DAG",
+      "expected": "Цикл, orphan, неизвестный requirement и leaf без verification rejected; без модели выполняется schema/DAG validator",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-80": {
+      "primary_task": "SN-029",
+      "supporting_tasks": [
+        "SN-029",
+        "SN-042"
+      ],
+      "scenario": "End-to-end этап",
+      "expected": "Идея/ТЗ → leaf tasks → реальные integration tests → независимый review → поставленный milestone; no manual continue для обычных стадий",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-81": {
+      "primary_task": "SN-032",
+      "supporting_tasks": [
+        "SN-032"
+      ],
+      "scenario": "Typed provisioning",
+      "expected": "Sandbox repo/app/client создаются по manifest; таймаут/resume не дублируют ресурсы; чужие IDs rejected",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-82": {
+      "primary_task": "SN-033",
+      "supporting_tasks": [
+        "SN-033",
+        "SN-042"
+      ],
+      "scenario": "Автодеплой",
+      "expected": "Точный PR HEAD checks/review → merge → штатный webhook → exact runtime/functional PASS без per-deploy human approval",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-83": {
+      "primary_task": "SN-031",
+      "supporting_tasks": [
+        "SN-031",
+        "SN-032"
+      ],
+      "scenario": "Риск и делегация",
+      "expected": "Изменение scope/root/global IdP/внешнего проекта BLOCKED; более дорогая модель не расширяет permission",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-84": {
+      "primary_task": "SN-003",
+      "supporting_tasks": [
+        "SN-003",
+        "SN-030",
+        "SN-033"
+      ],
+      "scenario": "Несовпадение SHA",
+      "expected": "Старые CI/review/deploy результаты и out-of-order webhook не принимают новый HEAD",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-85": {
+      "primary_task": "SN-034",
+      "supporting_tasks": [
+        "SN-034"
+      ],
+      "scenario": "Совместимый rollback",
+      "expected": "Faulted sandbox release откатывается на известный predecessor; runtime и functional acceptance восстановлены",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-86": {
+      "primary_task": "SN-034",
+      "supporting_tasks": [
+        "SN-034",
+        "SN-044"
+      ],
+      "scenario": "Несовместимый rollback",
+      "expected": "Destructive/несовместимая схема вызывает recovery hold, без фиктивного успеха или потери данных от restore",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-87": {
+      "primary_task": "SN-023",
+      "supporting_tasks": [
+        "SN-023",
+        "SN-044"
+      ],
+      "scenario": "Network retries",
+      "expected": "Три попытки с сохранёнными задержками 10/60 секунд, затем durable stop; после stop нет новых model calls",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-88": {
+      "primary_task": "SN-022",
+      "supporting_tasks": [
+        "SN-022",
+        "SN-023",
+        "SN-044"
+      ],
+      "scenario": "401/403/429",
+      "expected": "Auth/policy без blind retries; rate limit уважает Retry-After/deadline; причина видна оператору",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-89": {
+      "primary_task": "SN-023",
+      "supporting_tasks": [
+        "SN-023",
+        "SN-034",
+        "SN-044"
+      ],
+      "scenario": "Write timeout",
+      "expected": "Неизвестный create/merge/deploy outcome сначала сверяется; недоступный lookup вызывает hold, не повтор mutation",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-90": {
+      "primary_task": "SN-024",
+      "supporting_tasks": [
+        "SN-024",
+        "SN-044"
+      ],
+      "scenario": "Потеря control/сети",
+      "expected": "Local watchdog останавливает разрешённую группу; deferred notification после reconnect; старый lease не оживает",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-91": {
+      "primary_task": "SN-021",
+      "supporting_tasks": [
+        "SN-021",
+        "SN-023",
+        "SN-024",
+        "SN-044"
+      ],
+      "scenario": "Restart во время backoff",
+      "expected": "Attempts/deadline/stop сохраняются; повторный запуск не получает новый бюджет",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-92": {
+      "primary_task": "SN-012",
+      "supporting_tasks": [
+        "SN-012",
+        "SN-022",
+        "SN-024",
+        "SN-041",
+        "SN-044"
+      ],
+      "scenario": "Диагностика",
+      "expected": "Bundle содержит нужные codes/versions/reproduction и не содержит secrets; pending delivery не мешает stop",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-93": {
+      "primary_task": "SN-001",
+      "supporting_tasks": [
+        "SN-001",
+        "SN-002",
+        "SN-043"
+      ],
+      "scenario": "Изоляция bootstrap",
+      "expected": "Новая identity не читает DF home/auth/workspaces и не пишет в его repo; его процесс не перезапускается",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-94": {
+      "primary_task": "SN-001",
+      "supporting_tasks": [
+        "SN-001",
+        "SN-002",
+        "SN-017",
+        "SN-027"
+      ],
+      "scenario": "Полный Codex пакет и skills",
+      "expected": "Sidecars/CLI protocol проверены; неверный hash/неодобренный skill rejected; inventory не назван аудитом",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-95": {
+      "primary_task": "SN-043",
+      "supporting_tasks": [
+        "SN-043"
+      ],
+      "scenario": "Self-hosting cutover",
+      "expected": "Одна каноническая task identity/queue; drain/import/readback; новый и старый scheduler не выполняют одну task",
+      "evidence_status": "NOT_RUN"
+    },
+    "AC-96": {
+      "primary_task": "SN-003",
+      "supporting_tasks": [
+        "SN-003",
+        "SN-030",
+        "SN-033",
+        "SN-042",
+        "SN-044"
+      ],
+      "scenario": "Trusted CI/reviewer",
+      "expected": "Writer не может подписать свой check/approval или ослабить locked acceptance suite; обязательный gate проверяет exact artifact",
+      "evidence_status": "NOT_RUN"
+    }
+  },
+  "note": "Mapping is an obligation for implementation/review, not evidence that a requirement or acceptance test passes."
+}
