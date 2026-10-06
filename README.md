@@ -3,6 +3,7 @@
 Цель: самостоятельно размещённый на Coolify многопроектный оркестратор автономной разработки, с Authentik, собственным трекером, несколькими агентами/моделями, мобильным управлением и ChatGPT/MCP. Существующий DF Assistant не меняется.
 
 ## Состав
+
 - SPECIFICATION.md — полная согласованная редакция требований, включая голосовые решения об автономном release и диагностике.
 - TASKS.md — 44 задачи с зависимостями, fixtures, assertions, evidence и границами.
 - planning/backlog.json — канонический seed для импорта; dispatch/admission выключены.
@@ -11,6 +12,12 @@
 - BOOTSTRAP_PLAN.md, bootstrap/INSTALLATION_STATE.md и bootstrap/STATUS.json — установка, фактические проверки и оставшиеся gates.
 - bootstrap/WORKFLOW.github.example.md — неактивный пример pinned stock workflow; не копировать в live без проверки binding/auth/policy.
 - schemas/backlog.schema.json — схема seed; MANIFEST.sha256 — целостность текстовых материалов.
+
+## Настройки моделей задач и планировщика
+
+Обязательное [дополнение ТЗ MODEL-SELECTION-r1](docs/superpowers/specs/2026-10-06-task-model-effort-speed.md) описывает отдельный выбор модели, усилия и скорости для каждой агентной задачи. Первичный выбор делает планировщик по сложности и риску; пользователь может переопределить параметры. Модель и усилие самого планировщика задаются при создании проекта и меняются позднее для следующих planning runs. Активный запуск сохраняет snapshot.
+
+Полная композиция требований — `planning/spec-index.json`; владельцы и приёмка дополнения — `planning/model-selection-traceability.json`. База v0.5 и MCP-SN031-r2 сохраняются. Это требования к будущей реализации; настройки продукта **NOT_IMPLEMENTED**, новые сценарии **NOT_RUN**, dispatch выключен.
 
 ## Фактическая точка продолжения
 Owner installation под symphony-next UID/GID995 завершена; Git read, отдельный ChatGPT login и GitHub API read подтверждены датированными отчётами. Исходники и пакет опубликованы в pupkinson/SymphonyNext; PR #1 открыт. Последнее наблюдение службы — inactive/dead/disabled; новый worker не подтверждён как запущенный. Это не live health-check на момент будущего чтения.

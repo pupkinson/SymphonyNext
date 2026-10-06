@@ -1,0 +1,244 @@
+{
+  "schema": "symphony-next-requirement-addendum-traceability/v1",
+  "revision": "MODEL-SELECTION-r1",
+  "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+  "source_sha256": "a236e1e92bac0b4273d84f3a2ffa86c021bc2d0f56b88663561d25e5f095951a",
+  "base_spec_sha256": "b107299574b8717e45d9fc58e8f204b37b441344c8c559e5e65a8113d10238a6",
+  "base_backlog_sha256": "c2a0e1a51409bd82c4dda0c5195b60926d311a64098d28defd14842c9a77b4f0",
+  "owner_decision": "https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6019281088",
+  "dispatch_enabled": false,
+  "requirements": [
+    {
+      "id": "MSEL-01",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-026",
+      "consumers": [
+        "SN-019",
+        "SN-035"
+      ],
+      "extends": [
+        "ENG-04",
+        "ENG-05",
+        "ROUT-06"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-03",
+        "AC-MSEL-04"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-02",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-029",
+      "consumers": [
+        "SN-006",
+        "SN-026",
+        "SN-035"
+      ],
+      "extends": [
+        "PLAN-01",
+        "ENG-05"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-01",
+        "AC-MSEL-02"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-03",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-029",
+      "consumers": [
+        "SN-019",
+        "SN-026"
+      ],
+      "extends": [
+        "PLAN-03",
+        "ROUT-02",
+        "ROUT-03",
+        "ROUT-04",
+        "ROUT-05"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-03"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-04",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-026",
+      "consumers": [
+        "SN-007",
+        "SN-029",
+        "SN-035"
+      ],
+      "extends": [
+        "ENG-05",
+        "ROUT-01",
+        "ROUT-08"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-04"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-05",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-019",
+      "consumers": [
+        "SN-017",
+        "SN-018",
+        "SN-025",
+        "SN-026"
+      ],
+      "extends": [
+        "ENG-03",
+        "ENG-04",
+        "ROUT-02",
+        "BUD-02",
+        "BUD-03",
+        "BUD-04"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-05"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-06",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-026",
+      "consumers": [
+        "SN-014",
+        "SN-017",
+        "SN-018",
+        "SN-022",
+        "SN-025",
+        "SN-029",
+        "SN-039",
+        "SN-041"
+      ],
+      "extends": [
+        "ENG-04",
+        "ROUT-05",
+        "ROUT-09"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-06"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-07",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-014",
+      "consumers": [
+        "SN-026",
+        "SN-029",
+        "SN-035",
+        "SN-039"
+      ],
+      "extends": [
+        "ROUT-09",
+        "ENG-08",
+        "ENG-09",
+        "BUD-01"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-02",
+        "AC-MSEL-07"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "MSEL-08",
+      "source": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "owner": "SN-035",
+      "consumers": [
+        "SN-006",
+        "SN-014",
+        "SN-026",
+        "SN-029",
+        "SN-031"
+      ],
+      "extends": [
+        "UI-02",
+        "UI-03",
+        "API-08",
+        "ENG-05"
+      ],
+      "acceptance_ids": [
+        "AC-MSEL-08"
+      ],
+      "implementation_state": "NOT_IMPLEMENTED"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC-MSEL-01",
+      "requirement_ids": [
+        "MSEL-02"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-02",
+      "requirement_ids": [
+        "MSEL-02",
+        "MSEL-07"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-03",
+      "requirement_ids": [
+        "MSEL-01",
+        "MSEL-03"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-04",
+      "requirement_ids": [
+        "MSEL-01",
+        "MSEL-04"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-05",
+      "requirement_ids": [
+        "MSEL-05"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-06",
+      "requirement_ids": [
+        "MSEL-06"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-07",
+      "requirement_ids": [
+        "MSEL-07"
+      ],
+      "evidence_state": "NOT_RUN"
+    },
+    {
+      "id": "AC-MSEL-08",
+      "requirement_ids": [
+        "MSEL-08"
+      ],
+      "evidence_state": "NOT_RUN"
+    }
+  ],
+  "composition_rule": "Add requirements and acceptance to their existing owners without removing baseline scope or changing dependencies/status/admission. This ownership map is not a task override or runtime importer. Stop unsupported_requirement_addendum if the active planner cannot retain it.",
+  "implementation_state": "NOT_IMPLEMENTED",
+  "runtime_changes": "NONE"
+}
