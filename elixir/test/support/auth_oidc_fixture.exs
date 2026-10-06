@@ -302,17 +302,87 @@ defmodule SymphonyControl.Auth.OidcFixture do
         Agent.update(state, &Map.put(&1, :last_token, payload["id_token"]))
         conn = canary_header(conn, data, payload, params)
 
-        if Keyword.get(data.opts, :fault) == :utf8_content_type do
-          canaries = Enum.join([payload["id_token"], payload["access_token"], params["code"], "synthetic-client-secret-canary"], " ")
-
-          conn
-          |> put_resp_header("content-type", "application/json; x-canary=\"#{canaries} Ā\"")
-          |> send_resp(200, Jason.encode!(payload))
+        if wire_fault = Keyword.get(data.opts, :wire_fault) do
+          wire_response(conn, state, payload, params, wire_fault)
         else
-          json(conn, Keyword.get(data.opts, :token_status, 200), payload)
+          existing_token_response(conn, data, payload, params)
         end
     end
   end
+
+  defp existing_token_response(conn, data, payload, params) do
+    if Keyword.get(data.opts, :fault) == :utf8_content_type do
+      canaries = Enum.join([payload["id_token"], payload["access_token"], params["code"], "synthetic-client-secret-canary"], " ")
+
+      conn
+      |> put_resp_header("content-type", "application/json; x-canary=\"#{canaries} Ā\"")
+      |> send_resp(200, Jason.encode!(payload))
+    else
+      json(conn, Keyword.get(data.opts, :token_status, 200), payload)
+    end
+  end
+
+  defp wire_response(conn, state, payload, params, fault) do
+    canaries = [payload["id_token"], payload["access_token"], "synthetic-refresh-canary", params["code"], "synthetic-client-secret-canary"]
+    payload = Map.merge(payload, %{"refresh_token" => "synthetic-refresh-canary", "extension" => %{"nested" => [canaries]}})
+    {content_type, body} = wire_bytes(payload, canaries, fault)
+    Agent.update(state, &Map.merge(&1, %{wire_canaries: canaries, wire_body: body}))
+    conn = if content_type == nil, do: delete_resp_header(conn, "content-type"), else: put_resp_header(conn, "content-type", content_type)
+    send_resp(conn, 200, body)
+  end
+
+  defp wire_bytes(payload, canaries, {:content_type, variant}) do
+    embedded = Enum.join(canaries, " ")
+
+    content_type =
+      case variant do
+        :missing -> nil
+        :empty -> ""
+        :wrong -> "text/plain; canary=\"#{embedded}\""
+        :malformed -> "application/json #{embedded} Ā"
+        :utf8_parameter -> "application/json; canary=\"#{embedded} Ā\""
+        :json_suffix -> "application/oidc+json; canary=\"#{embedded}\""
+      end
+
+    {content_type, Jason.encode!(payload)}
+  end
+
+  defp wire_bytes(payload, canaries, {:field, field, variant}) do
+    payload = if variant == :missing, do: Map.delete(payload, field), else: Map.put(payload, field, wire_value(canaries, variant))
+    {"application/json", Jason.encode!(payload)}
+  end
+
+  defp wire_bytes(payload, canaries, {:json, :valid_id_last}) do
+    embedded = Jason.encode!(Enum.join(canaries, " "))
+    body = ~s|{"id_token":| <> embedded <> "," <> String.trim_leading(Jason.encode!(payload), "{")
+    {"application/json", body}
+  end
+
+  defp wire_bytes(payload, canaries, {:json, variant}) do
+    encoded = Jason.encode!(payload)
+    embedded = Jason.encode!(Enum.join(canaries, " "))
+
+    body =
+      case variant do
+        :malformed -> encoded <> " trailing " <> embedded
+        :escaped_canaries -> String.replace(encoded, "synthetic", "\\u0073ynthetic")
+        :escaped_id_key -> String.replace(encoded, "\"id_token\"", "\"id_\\u0074oken\"")
+        :large_integer -> String.replace_suffix(encoded, "}", ",\"edge\":1234567890123456789012345678901234567890}")
+        :float_overflow -> String.replace_suffix(encoded, "}", ",\"edge\":1.0e999}")
+        :lone_surrogate -> String.replace_suffix(encoded, "}", ",\"edge\":\"\\uD800\"}")
+        :duplicate_extension -> String.replace_suffix(encoded, "}", ~s|,"extension":{"escaped":| <> embedded <> "}}")
+        :invalid_id_last -> String.replace_suffix(encoded, "}", ",\"id_token\":" <> embedded <> "}")
+      end
+
+    {"application/json", body}
+  end
+
+  defp wire_value(canaries, :string), do: Enum.join(canaries, " ")
+  defp wire_value(canaries, :list), do: canaries
+  defp wire_value(canaries, :map), do: %{"nested" => [canaries]}
+  defp wire_value(_, :null), do: nil
+  defp wire_value(_, :empty), do: ""
+  defp wire_value(_, :numeric_string), do: "120"
 
   defp canary_header(conn, data, payload, params) do
     if Keyword.get(data.opts, :fault) == :non_utf8_header do

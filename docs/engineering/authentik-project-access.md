@@ -586,3 +586,168 @@ Native evidence root: `/srv/rdc-workspace/sn005-oidc-protocol-20261004`. It cont
 The attempt began at 2026-10-04T15:02:31.043350Z with a 1800-second wall budget, zero repair cycles and zero profile changes. Provisioning or continuation must preserve this history rather than reset the attempt. On exhaustion, stop/checkpoint and obtain a separate bounded admission.
 
 This checkpoint changes only this document and its MANIFEST.sha256 entry. Runtime rollback is not applicable: no product/dependency/schema/config change occurred. Full SN004/SN005 acceptance, production isolation and live access revocation remain unverified.
+
+## Dependency context and wire regression continuation — 2026-10-06
+
+Attempt `SN005-AUTH-PROTOCOL-01-DEPENDENCY-CONTEXT-20261006` uses the separate
+[owner admission](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6019281088)
+and [executor ACCEPTED](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6019741212).
+T0 `2026-10-06T15:33:59.000Z`, absolute deadline `2026-10-06T16:03:59.000Z`, maximum1800s includes cleanup
+and publication. One writer, repair cycles **2/2**, profile changes **0/0**.
+Owned detached worktree `/workspace/scratch/sn005-dep-context-src` starts at HEAD `8c5828b1a5c4a2261fb2cd0a021235109a8e07a3`,
+tree `496889153378c3e22bd58c96cf0f6855364117e5`, base `233dda1878533a425574074b8d34344b50d41cf7`; fresh explicit-ref fetch matches all three.
+An earlier read of stale remote-tracking refs exited128 and is retained; it was
+not used as source identity. Existing source/native budgets and native7cd15ad
+terminal HOLD remain closed. All preceding report bytes are preserved.
+
+Assignment requested gpt-6.1-sol/xhigh, with existing speed unchanged. Real client
+requested/resolved/observed model, effort and speed are **UNKNOWN**: the current
+thread, environment and selected runtime variables expose no such fields.
+No replacement model agent or profile was started; this report does not certify
+a GPT-6.1 Sol run. Managed Cloud is running/connected, configuration revision32,
+existing network policy enforced. Composition0.5+MCP-SN031-r2 all8 hashes match;
+project-policy SHA256831e8f86170211d2b800960c64ce977d7816167501fb9ec831bdbce702e097a9
+is unchanged. Fresh Elixir/Mix1.19.5 on OTP28/ERTS16.4 and mix setup each exited0.
+Frozen mix.lock SHA25613489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073
+and all dependency pins remain unchanged. Hex emitted advisories for existing
+frozen packages; no package update was performed.
+
+### Verified context target
+
+[oidcc-3.9.0-review-context.md](oidcc-3.9.0-review-context.md) contains complete
+HTTP utility, token exchange, Elixir token wrapper, scope parser and telemetry
+span/module source, plus complete Apache2.0 licenses and Telemetry NOTICE.
+All8 actual selected source files match supplied size/SHA256/Git-blob records.
+Oidcc's retained outer archive and recomputed inner checksum match frozen lock;
+its five selected files match archive members. Telemetry's selected source bytes
+match the immutable comparison; full Telemetry Hex archive equivalence remains
+NOT_VERIFIED because no archive was retained. A tag alone was never treated as
+package equivalence. The132351-byte inert source document is below700000 bytes;
+PR source size/page estimates remain within unchanged2MiB/400-call limits.
+No executable code is vendored and no native reviewer capability is widened.
+
+### Actual baseline and regression matrix
+
+Added **43 tests**:42 real signed-token HTTPS wire cases plus one recursive scanner
+self-test. Scoped collectors attach only for each exchange, collect every request_token
+start/stop/exception event with measurements/metadata, and detach only their own
+handler in cleanup. Assertions scan logs and complete nested metadata, including
+map keys/values, tuples, lists, integer lists/charlists and exception stack values.
+They scan the actual fixture ID/access/refresh tokens, issued code and synthetic
+client secret, including Base64/BasicAuth/URL and JSON-escaped representations.
+The scanner self-test catches intentionally raised assertion failures for nested
+charlist, escaped JSON and Base64 values; those are scanner controls, not product RED.
+Every reached token endpoint case asserts exactly one real POST.
+
+Missing/empty/wrong/malformed validUTF8 Content-Type is refused with fixed forbidden;
+valid UTF8 parameters and application/*+json remain accepted. Malformed expires_in
+string/list/map/null and access/refresh list/map/null give fixed forbidden. Valid
+binary access/refresh, numeric-string expiry and binary/list scope retain acceptance;
+map/null scope is refused. Malformed token_type string/list/map/null and unknown
+credential-bearing nested extension fields remain accepted under the existing
+contract, without observed metadata/log disclosure; no stricter contract is invented.
+Missing/empty/nonbinary/invalid sole id_token and malformed JSON refuse identity.
+Escaped keys/canaries, large integer and duplicate extensions are accepted; overflow
+float and lone surrogate are rejected by both measured decoders. For duplicate
+id_token keys both Jason and OTP JSON select the first value: signed-first accepts,
+invalid-first refuses even with signed-last. These bounded observations are not a
+general equivalence claim for all JSON.
+
+The initial probe **94/2, exit2** incorrectly expected last-key selection. A separate
+decoder probe measured first-key selection for both libraries, exit0; repair1
+corrected only test expectations. This was not semantic product RED. The corrected
+baseline **94/0, exit0** passed while product oidc.ex remained byte-identical.
+The first full makeall stopped on new test-helper Credo readability/complexity,
+exit2 (lint child12); coverage and Dialyzer were NOT_RUN in that invocation.
+Repair2 only split layout/fixture clauses and used a sigil without changing wire
+bytes or assertions. Candidate targeted **94/0, exit0** then passed.
+**Product semantic RED NOT_OBSERVED; product patch NOT_NEEDED.**
+Adapter SHA256056f08b40209a8d40a95d222ccc078d1db88ff33a6d922b1328b26ea0a73145b
+is unchanged. Previous HTTP202/nonUTF8/unsigned/encrypted-only/DPoP/lost-response/
+deadline/refresh/queued-expiry controls and assertions remain intact.
+
+### Full gates and owned resources
+
+A second makeall gave507/2/6 with configured coverage100, exit2: both failures were
+unrelated dashboard LazyHTML Enumerable lookup. The executor had incorrectly used
+MIX_BUILD_PATH=_build, mixing dev/test artifacts; test-only LazyHTML was absent from
+that consolidated protocol. A read-only probe of standard MIX_BUILD_ROOT confirmed
+actual _build/test and Enumerable.LazyHTML, exit0. No tracked repair, dependency,
+toolchain, profile or gate setting changed. The same full gates were rerun with
+MIX_BUILD_ROOT=/workspace/SymphonyNext/elixir/_build and MIX_BUILD_PATH unset;
+MIX_DEPS_PATH selects the already verified existing package sources. This is standard
+build-directory isolation, not a new source repair cycle or allowance reset.
+
+Final `make all` from elixir: **exit0,507 tests/0 failures/6 existing skips,seed858462**;
+configured total/Config/Clock/Oidc coverage100%; setup/build/format/specs/strictCredo/
+coverage/deps/Dialyzer all passed with actual stage exits0. Dialyzer0errors/0skips.
+Output SHA256 `0d8730840f576d99b5635c6ccb6dc7c4aa1acff90253dc13c6561347f71a017f`.
+Bootstrap12/0 and MCP11/0 exited0. Source byte/allowlist/composition/budget validation
+passed; final manifest/diff/actual PR-body/remote identity are recorded in the
+publication checkpoint, never inferred from an unrun command.
+
+Owned PostgreSQL17.11 has new0700 data/socket directories, no TCP listener, own
+sn004_fixture/sn004_test and port55474; init/start/create/SELECT version()+SELECT1
+all exit0. Existing unprivileged Cloud binaries were reused without toolchain or
+system installation. Stop/status results below are actual retained child exits.
+Full-suite tests did not change CoreTest/test_helper/mix/coverage controls.
+Evidence directory `/workspace/scratch/SN005-AUTH-PROTOCOL-01-DEPENDENCY-CONTEXT-20261006` contains command argv/cwd/UTC/exit/outputSHA256 records,
+raw outputs, source/evidence manifests and publication responses. No production DB
+or protected/native resource was used. Auth remains disabled. Task2–5, native replay,
+check publication, merge/deploy/GitHub Actions and live acceptance remain NOT_RUN.
+Independent exact-new-HEAD source review and trusted native check are separate stages.
+Author source gates do not establish full Task1/SN005/production acceptance.
+
+### Recorded gate and cleanup evidence
+
+| Command label | Exit | Output SHA256 |
+| --- | --- | --- |
+| 01-source | 0 | `7e6eed581ed16c77b5d0893b07cbef782f40cdbb47c21b1233d9aa108e0aec83` |
+| 02-clean | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 03-elixir-version | 0 | `b7bc746ca83ed80c14bbb1d4a097a39a1e61e01f8d50cf14c35dcfefd2faa765` |
+| 04-mix-version | 0 | `c5d8941ea9c5bb7a6b2a755fafb64c04ba91b6345eb1f62ec2e3b594353e4305` |
+| 05-setup | 0 | `9a61e102152c091dae5ef2c8abdc7888a1f924cefcbd3edae50712c6beefb9be` |
+| 06-test-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 07-product-unchanged | 0 | `e6ada66e4a22c74a474ac8ce56a73220eeaef3cc32a1aecb8673c70903a8924f` |
+| 09-pg-init | 0 | `9add09dfdb16932de7f15012e851ac936cb681740cb0ead7f35fa631f5f6b7dd` |
+| 08-baseline-targeted | 2 | `5b8c7dba5aba60701102d34cda511610f817ae56f70344a12546f3ebd3661169` |
+| 10-decoder-probe | 0 | `ba69414b9455e083c0287a2714269f13716e68d7aa66de60d7197acf3143b890` |
+| 11-pg-start | 0 | `66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad` |
+| 12-pg-db | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 13-pg-ready | 0 | `a9e7617273063f924895faf86757f4faad02b0e55c4c66709453fd62d27f1f5b` |
+| 14-repair-test-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 15-baseline-green | 0 | `328e880d7c40e3e4c32284c08849bd1875166fe1146ca553a2a43204fdfb2694` |
+| 16-dependency-context | 0 | `eb154809252d2c07fd9cab4e1ef3de617239565407d71258ec9d3ddb5020796c` |
+| make-stage-1791301497326750460-setup | 0 | `34daa5000c5cc12042f1ed8c7baff720be80b239f90367c83aec8160877e3481` |
+| make-stage-1791301504632554481-build | 0 | `10c153ae9a01b37aff57f3c667ec951cb2ac28b2e0f9b2717231d480e8b8d45f` |
+| make-stage-1791301516529573412-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 18-bootstrap | 0 | `fe12817179cd260fdfc89bac9f7be610d195981085d4bfeb80271e8f9e821c6d` |
+| 19-mcp-source | 0 | `b70f99e7698c6bf03a3be0a373c296209c9eadd12117438974840b25bf4d2c86` |
+| make-stage-1791301519471414715-lint | 12 | `2681714d8a53bd6d5fa0c327ee46f19d1e1ac2f26ff1daa920f2053d1b5a855f` |
+| 17-make-all | 2 | `ab4b9871d23cc0f9021657872feb50c83f7f4d8a8ff3502a9c63ff77abb29a1e` |
+| 20-fresh-fetch | 0 | `5816735dbc156cb8fe323d6b94e62a1c08befa9661b9a1504f83ecf2350d86ed` |
+| 21-remote-baseline | 128 | `b555323ff03fc5db504ca60c860b2392f39b580df29d4c5918d87f1186f7a50d` |
+| 22-cycle2-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 23-candidate-targeted | 0 | `4a99bb1db3494fa7e684d062572ec5733578dadeaa4ee0e77f6f70e7b3330f8e` |
+| 24-fetch-explicit | 0 | `3a7bf38588c4e1ebc85b98acc04de12427c6b8e6f98852a4fb4454291f8f7455` |
+| 25-fresh-tuple | 0 | `2cb46be023bf2e5b264ddda3146c5a8f71e9d13749e8caad2485a93d155427e6` |
+| make-stage-1791301794138604458-setup | 0 | `3179257998c68d8905f9ffe1503d1d1e03a5cc43d6ab3a8668fa1254b839439a` |
+| make-stage-1791301796763780034-build | 0 | `10c153ae9a01b37aff57f3c667ec951cb2ac28b2e0f9b2717231d480e8b8d45f` |
+| make-stage-1791301804955109548-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| make-stage-1791301805840386513-lint | 0 | `b653736cf586b36c7c797dc25eda1e0df80007a4ccf4ddc00444ecc7e421bb33` |
+| make-stage-1791301811169595445-test | 2 | `0b020096575eb28cff46af0c982f7b2c5a744a15fb9e67c56e9a322e17a967d2` |
+| 26-make-all-green | 2 | `6636d76d8cb74aae102756214facb2d98c4bfa228e13a0486a5823224ac48d01` |
+| 27-build-isolation-probe | 0 | `d31366e8d415451b99ab741300ee6bde74fe1cb95dae9f096e9760a615d6d0b1` |
+| 28-source-validation | 0 | `6994db8c3d7fa7a47572976b30c442542192f79f329e3c6895cc3d1ec9b10754` |
+| make-stage-1791302070144250426-setup | 0 | `1bf556349d1e46126f1e59344fbb4dd072f5f08bf59320416db42aa47a370822` |
+| make-stage-1791302072810775294-build | 0 | `691612a71a587486b8ad4d5cf830121efd5e8fc38f57441dcd1705e54eb3b215` |
+| make-stage-1791302086851248470-format | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| make-stage-1791302087890501507-lint | 0 | `1ed4de28d5b27be949abc73a1629cfba6779890757a858fab961551a5421f079` |
+| make-stage-1791302093609418230-test | 0 | `18e068abde22c5058cd4534c6ad596a4617642aca2d9f3b034a5ca1404badb47` |
+| make-stage-1791302183029845848-deps.get | 0 | `a2bfa93ccef1e0a8b5d91868cee09af9f2a8bd3b8c275bedb8e6f91db0f045bd` |
+| make-stage-1791302186478129065-dialyzer | 0 | `4805498672ca638516d1bd6f927a6bf29474c0c425494b7baa643298887fde69` |
+| 29-make-all-isolated | 0 | `0d8730840f576d99b5635c6ccb6dc7c4aa1acff90253dc13c6561347f71a017f` |
+| cleanup-pg-stop | 0 | `ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d` |
+| cleanup-pg-status | 3 | `e138ccb54fdb08283c6eb21159c53207bbbbf07077246e2804e18d22efe6e250` |
+
+Exact argv/cwd/start/endUTC for these records are retained in commands.jsonl; finalization adds later records to the final evidence manifest/checkpoint.

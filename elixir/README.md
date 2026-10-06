@@ -477,3 +477,14 @@ Control component tests require isolated PostgreSQL through `SN004_TEST_PG_SOCKE
 See [the configuration and test guide](../docs/engineering/control-foundation.md)
 for startup, migration, health, authorization and test limits. Default startup
 keeps control disabled; production tracker and Authentik acceptance remain separate.
+
+The separately admitted 2026-10-06 dependency-context continuation adds43 tests:
+scoped structural telemetry/log checks over real signed-token HTTPS malformed responses
+and scanner controls. Baseline and candidate94/0 pass; makeall507/0/6, coverage100%,
+strict Credo and Dialyzer pass. No semantic product RED was reproduced; oidc.ex is
+unchanged. [Complete licensed dependency source context](../docs/engineering/oidcc-3.9.0-review-context.md) binds the actual
+selected Oidcc/Telemetry files; Oidcc selected Hex-source equivalence is verified,
+full Telemetry archive equivalence is NOT_VERIFIED. Existing token_type/unknown-field
+acceptance is classified explicitly; no stricter protocol contract is added.
+Actual client model/effort/speed remain UNKNOWN. History and frozen controls are preserved;
+new independent review/trusted native/live acceptance remain separate, auth stays disabled.

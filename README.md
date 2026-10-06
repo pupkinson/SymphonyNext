@@ -59,3 +59,14 @@ within the network deadline; a still-valid queued identity remains accepted. Rea
 regressions observed51/1 RED then51/0 GREEN with one token POST and worker cleanup.
 Full gate evidence and the unchanged original attempt budget are in the engineering report.
 Independent new-HEAD review/trusted checking remain separate; authentication stays disabled.
+
+The separately admitted 2026-10-06 dependency-context continuation adds43 tests:
+scoped structural telemetry/log checks over real signed-token HTTPS malformed responses
+and scanner controls. Baseline and candidate94/0 pass; makeall507/0/6, coverage100%,
+strict Credo and Dialyzer pass. No semantic product RED was reproduced; oidc.ex is
+unchanged. [Complete licensed dependency source context](docs/engineering/oidcc-3.9.0-review-context.md) binds the actual
+selected Oidcc/Telemetry files; Oidcc selected Hex-source equivalence is verified,
+full Telemetry archive equivalence is NOT_VERIFIED. Existing token_type/unknown-field
+acceptance is classified explicitly; no stricter protocol contract is added.
+Actual client model/effort/speed remain UNKNOWN. History and frozen controls are preserved;
+new independent review/trusted native/live acceptance remain separate, auth stays disabled.

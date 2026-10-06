@@ -291,7 +291,20 @@ defmodule SymphonyControl.Auth.OidcTest do
   end
 
   defp assert_no_canaries(value, canaries) when is_binary(value) do
-    for canary <- canaries, do: refute(value =~ canary)
+    for canary <- canaries,
+        encoded <- [
+          canary,
+          Base.encode64(canary),
+          Base.url_encode64(canary, padding: false),
+          URI.encode_www_form(canary),
+          Base.encode64("control-client:" <> canary)
+        ],
+        do: refute(value =~ encoded)
+
+    case Jason.decode(value) do
+      {:ok, decoded} when decoded != value -> assert_no_canaries(decoded, canaries)
+      _ -> :ok
+    end
   end
 
   defp assert_no_canaries(value, canaries) when is_list(value) do
@@ -312,6 +325,139 @@ defmodule SymphonyControl.Auth.OidcTest do
     do: value |> Map.to_list() |> assert_no_canaries(canaries)
 
   defp assert_no_canaries(_, _), do: :ok
+
+  test "structural scanner detects nested charlist and JSON-escaped canaries" do
+    canary = "synthetic-scanner-canary"
+    encoded = String.replace(Jason.encode!(%{"nested" => canary}), "synthetic", "\\u0073ynthetic")
+
+    for value <- [
+          %{reason: {:error, [String.to_charlist(canary)]}},
+          %{stacktrace: [{__MODULE__, :synthetic, [encoded], []}]},
+          %{nested: [{:basic, Base.encode64("control-client:" <> canary)}]}
+        ] do
+      assert_raise ExUnit.AssertionError, fn -> assert_no_canaries(value, [canary]) end
+    end
+  end
+
+  for {variant, expected} <- [
+        missing: :refused,
+        empty: :refused,
+        wrong: :refused,
+        malformed: :refused,
+        utf8_parameter: :accepted,
+        json_suffix: :accepted
+      ] do
+    test "wire Content-Type #{variant} has typed #{expected} result and no disclosure" do
+      assert_wire_exchange({:content_type, unquote(variant)}, unquote(expected))
+    end
+  end
+
+  for field <- ~w(expires_in access_token refresh_token scope), variant <- [:string, :list, :map, :null] do
+    expected =
+      if (field in ~w(access_token refresh_token scope) and variant == :string) or
+           (field == "scope" and variant == :list), do: :accepted, else: :refused
+
+    test "wire #{field} #{variant} has typed #{expected} result and no disclosure" do
+      assert_wire_exchange({:field, unquote(field), unquote(variant)}, unquote(expected))
+    end
+  end
+
+  for variant <- [:string, :list, :map, :null, :empty, :missing] do
+    test "wire id_token #{variant} refuses identity and does not disclose credentials" do
+      assert_wire_exchange({:field, "id_token", unquote(variant)}, :refused)
+    end
+  end
+
+  for variant <- [:string, :list, :map, :null] do
+    test "wire token_type #{variant} remains accepted by existing contract without disclosure" do
+      assert_wire_exchange({:field, "token_type", unquote(variant)}, :accepted)
+    end
+  end
+
+  test "wire numeric string expiry remains accepted with signed token and refresh token" do
+    assert_wire_exchange({:field, "expires_in", :numeric_string}, :accepted)
+  end
+
+  for {variant, expected} <- [
+        malformed: :refused,
+        escaped_canaries: :accepted,
+        escaped_id_key: :accepted,
+        large_integer: :accepted,
+        float_overflow: :refused,
+        lone_surrogate: :refused,
+        duplicate_extension: :accepted,
+        invalid_id_last: :accepted,
+        valid_id_last: :refused
+      ] do
+    test "wire JSON #{variant} has typed #{expected} result and no disclosure" do
+      assert_wire_exchange({:json, unquote(variant)}, unquote(expected))
+    end
+  end
+
+  defp assert_wire_exchange(fault, expected) do
+    f = OidcFixture.start!(wire_fault: fault)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    cfg = OidcFixture.config(f)
+    owner = self()
+    handler = make_ref()
+    events = for phase <- [:start, :stop, :exception], do: [:oidcc, :request_token, phase]
+    callback = fn event, measurements, metadata, _ -> send(owner, {handler, event, measurements, metadata}) end
+    :ok = :telemetry.attach_many(handler, events, callback, nil)
+
+    try do
+      log = capture_log(fn -> send(owner, {handler, :result, Oidc.exchange(cfg, code, @expectations, deadline())}) end)
+      assert_receive {^handler, :result, result}
+      collected = collect_wire_events(handler)
+      assert Enum.count(collected, &(elem(&1, 0) == [:oidcc, :request_token, :start])) == 1
+      assert Enum.count(collected, &(elem(&1, 0) in [[:oidcc, :request_token, :stop], [:oidcc, :request_token, :exception]])) == 1
+      %{wire_canaries: canaries, wire_body: body} = Agent.get(f.state, & &1)
+      assert length(canaries) == 5
+      assert OidcFixture.calls(f, :token) == 1
+      assert_no_canaries(collected, canaries)
+      assert_no_canaries(log, canaries)
+      OidcFixture.record_log(f, log)
+      assert :ok == OidcFixture.assert_no_secret_echo(f)
+      assert_wire_result(result, expected)
+      assert_decoder_controls(fault, body)
+    after
+      :telemetry.detach(handler)
+    end
+  end
+
+  defp collect_wire_events(handler) do
+    receive do
+      {^handler, event, measurements, metadata} -> [{event, measurements, metadata} | collect_wire_events(handler)]
+    after
+      0 -> []
+    end
+  end
+
+  defp assert_wire_result(result, :refused), do: assert(result == {:error, :forbidden})
+  defp assert_wire_result(result, :accepted), do: assert(match?({:ok, %{subject: "human-1"}}, result))
+
+  defp assert_decoder_controls({:json, variant}, body) do
+    expected = variant not in [:malformed, :float_overflow, :lone_surrogate]
+    assert match?({:ok, _}, Jason.decode(body)) == expected
+
+    otp =
+      try do
+        :json.decode(body)
+        :accepted
+      rescue
+        _ -> :refused
+      end
+
+    assert otp == :accepted == expected
+
+    if variant in [:invalid_id_last, :valid_id_last] do
+      {:ok, jason} = Jason.decode(body)
+      assert :json.decode(body)["id_token"] == jason["id_token"]
+      first = body |> String.split("\"id_token\":") |> Enum.at(1)
+      assert String.starts_with?(first, Jason.encode!(jason["id_token"]))
+    end
+  end
+
+  defp assert_decoder_controls(_, _), do: :ok
 
   test "timeout kills held protocol worker and discards its later completion" do
     f = OidcFixture.start!(hold_jwks: self())
