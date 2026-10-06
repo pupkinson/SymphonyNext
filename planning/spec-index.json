@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-spec-composition/v1",
-  "revision": "0.5+MCP-SN031-r2",
+  "revision": "0.5+MCP-SN031-r2+AUT-v1",
   "status": "review_candidate_not_runtime_ready",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
   "dispatch_enabled": false,
@@ -29,6 +29,13 @@
       "requirements": "MCP-07..MCP-26",
       "acceptance": "AC-MCP-01..AC-MCP-20",
       "owner": "SN-031"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-06-scoped-autonomy-design.md",
+      "sha256": "8cd87d39f7c01ec31b17fdb29bcf8ccfe3cf64852d8cda4933731cff66a35d8d",
+      "requirements": "AUT-01..AUT-16",
+      "acceptance": "AC-AUT-01..AC-AUT-24",
+      "owner": "SN-020"
     }
   ],
   "task_refinements": [
@@ -55,7 +62,8 @@
     "Interpret this as one versioned planning source, not a second queue or a completed native importer.",
     "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
     "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance.",
-    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them."
+    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them.",
+    "Load the four hash-bound AUT/v1 source artifacts listed by its design before planning autonomy work. Preserve baseline/MCP and separately accepted addenda; unknown or mismatched sources hold import. This design does not admit tasks, activate skills, expand live policy or replay historical HOLDs."
   ],
   "related_pending_sources": [
     {
