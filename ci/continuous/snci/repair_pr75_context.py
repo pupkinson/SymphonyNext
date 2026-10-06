@@ -124,7 +124,12 @@ def preflight(owner, head, api, source):
     require(old_tree == BASE_TREE and tree == commit['tree']['sha'], 'pr75_context_package_tree')
     package = refresh.package_delta(old, new, DELTA); manifest = refresh.verify_package(old)
     for profile in policy['profiles']:
-        refresh.read_acceptance(STATE, profile, policy['codex_sha256'], time.time(), fresh=False)
+        if profile['name'] == 'sn004':
+            # Its pr75-target pointer is admitted only by the exact predecessor
+            # completion/receipt chain, including identity, time and quality.
+            original_proof(policy, raw)
+        else:
+            refresh.read_acceptance(STATE, profile, policy['codex_sha256'], time.time(), fresh=False)
         require(owner.inspect_image(profile['image']).get('Id') == profile['image'], 'pr75_context_retained_image')
         origin = repair_review_paging.BASE if profile['name'] == 'sn004' else pr75_profile.HISTORY_HEAD
         recover_retention.keeper_verify(owner, origin, profile)
@@ -209,11 +214,10 @@ def perform(owner, head, api, source):
     pr75_profile.verify_history(saved['history']); hold_binding(saved['history'])
     proof = dict(intent, status='PR75_CONTEXT_INSTALLED_PAUSED', inputs_sha256=sha256(canonical(saved)),
                  manifest_sha256=sha256(trusted(INSTALL / 'installed.json').read_bytes()))
-    try:
-        write_new(directory / 'COMPLETE.json', canonical(proof))
-        validate_preparation(STATE, future, canonical(future))
-    except Exception:
-        (directory / 'COMPLETE.json').unlink(missing_ok=True); refresh.sync(directory); raise
+    # A failed fsync or readback leaves the exact created bytes as evidence.
+    # The existing claim blocks replay; success follows only validated completion.
+    write_new(directory / 'COMPLETE.json', canonical(proof))
+    validate_preparation(STATE, future, canonical(future))
     print('PR75_CONTEXT_INSTALLED_PAUSED ' + head, flush=True)
     print(canonical(dict(completion='VERIFIED_INSTALLED_PAUSED', revision=head, target=PR75_CONTEXT_REQUEST,
         policy_sha256=intent['policy_sha256'], profile='sn004', image=profile['image'], quality=quality,

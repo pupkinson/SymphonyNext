@@ -906,3 +906,21 @@ review/check, activation, production auth, Task2–5, merge and deployment are
 NOT_RUN by this source stage. Historical stages and consumed budgets are not
 reopened. Local tests exercise native boundaries with fixtures and certify
 only these source contracts.
+
+
+### PR80 preflight and failed-completion evidence fixup
+
+The context preflight validates the predecessor sn004 target receipt through
+its exact original completion/profile/paging chain. Its `pr75-target-<sha>`
+pointer is not passed to the shared refresh reader; main keeps that reader and
+its original closed grammar. Real-preflight source fixtures exercise actual
+package, archive, receipt and proof validators. Incorrect pointers/digests,
+identity, time, native-probe/quality evidence and predecessor proofs refuse
+before a claim or protected quality run.
+
+After package/policy commit, a failed COMPLETE file fsync, directory fsync or
+completion validation preserves any created COMPLETE bytes with the durable
+intent, receipt, package and archive. No success is reported. The single-use
+claim prevents replay, and the controller continues to reject incomplete or
+invalid completion. This fixup changes no profile, target, threshold, shared
+receipt grammar or native guard; native execution remains NOT_RUN.

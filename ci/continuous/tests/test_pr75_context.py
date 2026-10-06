@@ -278,5 +278,163 @@ class ContextDispatchTests(unittest.TestCase):
             own.assert_called_once(); predecessor.assert_not_called(); original.assert_not_called(); paging.assert_not_called()
 
 
+class RealPreflightFixupTests(unittest.TestCase):
+    def setUp(self):
+        import test_pr75_profile as initial_fixture
+        from test_daily_limit import policy as fixture_policy
+        from snci import refresh
+        # Provision a valid main receipt in the initial predecessor fixture,
+        # before any real predecessor completions are produced. This changes
+        # fixture input serialization only; no receipt/proof validator is mocked.
+        receipt_holder = {}
+        def seed_policy(value):
+            if isinstance(value, dict) and 'profiles' in value and 'codex_sha256' in value:
+                value.setdefault('ruleset', fixture_policy(None)['ruleset'])
+                main = value['profiles'][0]
+                if main.get('preparation_sha256') == 'c'*64:
+                    raw = canonical(dict(profile='main', head=main['head'], tree=main['tree'],
+                        image=main['image'], codex_sha256=value['codex_sha256'], time=0,
+                        native_probe_sha256='1'*64,
+                        quality=dict(stages=dict.fromkeys(('build','format','lint','coverage','dialyzer'), 0),
+                            tests=507, failures=0, skipped=6, coverage=100.0, dialyzer_errors=0,
+                            source_before=True, source_after=True, cleanup=0)))
+                    main['preparation_sha256'] = sha256(raw); receipt_holder['raw'] = raw
+            return canonical(value)
+        with patch.object(initial_fixture, 'canonical', seed_policy):
+            ContextTransitionTests.setUp(self)
+        main = self.snapshot['policy']['profiles'][0]
+        path = self.state / main['preparation']; path.parent.mkdir(parents=True, exist_ok=True)
+        write_new(path, receipt_holder['raw'])
+        self.snapshot['history'] = self.m.history(self.snapshot['policy'], 'c'*40)
+        self.api_calls = []
+        test = self
+        class API:
+            def request(_, method, path):
+                test.api_calls.append((method, path))
+                if '/git/commits/' in path:
+                    return dict(sha='c'*40, parents=[{'sha': test.m.BASE}], tree={'sha': '6'*40})
+                if '/pulls/75' in path: return candidate()
+                if '/rulesets/' in path: return copy.deepcopy(test.snapshot['policy']['ruleset'])
+                raise AssertionError('unexpected external request')
+        old = {'ci/continuous/'+name: dict(sha=blob_hash((self.inst/name).read_bytes()),
+                    mode='100644', size=len((self.inst/name).read_bytes()))
+               for name in decode((self.inst/'installed.json').read_bytes())}
+        new = dict(old)
+        data = {}
+        for path in self.m.DELTA:
+            raw = ('new exact package '+path).encode(); data[path] = raw
+            new[path] = dict(sha=blob_hash(raw), mode='100644', size=len(raw))
+        class Source:
+            def tree(_, head):
+                if head == test.m.BASE: return test.m.BASE_TREE, copy.deepcopy(old)
+                if head == 'c'*40: return '6'*40, copy.deepcopy(new)
+                if head == REQUEST['head']: return REQUEST['tree'], copy.deepcopy(test.snapshot['entries'])
+                raise AssertionError('unexpected source identity')
+        self.api, self.remote_source = API(), Source()
+
+    def check(self): return self.real_preflight(self.owner, 'c'*40, self.api, self.remote_source)
+
+    def test_exact_predecessor_real_preflight_accepts_target_receipt_pointer(self):
+        result = self.check()
+        self.assertEqual(result['policy_raw'], self.original_raw)
+        self.assertEqual(result['entries'], self.snapshot['entries'])
+        self.assertFalse(self.m.paths('c'*40)[0].exists()); self.worker.assert_not_called()
+
+    def test_bad_predecessor_receipt_or_proof_refuses_before_claim(self):
+        profile = self.snapshot['policy']['profiles'][1]
+        receipt_path = self.state / profile['preparation']; raw = receipt_path.read_bytes()
+        receipt = decode(raw)
+        for field, value in [('profile','main'), ('head','0'*40), ('tree','0'*40),
+                             ('image','sha256:'+'0'*64), ('time',-1), ('time',True),
+                             ('quality',dict(receipt['quality'], tests=463)),
+                             ('native_probe_sha256','0'*64)]:
+            changed = canonical(dict(receipt, **{field:value}))
+            receipt_path.write_bytes(changed)
+            policy = decode(self.original_raw); policy['profiles'][1]['preparation_sha256'] = sha256(changed)
+            policy_raw = canonical(policy); (self.etc/'policy.json').write_bytes(policy_raw)
+            directory = self.state / ('pr75-target-'+self.m.BASE)
+            proof_path, intent_path = directory/'COMPLETE.json', directory/'commit-intent.json'
+            proof_raw, intent_raw = proof_path.read_bytes(), intent_path.read_bytes()
+            proof, intent = decode(proof_raw), decode(intent_raw)
+            proof['policy_sha256'] = intent['policy_sha256'] = sha256(policy_raw)
+            proof_path.write_bytes(canonical(proof)); intent_path.write_bytes(canonical(intent))
+            with patch.object(self.m, 'POLICY_SHA', sha256(policy_raw)), \
+                 patch.object(self.m, 'ORIGINAL_COMPLETE_SHA', sha256(canonical(proof))), \
+                 self.subTest(field=field), self.assertRaises(Hold): self.check()
+            proof_path.write_bytes(proof_raw); intent_path.write_bytes(intent_raw)
+            (self.etc/'policy.json').write_bytes(self.original_raw)
+            self.assertFalse(self.m.paths('c'*40)[0].exists()); self.worker.assert_not_called()
+        receipt_path.write_bytes(raw)
+        proof = self.state / ('pr75-target-'+self.m.BASE) / 'COMPLETE.json'
+        saved = proof.read_bytes(); proof.write_bytes(b'changed predecessor proof')
+        with self.assertRaisesRegex(Hold, 'pr75_context_original_complete'): self.check()
+        proof.write_bytes(saved)
+
+    def test_wrong_pointer_or_digest_refuses_even_with_rebound_top_policy_digest(self):
+        path = self.etc / 'policy.json'
+        for field, value in [('preparation','refresh-'+'c'*40+'/sn004/acceptance.json'),
+                             ('preparation_sha256','0'*64)]:
+            policy = decode(self.original_raw); policy['profiles'][1][field] = value; raw = canonical(policy)
+            path.write_bytes(raw)
+            with patch.object(self.m, 'POLICY_SHA', sha256(raw)), self.assertRaises(Hold): self.check()
+            self.assertFalse(self.m.paths('c'*40)[0].exists()); self.worker.assert_not_called()
+        path.write_bytes(self.original_raw)
+
+
+class CompletionEvidenceFixupTests(unittest.TestCase):
+    def setUp(self): ContextTransitionTests.setUp(self)
+    def perform(self): return self.m.perform(self.owner, 'c'*40, None, self.source)
+
+    def assert_retained(self, output):
+        directory, _, archive = self.m.paths('c'*40)
+        self.assertTrue(archive.exists()); self.assertTrue((directory/'commit-intent.json').exists())
+        self.assertTrue((directory/'COMPLETE.json').exists())
+        self.assertEqual(decode((directory/'COMPLETE.json').read_bytes())['status'], 'PR75_CONTEXT_INSTALLED_PAUSED')
+        self.assertNotIn('PR75_CONTEXT_INSTALLED_PAUSED ', output)
+        self.assertNotIn('VERIFIED_INSTALLED_PAUSED', output)
+        with self.assertRaisesRegex(Hold, 'pr75_context_already_claimed'): self.perform()
+        # Corrupt evidence remains present and the real controller gate refuses it.
+        (directory/'COMPLETE.json').write_bytes(canonical({'status':'invalid partial proof'}))
+        raw = (self.etc/'policy.json').read_bytes()
+        with self.assertRaisesRegex(Hold, 'pr75_context_completion_binding'):
+            controller.validate_owner_preparation(self.state, decode(raw), raw)
+
+    def test_failed_completion_validation_preserves_durable_complete_without_success(self):
+        import contextlib, io
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), \
+             patch.object(self.m, 'validate_preparation', side_effect=Hold('postwrite readback failed')), \
+             self.assertRaisesRegex(Hold, 'postwrite readback failed'): self.perform()
+        self.assert_retained(output.getvalue())
+
+    def sync_failure(self, target_kind):
+        import contextlib, io, os
+        original_write = self.m.write_new
+        def write_with_sync_failure(path, raw, *args, **kwargs):
+            if Path(path).name != 'COMPLETE.json':
+                return original_write(path, raw, *args, **kwargs)
+            original_sync = os.fsync
+            target = Path(path) if target_kind == 'file' else Path(path).parent
+            def failed_sync(fd):
+                if Path(os.readlink('/proc/self/fd/'+str(fd))) == target:
+                    raise OSError(target_kind+' fsync failed during COMPLETE write')
+                return original_sync(fd)
+            # Injection lasts only for this exact COMPLETE write, including its
+            # real file flush/fsync and parent-directory fsync implementation.
+            with patch.object(os, 'fsync', failed_sync):
+                return original_write(path, raw, *args, **kwargs)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), patch.object(self.m, 'write_new', write_with_sync_failure), \
+             self.assertRaisesRegex(OSError, target_kind+' fsync failed during COMPLETE write'):
+            self.perform()
+        self.assert_retained(output.getvalue())
+
+    def test_complete_sync_failure_preserves_created_bytes_without_success(self):
+        self.sync_failure('directory')
+
+    def test_complete_file_fsync_failure_preserves_created_bytes_without_success(self):
+        self.sync_failure('file')
+
+
 if __name__ == '__main__': unittest.main()
 
