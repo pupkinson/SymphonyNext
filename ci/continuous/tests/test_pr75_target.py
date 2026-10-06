@@ -261,5 +261,30 @@ class SuccessorDispatchTests(unittest.TestCase):
                 controller.validate_owner_preparation(Path("/fixture"),{"owner_request":SUCCESSOR},b"fixture")
             own.assert_called_once();initial.assert_not_called();paging.assert_not_called()
 
+class ArchivedSuccessorProofTests(unittest.TestCase):
+    def setUp(self):
+        SuccessorTransitionTests.setUp(self)
+
+    def test_explicit_archive_validates_real_bytes_while_default_requires_current_install(self):
+        self.m.perform(self.owner, 'a'*40, None, self.source)
+        raw = (self.etc / 'policy.json').read_bytes(); policy = self.decode(raw)
+        archive = self.inst.with_name('supplied-predecessor-archive'); self.inst.rename(archive)
+        self.m.validate_preparation(self.state, policy, raw, package=archive)
+        with self.assertRaises((Hold, FileNotFoundError)):
+            self.m.validate_preparation(self.state, policy, raw)
+        path = archive / 'worker.py'; path.write_bytes(b'changed archived successor')
+        with self.assertRaisesRegex(Hold, 'daily_limit_package'):
+            self.m.validate_preparation(self.state, policy, raw, package=archive)
+
+    def test_archive_does_not_bypass_original_completion_or_older_package_chain(self):
+        self.m.perform(self.owner, 'a'*40, None, self.source)
+        raw = (self.etc / 'policy.json').read_bytes(); policy = self.decode(raw)
+        archive = self.inst.with_name('supplied-predecessor-archive'); self.inst.rename(archive)
+        path = self.state / ('review-paging-' + self.m.BASE) / 'COMPLETE.json'
+        path.write_bytes(b'changed original completion')
+        with self.assertRaisesRegex(Hold, 'pr75_target_original_complete'):
+            self.m.validate_preparation(self.state, policy, raw, package=archive)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -853,3 +853,56 @@ No new native paging probe is claimed: unchanged reviewer bytes retain the
 archived exact probe evidence; a new native review/check remains NOT_RUN.
 The historical request remains valid only for historical proofs or a separately
 installed historical policy; a label cannot widen either closed request.
+
+
+## Closed PR75 dependency-context admission
+
+CI source b7561f97 and its installed successor policy still pin 8c5828b.
+`repair_pr75_context.py` proposes a separate paused transition to exact PR75
+HEAD6925de7e291d8cb36f83493d254679527a83c34d,
+TREEb10931da9fa383bb5f22ca36f5f89e0038385e25, on the existing stacked base.
+The immutable `profiles-pr75-context.json` advances only the OIDC fixture and
+OIDC test blobs among68 locks; the other66 stay byte-pinned. The sn004 floor
+rises464→507 while maximum6 skips, coverage100, zero failures and every
+stage/source/cleanup assertion remain unchanged. Historical definitions and
+requests, main profile, owner/reviewer/runner/worker/unit bytes and scopes stay
+unchanged.
+
+This is a source proposal. A separate concrete owner admission and independent
+exact-source review are required before native installation. The single-use
+owner leaf requires a clean reviewed checkout, paused disabled timer, idle
+service (including failed/failed with both PIDs zero), absent workers, exact
+installed policy/package/COMPLETE and retained-image/keeper/ruleset readback.
+It binds all historical journal rows and prior state artifacts, including
+paging/target inputs, intents, completions, source and logs. The latest
+HOLD7cd15ad and older HOLD101338df/ff24dced remain terminal and immutable.
+
+The retained sn004 image is
+`sha256:13173082884c7fbe5bd03fc9db16a1deb0ec7af56d0dd71b4b391a252352c975`.
+Image reuse requires a fresh exact-target protected507+ run before a new
+acceptance receipt or installation. Author evidence and old native quality
+receipts cannot supply that result. The operation freezes inputs again after
+quality, stages only its closed nine-path delta, and records durable intent
+before archiving b756 and replacing package/policy. Failure before policy write
+restores the predecessor; unknown successful writes preserve matching package,
+archive, intent and claim for inspection. Neither outcome permits replay.
+
+Completion rehashes the current package, actual b756 archive and every older
+archive through the original paging/profile proof chain. It requires exact
+installed policy bytes, the new definition/request, fresh quality receipt,
+predecessor completion/native-probe bindings and unchanged history. The
+controller uses this context completion before claim or publication. New
+publishing rows remain reconcilable while every prior row stays unchanged.
+
+The future owner command, only after that separate native admission, is:
+
+```sh
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/repair_pr75_context.py install --reviewed-head <ci-package-sha>
+```
+
+`verify --reviewed-head <ci-package-sha>` is a separate paused readback action.
+The timer remains disabled; installation, protected native quality, paid
+review/check, activation, production auth, Task2–5, merge and deployment are
+NOT_RUN by this source stage. Historical stages and consumed budgets are not
+reopened. Local tests exercise native boundaries with fixtures and certify
+only these source contracts.
