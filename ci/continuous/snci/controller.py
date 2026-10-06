@@ -117,7 +117,10 @@ def targets(api,policy):
     return result
 
 def validate_owner_preparation(state,policy,raw):
-    from . import pr75_profile, repair_review_paging
+    from . import pr75_profile, repair_review_paging, repair_pr75_target
+    from .source import PR75_SUCCESSOR_REQUEST
+    if policy.get("owner_request") == PR75_SUCCESSOR_REQUEST:
+        return repair_pr75_target.validate_preparation(state, policy, raw)
     profile=next(p for p in policy['profiles'] if p['name']=='sn004')
     if (profile.get('preparation')=='refresh-'+repair_review_paging.BASE+'/sn004/acceptance.json'
             and policy['installed_revision']!=repair_review_paging.BASE):
