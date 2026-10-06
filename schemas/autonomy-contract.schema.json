@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:symphony-next:autonomy-contract:v1",
+  "title": "Autonomy Contract v1 — design candidate, not an authority grant",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "contract_id", "revision", "project_id", "status", "goal_ref", "policy_ref", "resource_manifest_ref", "authority_record_ref", "skill_manifest_ref", "validity", "grants", "role_bindings", "budget", "milestones", "recovery"],
+  "properties": {
+    "schema": {"const": "symphony-next-autonomy-contract/v1"},
+    "contract_id": {"$ref": "#/$defs/id"},
+    "revision": {"type": "integer", "minimum": 1},
+    "project_id": {"type": "string", "format": "uuid"},
+    "status": {"enum": ["draft", "active", "suspended", "revoked", "expired", "completed"]},
+    "goal_ref": {"$ref": "#/$defs/pin"},
+    "policy_ref": {"$ref": "#/$defs/pin"},
+    "resource_manifest_ref": {"$ref": "#/$defs/pin"},
+    "authority_record_ref": {"$ref": "#/$defs/pin"},
+    "skill_manifest_ref": {"$ref": "#/$defs/pin"},
+    "validity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["not_before", "termination"],
+      "properties": {
+        "not_before": {"type": "string", "format": "date-time"},
+        "termination": {"oneOf": [
+          {"type": "object", "additionalProperties": false, "required": ["mode", "expires_at"], "properties": {"mode": {"const": "expires_at"}, "expires_at": {"type": "string", "format": "date-time"}}},
+          {"type": "object", "additionalProperties": false, "required": ["mode", "milestone_id"], "properties": {"mode": {"const": "milestone"}, "milestone_id": {"$ref": "#/$defs/id"}}}
+        ]}
+      }
+    },
+    "grants": {"type": "array", "minItems": 1, "maxItems": 256, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["grant_id", "effect", "capability_ref", "resource_ids", "constraints_ref"],
+      "properties": {
+        "grant_id": {"$ref": "#/$defs/id"},
+        "effect": {"enum": ["allow", "deny"]},
+        "capability_ref": {"$ref": "#/$defs/pin"},
+        "resource_ids": {"$ref": "#/$defs/ids"},
+        "constraints_ref": {"$ref": "#/$defs/pin"}
+      }
+    }},
+    "role_bindings": {"type": "array", "minItems": 1, "maxItems": 32, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "principal_ids", "grant_ids", "role_contract_ref"],
+      "properties": {
+        "role": {"enum": ["planner", "implementer", "reviewer", "runtime_verifier", "arbitrator", "scheduler", "policy_controller", "release_controller", "recovery_controller"]},
+        "principal_ids": {"$ref": "#/$defs/ids"},
+        "grant_ids": {"$ref": "#/$defs/ids"},
+        "role_contract_ref": {"$ref": "#/$defs/pin"}
+      }
+    }},
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["currency", "max_cost_minor", "max_parallel_workers", "max_attempt_seconds", "max_repair_cycles", "max_profile_changes", "execution_profiles_ref", "resource_quotas_ref"],
+      "properties": {
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "max_cost_minor": {"type": "integer", "minimum": 0},
+        "max_parallel_workers": {"type": "integer", "minimum": 1},
+        "max_attempt_seconds": {"type": "integer", "minimum": 1},
+        "max_repair_cycles": {"type": "integer", "minimum": 0},
+        "max_profile_changes": {"type": "integer", "minimum": 0},
+        "execution_profiles_ref": {"$ref": "#/$defs/pin"},
+        "resource_quotas_ref": {"$ref": "#/$defs/pin"}
+      }
+    },
+    "milestones": {"type": "array", "minItems": 1, "maxItems": 128, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["milestone_id", "mode", "acceptance_ref"],
+      "properties": {
+        "milestone_id": {"$ref": "#/$defs/id"},
+        "mode": {"enum": ["report_only", "human_decision"]},
+        "acceptance_ref": {"$ref": "#/$defs/pin"}
+      }
+    }},
+    "recovery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policy_ref", "unknown_write", "stop_behavior"],
+      "properties": {
+        "policy_ref": {"$ref": "#/$defs/pin"},
+        "unknown_write": {"const": "reconcile_before_retry"},
+        "stop_behavior": {"const": "stop_intake_fence_then_bounded_cleanup"}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"},
+    "ids": {"type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "pin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "revision", "sha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    }
+  }
+}
