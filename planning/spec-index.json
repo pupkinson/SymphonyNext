@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-spec-composition/v1",
-  "revision": "0.5+MCP-SN031-r2",
+  "revision": "0.5+MCP-SN031-r2+MODEL-SELECTION-r1",
   "status": "review_candidate_not_runtime_ready",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
   "dispatch_enabled": false,
@@ -29,6 +29,20 @@
       "requirements": "MCP-07..MCP-26",
       "acceptance": "AC-MCP-01..AC-MCP-20",
       "owner": "SN-031"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-06-task-model-effort-speed.md",
+      "sha256": "a236e1e92bac0b4273d84f3a2ffa86c021bc2d0f56b88663561d25e5f095951a",
+      "requirements": "MSEL-01..MSEL-08",
+      "acceptance": "AC-MSEL-01..AC-MSEL-08",
+      "owner": "SN-029"
+    },
+    {
+      "path": "planning/model-selection-traceability.json",
+      "sha256": "6b0f7c0c7c6a3b5d8d96ebb8462c3dd4613131d98149ed50e9f1469ae53c322d",
+      "requirements": "MSEL-01..MSEL-08",
+      "acceptance": "AC-MSEL-01..AC-MSEL-08",
+      "owner": "SN-029"
     }
   ],
   "task_refinements": [
@@ -55,7 +69,8 @@
     "Interpret this as one versioned planning source, not a second queue or a completed native importer.",
     "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
     "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance.",
-    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them."
+    "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them.",
+    "Load MODEL-SELECTION-r1 and its ownership/acceptance map in addition to all baseline and MCP scope; include per-task model/effort/speed and independently user-configured planner settings in relevant task scope. Preserve every baseline field/dependency/status/admission. Missing support causes unsupported_requirement_addendum; no runtime or paid dispatch is authorized by this amendment."
   ],
   "related_pending_sources": [
     {
