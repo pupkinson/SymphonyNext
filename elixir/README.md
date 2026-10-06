@@ -86,6 +86,14 @@ Final exact-source gates and owned PostgreSQL cleanup are in the checkpoint/work
 Pin/lock/coverage policy and prior histories are preserved. Authentication stays disabled;
 independent review/trusted checks/live acceptance remain separate.
 
+The 2026-10-06 repair also checks current credential UTC expiry at caller acceptance,
+after the existing absolute monotonic deadline guard. The real HTTPS queued-result
+tests cover expiry before resumption and a still-valid positive control:51/1 semantic
+RED then51/0 GREEN. Both check one token POST, worker termination and captured-log
+redaction. The HTTPS fixture and dependency/coverage policies remain unchanged.
+Final full gates, exact source bindings and owned PostgreSQL cleanup are in the
+engineering report/checkpoint; auth activation and trusted checking remain separate.
+
 We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
 
 ```bash

@@ -60,7 +60,12 @@ defmodule SymphonyControl.Auth.Oidc do
   end
 
   defp accept_result(result, deadline, method),
-    do: if(now() < deadline, do: result, else: transport_error(method))
+    do: if(now() < deadline, do: accept_credential(result), else: transport_error(method))
+
+  defp accept_credential({:ok, %{credential_expires_at_ms: expiry}} = result),
+    do: if(expiry > System.system_time(:millisecond), do: result, else: {:error, :forbidden})
+
+  defp accept_credential(result), do: result
 
   defp run_guarded(fun, deadline), do: guarded(fn -> fun.(deadline) end)
 

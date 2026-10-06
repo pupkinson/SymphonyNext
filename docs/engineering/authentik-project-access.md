@@ -1,5 +1,90 @@
 # Authentik project access: Task1 dependency preflight
 
+## Queued credential expiry repair — 2026-10-06
+
+Attempt `SN005-AUTH-PROTOCOL-01-QUEUED-EXPIRY-REPAIR-20261006` continues the
+[owner admission](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6014254748).
+[Executor continuation](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6014518354)
+was published before tracked changes. Original T0 `2026-10-06T10:21:27Z` and
+absolute deadline `2026-10-06T10:51:27Z` are unchanged; executor began at
+`2026-10-06T10:38:27.167958506Z`, using only the remaining budget.
+Baseline HEAD `be5371e71db363d5a07c7109d6dd010a6ceca7ef`,
+tree `b0f828141ca90851f6e037d6f1741aaaa28496de`,
+PR base `233dda1878533a425574074b8d34344b50d41cf7` were checked against fresh fetch.
+One writer, two repair cycles, zero profile changes; only the six admitted paths changed.
+Previous source reports below and both native HOLD attempts remain historical records.
+
+The coordinator's unrun54-line draft was applied with identical diff SHA256
+`23ff9acaa6b723c1db7b96b618ff21b78600dca56189c5acd91ee52c18de6904`.
+Its first runnable probe produced51/2: one expired-identity assertion and one positive-control
+test-wiring failure because the existing redaction fixture requires a recorded captured log.
+Only the test wiring was corrected to capture and record the actual exchange logs.
+An earlier Mix socket EPERM failure and default-sandbox fetch failure are infrastructure
+observations, never semantic RED. Ordinary network permission kept the existing proxy and
+toolchain; Elixir/Mix1.19.5 on OTP28/ERTS16.4 exited0. No profile or credential was replaced.
+
+The existing unchanged HTTPS fixture holds JWKS while the caller is suspended. A real
+Oidc.exchange worker completes verification, queues its identity in that caller's mailbox,
+and exits normally before caller resumption. The negative test waits until the queued
+credential has expired while the original monotonic network deadline still remains valid.
+The positive control resumes while both bounds remain valid. Both assert exactly one token
+POST, worker termination and absence of secret echo in captured logs.
+
+From elixir, the same command was observed before and after the product change:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+Clean semantic RED: **51 tests/1 failure, exit2**, output SHA256
+`998eb52eef0e0194d23f75d3dfafe3fceaacffa5e323c9efe3d7d5efacd14033`.
+The otherwise verified expired identity was returned instead of `{:error, :forbidden}`;
+the queued-valid positive control passed. Product bytes were unchanged at this RED.
+GREEN: **51/0, exit0**, output SHA256
+`41c5da25f86ce01f293a1756b6359bdbc888cbb0ebd68a061bca49ea3d84a103`.
+
+The product keeps the existing monotonic acceptance guard first, preserving deadline error
+projection. Only successful verified identities then receive a current UTC expiry check:
+`credential_expires_at_ms <= System.system_time(:millisecond)` gives the fixed forbidden
+result. URL results and existing errors pass through unchanged. This adds no public hooks,
+token retry, network operation or alternate authentication architecture. Receipt-anchored
+expiry, encrypted-only unsigned rejection, DPoP one-POST and previous wire regressions remain.
+
+The first makeall stopped at strict Credo: the new helper clause exceeded120 columns,
+exit2 (Credo child4). Coverage and Dialyzer were NOT_RUN in that invocation. The second
+and final repair cycle split only the clause result line without changing behavior;
+the full unchanged gates were repeated. No threshold/exclusion/check was relaxed.
+Final makeall: **exit0,464/0/6,seed94528**, configured total/Config/Clock/Oidc100%;
+format/specs/strictCredo passed and Dialyzer0errors/0skips. Output SHA256
+`5a83478a3c0048e8f97ec65f53efc3c4394afa557e58188da6a2ea1acfea2510`.
+Bootstrap12/0 and MCP input-contract11/0 exited0; manifest42/diff/PR-body checks exited0.
+An optional second fixed-seed suite was NOT_RUN: makeall already executed the full suite,
+and the unchanged deadline bounds final publication/cleanup. Dependency retrieval emitted
+security advisories for frozen existing packages; dependency updates are outside this allowance.
+Full gates and cleanup results are recorded in the final checkpoint; an absent check stays
+NOT_RUN. A fresh private PostgreSQL17.11 fixture uses0700 data/socket directories, no TCP,
+port55474 and its own sn004_fixture/sn004_test. Existing unprivileged Cloud developer tools
+were reused without system installation, cache copying, root/sudo or production database use.
+Initialization/start/database creation/version plus SELECT1 readiness all exited0.
+The final owned stop/status commands retain their actual child exits before metadata work.
+
+Evidence root: `/workspace/scratch/SN005-AUTH-PROTOCOL-01-QUEUED-EXPIRY-REPAIR-20261006`.
+Actual argv/cwd/start/end UTC/exit/output hashes and source bindings are in command records.
+All2776 prior Cloud FIXUP evidence entries were verified unchanged. Oidcc==3.9.0 and the
+transitive lock remain frozen, SHA256
+`13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`.
+HTTPS fixture, CoreTest, shared support, testhelper, dependency/coverage policy and protected
+CI/profile/installed native package remain unchanged. Six existing skips are preserved.
+
+**VERIFIED:** real queued-expiry semantic RED/GREEN and queued-valid control with one POST.
+**INFERRED:** the acceptance guard meets the specified caller-resumption refusal contract.
+**UNKNOWN:** arbitrary scheduler suspension, clock rollback and live IdP eligibility/isolation.
+**BLOCKED:** independent review of the new HEAD, new trusted exact-HEAD attempt and live
+acceptance remain separate NOT_RUN stages. Author gates do not certify these stages.
+Authentication stays disabled; Task2–5, merge/deploy and native attempt replay were not run.
+Rollback source is the preserved be5371e; no runtime or schema rollout occurred.
+Next bounded action is independent new-HEAD review and separately admitted trusted checking.
+
 ## Cloud fixup attempt — 2026-10-05
 
 Status: **auth protocol and local retry fixtures GREEN; independent acceptance pending**.

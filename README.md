@@ -52,3 +52,10 @@ retain binary bytes, preventing downstream telemetry exceptions; nonUTF8 still f
 Only three retry tests use local empty memory fixtures; their assertions and timing ranges
 are unchanged. Independent review, protected trusted checks and live bindings remain required.
 Authentication stays disabled; all previous attempt reports and failures are preserved.
+
+The 2026-10-06 queued-expiry repair rechecks credential UTC expiry when the caller
+accepts a verified worker result. An expired queued identity returns forbidden even
+within the network deadline; a still-valid queued identity remains accepted. Real HTTPS
+regressions observed51/1 RED then51/0 GREEN with one token POST and worker cleanup.
+Full gate evidence and the unchanged original attempt budget are in the engineering report.
+Independent new-HEAD review/trusted checking remain separate; authentication stays disabled.

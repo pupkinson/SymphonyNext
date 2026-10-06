@@ -11,6 +11,34 @@ defmodule SymphonyControl.Auth.OidcTest do
     Oidc.exchange(cfg || OidcFixture.config(f), code, @expectations, deadline(ms))
   end
 
+  defp queued_exchange(f, expires) do
+    cfg = OidcFixture.config(f)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    caller = Task.async(fn -> Oidc.exchange(cfg, code, @expectations, expires) end)
+    assert_receive {:jwks_waiting, provider}, 1_000
+    :erlang.suspend_process(caller.pid)
+    on_exit(fn -> if Process.alive?(caller.pid), do: :erlang.resume_process(caller.pid) end)
+    {:links, links} = Process.info(caller.pid, :links)
+    worker = Enum.find(links, &(&1 != self()))
+    assert is_pid(worker)
+    monitor = Process.monitor(worker)
+    send(provider, :release_jwks)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :normal}, 1_000
+    {:messages, messages} = Process.info(caller.pid, :messages)
+
+    identity =
+      Enum.find_value(messages, fn
+        {ref, {:ok, %{credential_expires_at_ms: expiry} = identity}} when is_reference(ref) and is_integer(expiry) ->
+          identity
+
+        _ ->
+          nil
+      end)
+
+    assert is_map(identity)
+    {caller, worker, identity}
+  end
+
   test "HTTPS fixture is ready independently of missing product adapter" do
     f = OidcFixture.start!()
     assert {:ok, %{status: 200, body: %{"issuer" => issuer}}} = Req.get(f.origin <> "/discovery", connect_options: [transport_opts: [cacerts: [f.ca]]], retry: false)
@@ -192,6 +220,47 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert Task.await(caller) == {:error, :dependency_unavailable}
     refute Process.alive?(worker)
     assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "successful exchange queued past credential expiry is refused before network deadline" do
+    f = OidcFixture.start!(hold_jwks: self(), expires_in: 1)
+
+    log =
+      capture_log(fn ->
+        expires = deadline()
+        {caller, worker, identity} = queued_exchange(f, expires)
+        Process.sleep(max(identity.credential_expires_at_ms - System.system_time(:millisecond), 0) + 30)
+        assert identity.credential_expires_at_ms <= System.system_time(:millisecond)
+        assert System.monotonic_time(:millisecond) < expires
+        :erlang.resume_process(caller.pid)
+        assert Task.await(caller) == {:error, :forbidden}
+        assert OidcFixture.calls(f, :token) == 1
+        refute Process.alive?(worker)
+      end)
+
+    OidcFixture.record_log(f, log)
+    assert :ok == OidcFixture.assert_no_secret_echo(f)
+  end
+
+  test "successful exchange queued within credential lifetime remains accepted" do
+    f = OidcFixture.start!(hold_jwks: self(), expires_in: 120)
+
+    log =
+      capture_log(fn ->
+        expires = deadline()
+        {caller, worker, identity} = queued_exchange(f, expires)
+        assert identity.credential_expires_at_ms > System.system_time(:millisecond)
+        assert System.monotonic_time(:millisecond) < expires
+        :erlang.resume_process(caller.pid)
+        assert {:ok, accepted} = Task.await(caller)
+        assert accepted.subject == "human-1"
+        assert accepted.credential_expires_at_ms > System.system_time(:millisecond)
+        assert OidcFixture.calls(f, :token) == 1
+        refute Process.alive?(worker)
+      end)
+
+    OidcFixture.record_log(f, log)
+    assert :ok == OidcFixture.assert_no_secret_echo(f)
   end
 
   test "UTF8 Content-Type parameter preserves byte representation without credential telemetry" do
