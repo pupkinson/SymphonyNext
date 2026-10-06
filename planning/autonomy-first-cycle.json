@@ -1,0 +1,585 @@
+{
+  "schema": "symphony-next-autonomy-plan/v1",
+  "revision": 1,
+  "source_head": "e5dda93f88d2291d0b916142b68705e353fe94b4",
+  "source_tree": "a6a64e90fc8b1fe9e2f02aecb1ff19e87471f32e",
+  "spec": {
+    "path": "docs/superpowers/specs/2026-10-06-scoped-autonomy-design.md",
+    "sha256": "8cd87d39f7c01ec31b17fdb29bcf8ccfe3cf64852d8cda4933731cff66a35d8d"
+  },
+  "plan": {
+    "path": "docs/superpowers/plans/2026-10-06-autonomy-first-cycle.md",
+    "sha256": "4ee321a83001c48b83225b81127de4f27a78556eab1e2456cc38898d78c7d43e"
+  },
+  "source_review": {
+    "issue": 83,
+    "comment": 6024825121,
+    "head": "e5dda93f88d2291d0b916142b68705e353fe94b4",
+    "verdict": "ACCEPTED",
+    "scope": "source_only",
+    "tests_executed": "NOT_RUN"
+  },
+  "status": "written_not_executed",
+  "dispatch_enabled": false,
+  "runtime_changes": "NONE",
+  "task_refinement": false,
+  "owner_semantics": "Slices of existing SN owners, not independent runtime tasks. Compose exact accepted sources and paired overrides before any implementation admission. Internal package graph does not certify native product DAG.",
+  "requirements": [
+    {
+      "id": "AUT-01",
+      "owners": [
+        "SN-020",
+        "SN-042"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-01",
+        "AC-AUT-02"
+      ]
+    },
+    {
+      "id": "AUT-02",
+      "owners": [
+        "SN-014",
+        "SN-020"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-03"
+      ]
+    },
+    {
+      "id": "AUT-03",
+      "owners": [
+        "SN-005",
+        "SN-020"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-04",
+        "AC-AUT-05"
+      ]
+    },
+    {
+      "id": "AUT-04",
+      "owners": [
+        "SN-014",
+        "SN-033"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-06"
+      ]
+    },
+    {
+      "id": "AUT-05",
+      "owners": [
+        "SN-028",
+        "SN-030"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-07",
+        "AC-AUT-08"
+      ]
+    },
+    {
+      "id": "AUT-06",
+      "owners": [
+        "SN-014",
+        "SN-015"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-09",
+        "AC-AUT-10"
+      ]
+    },
+    {
+      "id": "AUT-07",
+      "owners": [
+        "SN-021",
+        "SN-023"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-11",
+        "AC-AUT-12"
+      ]
+    },
+    {
+      "id": "AUT-08",
+      "owners": [
+        "SN-005",
+        "SN-016",
+        "SN-020"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-13"
+      ]
+    },
+    {
+      "id": "AUT-09",
+      "owners": [
+        "SN-020",
+        "SN-022",
+        "SN-036"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-14",
+        "AC-AUT-15"
+      ]
+    },
+    {
+      "id": "AUT-10",
+      "owners": [
+        "SN-010",
+        "SN-029",
+        "SN-035"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-16"
+      ]
+    },
+    {
+      "id": "AUT-11",
+      "owners": [
+        "SN-027"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-17",
+        "AC-AUT-18"
+      ]
+    },
+    {
+      "id": "AUT-12",
+      "owners": [
+        "SN-016",
+        "SN-030"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-19"
+      ]
+    },
+    {
+      "id": "AUT-13",
+      "owners": [
+        "SN-015",
+        "SN-025",
+        "SN-026"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-20"
+      ]
+    },
+    {
+      "id": "AUT-14",
+      "owners": [
+        "SN-031",
+        "SN-036"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-21"
+      ]
+    },
+    {
+      "id": "AUT-15",
+      "owners": [
+        "SN-029",
+        "SN-042",
+        "SN-044"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-22"
+      ]
+    },
+    {
+      "id": "AUT-16",
+      "owners": [
+        "SN-003",
+        "SN-030",
+        "SN-033",
+        "SN-034"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-23",
+        "AC-AUT-24"
+      ]
+    }
+  ],
+  "work_packages": [
+    {
+      "id": "AUT-W01",
+      "title": "Единый source index и протокол команд",
+      "owners": [
+        "SN-014",
+        "SN-029"
+      ],
+      "depends_on": [],
+      "acceptance_ids": [
+        "AC-AUT-22"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W01"
+    },
+    {
+      "id": "AUT-W02",
+      "title": "Сохраняемый договор и реальная проверка полномочий",
+      "owners": [
+        "SN-005",
+        "SN-014",
+        "SN-020"
+      ],
+      "depends_on": [
+        "AUT-W01"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-03",
+        "AC-AUT-04",
+        "AC-AUT-05",
+        "AC-AUT-13"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W02"
+    },
+    {
+      "id": "AUT-W03",
+      "title": "Транзакционный журнал, leases и бюджет",
+      "owners": [
+        "SN-014",
+        "SN-015",
+        "SN-025"
+      ],
+      "depends_on": [
+        "AUT-W02"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-09",
+        "AC-AUT-10",
+        "AC-AUT-12",
+        "AC-AUT-20"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W03"
+    },
+    {
+      "id": "AUT-W04",
+      "title": "Планировщик и закреплённые role skills",
+      "owners": [
+        "SN-026",
+        "SN-027",
+        "SN-029"
+      ],
+      "depends_on": [
+        "AUT-W01",
+        "AUT-W02",
+        "AUT-W03"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-05",
+        "AC-AUT-15",
+        "AC-AUT-17",
+        "AC-AUT-18",
+        "AC-AUT-20"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W04"
+    },
+    {
+      "id": "AUT-W05",
+      "title": "Изолированный исполнитель и подтверждённая передача",
+      "owners": [
+        "SN-016",
+        "SN-017",
+        "SN-028"
+      ],
+      "depends_on": [
+        "AUT-W03",
+        "AUT-W04"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-03",
+        "AC-AUT-13",
+        "AC-AUT-19",
+        "AC-AUT-20"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W05"
+    },
+    {
+      "id": "AUT-W06",
+      "title": "Автоматический запрос защищённой проверки нового source",
+      "owners": [
+        "SN-003",
+        "SN-030"
+      ],
+      "depends_on": [
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W05"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-06",
+        "AC-AUT-08",
+        "AC-AUT-23"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W06"
+    },
+    {
+      "id": "AUT-W07",
+      "title": "Review obligation и автоматическое исправление",
+      "owners": [
+        "SN-028",
+        "SN-030"
+      ],
+      "depends_on": [
+        "AUT-W03",
+        "AUT-W04",
+        "AUT-W05",
+        "AUT-W06"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-02",
+        "AC-AUT-06",
+        "AC-AUT-07",
+        "AC-AUT-08",
+        "AC-AUT-09",
+        "AC-AUT-19"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W07"
+    },
+    {
+      "id": "AUT-W08",
+      "title": "Конечное восстановление, неизвестные записи и отзыв",
+      "owners": [
+        "SN-021",
+        "SN-022",
+        "SN-023",
+        "SN-024"
+      ],
+      "depends_on": [
+        "AUT-W03",
+        "AUT-W05",
+        "AUT-W07"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-10",
+        "AC-AUT-11",
+        "AC-AUT-12",
+        "AC-AUT-13"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W08"
+    },
+    {
+      "id": "AUT-W09",
+      "title": "Содержательные решения человека и milestones",
+      "owners": [
+        "SN-010",
+        "SN-012",
+        "SN-020",
+        "SN-022",
+        "SN-029"
+      ],
+      "depends_on": [
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W04",
+        "AUT-W07",
+        "AUT-W08"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-14",
+        "AC-AUT-15",
+        "AC-AUT-16",
+        "AC-AUT-18",
+        "AC-AUT-21"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W09"
+    },
+    {
+      "id": "AUT-W10",
+      "title": "Разрешённый выпуск и функциональная приёмка",
+      "owners": [
+        "SN-032",
+        "SN-033",
+        "SN-034"
+      ],
+      "depends_on": [
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W06",
+        "AUT-W07",
+        "AUT-W08",
+        "AUT-W09"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-01",
+        "AC-AUT-02",
+        "AC-AUT-11",
+        "AC-AUT-13",
+        "AC-AUT-23",
+        "AC-AUT-24"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W10"
+    },
+    {
+      "id": "AUT-W11",
+      "title": "Одинаковое управление через UI, API и MCP",
+      "owners": [
+        "SN-031",
+        "SN-035",
+        "SN-036"
+      ],
+      "depends_on": [
+        "AUT-W01",
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W09",
+        "AUT-W10"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-14",
+        "AC-AUT-16",
+        "AC-AUT-18",
+        "AC-AUT-21"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W11"
+    },
+    {
+      "id": "AUT-W12",
+      "title": "Первый полный цикл и приёмка с отказами",
+      "owners": [
+        "SN-042",
+        "SN-044"
+      ],
+      "depends_on": [
+        "AUT-W01",
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W04",
+        "AUT-W05",
+        "AUT-W06",
+        "AUT-W07",
+        "AUT-W08",
+        "AUT-W09",
+        "AUT-W10",
+        "AUT-W11"
+      ],
+      "acceptance_ids": [
+        "AC-AUT-01",
+        "AC-AUT-02",
+        "AC-AUT-03",
+        "AC-AUT-04",
+        "AC-AUT-05",
+        "AC-AUT-06",
+        "AC-AUT-07",
+        "AC-AUT-08",
+        "AC-AUT-09",
+        "AC-AUT-10",
+        "AC-AUT-11",
+        "AC-AUT-12",
+        "AC-AUT-13",
+        "AC-AUT-14",
+        "AC-AUT-15",
+        "AC-AUT-16",
+        "AC-AUT-17",
+        "AC-AUT-18",
+        "AC-AUT-19",
+        "AC-AUT-20",
+        "AC-AUT-21",
+        "AC-AUT-22",
+        "AC-AUT-23",
+        "AC-AUT-24"
+      ],
+      "status": "planned",
+      "admitted": false,
+      "plan_section": "AUT-W12"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M-AUT-CORE",
+      "mode": "report_only",
+      "requires": [
+        "AUT-W01",
+        "AUT-W02",
+        "AUT-W03",
+        "AUT-W04",
+        "AUT-W05"
+      ]
+    },
+    {
+      "id": "M-AUT-LOOP",
+      "mode": "report_only",
+      "requires": [
+        "AUT-W06",
+        "AUT-W07",
+        "AUT-W08",
+        "AUT-W09"
+      ]
+    },
+    {
+      "id": "M-AUT-FIRST-SERVICE",
+      "mode": "human_decision",
+      "requires": [
+        "AUT-W10",
+        "AUT-W11",
+        "AUT-W12"
+      ]
+    }
+  ],
+  "product_acceptance": {
+    "AC-AUT-01": "NOT_RUN",
+    "AC-AUT-02": "NOT_RUN",
+    "AC-AUT-03": "NOT_RUN",
+    "AC-AUT-04": "NOT_RUN",
+    "AC-AUT-05": "NOT_RUN",
+    "AC-AUT-06": "NOT_RUN",
+    "AC-AUT-07": "NOT_RUN",
+    "AC-AUT-08": "NOT_RUN",
+    "AC-AUT-09": "NOT_RUN",
+    "AC-AUT-10": "NOT_RUN",
+    "AC-AUT-11": "NOT_RUN",
+    "AC-AUT-12": "NOT_RUN",
+    "AC-AUT-13": "NOT_RUN",
+    "AC-AUT-14": "NOT_RUN",
+    "AC-AUT-15": "NOT_RUN",
+    "AC-AUT-16": "NOT_RUN",
+    "AC-AUT-17": "NOT_RUN",
+    "AC-AUT-18": "NOT_RUN",
+    "AC-AUT-19": "NOT_RUN",
+    "AC-AUT-20": "NOT_RUN",
+    "AC-AUT-21": "NOT_RUN",
+    "AC-AUT-22": "NOT_RUN",
+    "AC-AUT-23": "NOT_RUN",
+    "AC-AUT-24": "NOT_RUN"
+  },
+  "related_pending_prs": [
+    3,
+    10,
+    15,
+    26,
+    79
+  ],
+  "unmodified_protected_paths": [
+    "AGENTS.md",
+    "PROJECT_RULES.md",
+    "SKILLS_POLICY.md",
+    "SPECIFICATION.md",
+    "TASKS.md",
+    "planning/backlog.json",
+    "planning/traceability.json",
+    "planning/mcp-execution.json",
+    "policies/project-policy.json"
+  ]
+}

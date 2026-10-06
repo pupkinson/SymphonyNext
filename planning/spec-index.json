@@ -1,6 +1,6 @@
 {
   "schema": "symphony-next-spec-composition/v1",
-  "revision": "0.5+MCP-SN031-r2+AUT-v1",
+  "revision": "0.5+MCP-SN031-r2+AUT-v1-plan1",
   "status": "review_candidate_not_runtime_ready",
   "base_source": "30b29e7970d64ecadf0e5c1d8d5e3b1230952ba8",
   "dispatch_enabled": false,
@@ -52,6 +52,11 @@
       "path": "docs/superpowers/plans/2026-09-23-chatgpt-mcp-execution.md",
       "sha256": "976837613c941df6ad1a9f2f25fbd7e52cbf98b4aac0989dd384ba3d03282299",
       "state": "written_not_executed"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-06-autonomy-first-cycle.md",
+      "sha256": "4ee321a83001c48b83225b81127de4f27a78556eab1e2456cc38898d78c7d43e",
+      "state": "written_not_executed"
     }
   ],
   "composition_rules": [
@@ -63,7 +68,8 @@
     "Unsupported refinement causes a planning hold; it does not authorise replay of any specifically refused operation.",
     "Final milestone retains all MCP requirements, human-only auth/consent constraints and cloud-client acceptance.",
     "Validate the effective union of depends_on and interfaces.consumes.task as a cycle-free prerequisite graph; each consumed task must already be a direct or transitive dependency. Reject unsupported override fields rather than dropping them.",
-    "Load the four hash-bound AUT/v1 source artifacts listed by its design before planning autonomy work. Preserve baseline/MCP and separately accepted addenda; unknown or mismatched sources hold import. This design does not admit tasks, activate skills, expand live policy or replay historical HOLDs."
+    "Load the four hash-bound AUT/v1 source artifacts listed by its design before planning autonomy work. Preserve baseline/MCP and separately accepted addenda; unknown or mismatched sources hold import. This design does not admit tasks, activate skills, expand live policy or replay historical HOLDs.",
+    "AUT first-cycle ownership map is planning/autonomy-first-cycle.json (root MANIFEST-bound), not a task refinement or second queue. Read it with its hash-bound plan; preserve original backlog and validate the full accepted native graph before admission. All product AC remain NOT_RUN until actual execution."
   ],
   "related_pending_sources": [
     {
