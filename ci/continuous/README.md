@@ -825,3 +825,31 @@ Source admission6002349621 does not execute that leaf. Native characterization,
 paged delivery, owner installation and a new trusted exact-HEAD check remain
 NOT_RUN. The old HOLD101338df remains immutable. Timer, service, production auth,
 Task2–5, merge and deploy remain outside this source-only repair.
+
+
+## Closed PR75 successor admission
+
+The df9db5b installation pins PR75 to be5371e. Its sn004 profile also pins the
+OIDC test file, so the repaired 8c5828b cannot be checked by merely restarting
+the old controller. `repair_pr75_target.py` proposes one paused transition from
+that exact installation to the reviewed 8c5828b/tree496889 successor request.
+It retains the dependency image and all67 other locks, keeps the historical
+profile file and receipts unchanged, and adds a separate successor definition
+with only the OIDC test lock advanced and minimum_tests raised462→464. The
+maximum6 skips and coverage100/stage/source/cleanup assertions remain.
+
+The separately authorized owner install runs protected quality against that
+exact candidate using the retained image before issuing a new receipt or
+committing the package/policy. A byte-bound COMPLETE links the current package,
+actual df9 archive, original paging/profile/probe evidence, new quality receipt
+and both immutable HOLD histories. The successor controller requires this
+completion before claiming a check, including during read-only publication
+reconciliation. A partial claim or unknown write never permits replay.
+
+This owner leaf leaves the timer disabled and the service idle. It neither
+starts CI nor publishes a trusted check; those need a separate exact-target
+owner leaf. Generic `owner.py activate` is not the successor activation path.
+No new native paging probe is claimed: unchanged reviewer bytes retain the
+archived exact probe evidence; a new native review/check remains NOT_RUN.
+The historical request remains valid only for historical proofs or a separately
+installed historical policy; a label cannot widen either closed request.

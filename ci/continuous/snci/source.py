@@ -17,8 +17,13 @@ PR75_REQUEST = {'pr': 75, 'head': 'be5371e71db363d5a07c7109d6dd010a6ceca7ef',
     'base_ref': 'docs/sn005-authentik-project-access-20261004',
     'repository_id': REPO_ID, 'draft': True}
 
+PR75_SUCCESSOR_REQUEST = dict(PR75_REQUEST,
+    head="8c5828b1a5c4a2261fb2cd0a021235109a8e07a3",
+    tree="496889153378c3e22bd58c96cf0f6855364117e5")
+
 def validate_owner_request(request):
-    require(isinstance(request,dict) and canonical(request)==canonical(PR75_REQUEST),
+    require(isinstance(request,dict) and any(canonical(request)==canonical(pinned)
+                for pinned in (PR75_REQUEST, PR75_SUCCESSOR_REQUEST)),
             'owner_request_scope')
 
 def safe_path(path):

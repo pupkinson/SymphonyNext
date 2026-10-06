@@ -129,8 +129,9 @@ def saved_snapshot(snapshot):
     return {k: snapshot[k] for k in ('tree', 'old_manifest', 'units', 'history', 'original_complete_sha256')}
 
 
-def validate_preparation(state, policy, raw):
+def validate_preparation(state, policy, raw, *, package=None):
     """Read-only completion, also usable while a NEW publication is pending."""
+    package = INSTALL if package is None else Path(package)
     head = policy.get('installed_revision'); directory, _, archive = paths(head)
     require(Path(state) == STATE and raw == canonical(policy), 'paging_completion_policy')
     before = trusted(directory / 'policy-before.json', private=True).read_bytes(); old = decode(before)
@@ -144,7 +145,7 @@ def validate_preparation(state, policy, raw):
     require(intent == expected and all(proof.get(k) == v for k, v in expected.items())
             and proof.get('status') == 'REVIEW_PAGING_INSTALLED_PAUSED'
             and proof.get('inputs_sha256') == sha256(saved_raw), 'paging_completion_binding')
-    daily_limit.verify_manifest(INSTALL, proof['manifest_sha256'], head)
+    daily_limit.verify_manifest(package, proof['manifest_sha256'], head)
     daily_limit.verify_manifest(archive, saved['old_manifest'], BASE)
     original = STATE / ('refresh-' + BASE) / 'COMPLETE.json'
     require(saved['original_complete_sha256'] == ORIGINAL_COMPLETE_SHA
