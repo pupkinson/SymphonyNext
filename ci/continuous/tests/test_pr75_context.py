@@ -1,8 +1,11 @@
 """PR75 dependency-context admission is exact and preserves its predecessor."""
 import copy
 import importlib
+import os
 from pathlib import Path
+import stat
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -203,6 +206,19 @@ class ContextTransitionTests(unittest.TestCase):
             path.write_bytes(raw)
         with self.assertRaisesRegex(Hold, 'pr75_context_completion_policy'):
             self.m.validate_preparation(self.state, policy, canonical(dict(policy, extra=True)))
+
+    def test_real_socket_survives_transition_and_completion_refuses_later_metadata_drift(self):
+        path = self.state / 'recovery-source-only-20260930/tmux.sock'
+        path.parent.mkdir(mode=0o700); os.mknod(path, stat.S_IFSOCK | 0o600)
+        self.snapshot['history'] = self.m.history(self.snapshot['policy'], 'c'*40)
+        before = path.lstat(); held = dict(self.held)
+        self.perform(); self.proof()
+        self.assertTrue(stat.S_ISSOCK(path.lstat().st_mode))
+        self.assertEqual((path.lstat().st_ino, path.lstat().st_ctime_ns),
+                         (before.st_ino, before.st_ctime_ns))
+        self.assertEqual({p: p.read_bytes() for p in held}, held)
+        path.chmod(0o640)
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_sockets'): self.proof()
 
     def test_every_native_quality_failure_refuses_install_and_preserves_single_use_claim(self):
         bad = dict(self.worker.return_value, tests=506)
@@ -436,5 +452,112 @@ class CompletionEvidenceFixupTests(unittest.TestCase):
         self.sync_failure('file')
 
 
-if __name__ == '__main__': unittest.main()
+class HistoricalSocketTests(unittest.TestCase):
+    SOCKETS = (
+        'recovery-source-only-20260930/tmux.sock',
+        'repair-cache-10b56bc96f76/tmux.sock',
+        'repair-local-seed-151fc2eb5318/tmux.sock',
+        'repair-cap-names-8fd4edc25a4e/tmux.sock',
+        'repair-dialyzer-4662fbb392f5/tmux.sock')
 
+    def setUp(self):
+        self.m = importlib.import_module('snci.repair_pr75_context')
+        self.temp = tempfile.TemporaryDirectory(prefix='snci-socket-test-', dir='/root')
+        self.addCleanup(self.temp.cleanup)
+        self.state = Path(self.temp.name)
+        self.cwd = Path.cwd()
+        os.chdir(self.state); self.addCleanup(os.chdir, self.cwd)
+        for obj, name, value in ((self.m, 'STATE', self.state),
+                                (self.m.pr75_profile, 'STATE', self.state)):
+            guard = patch.object(obj, name, value); guard.start(); self.addCleanup(guard.stop)
+        from snci.state import Journal
+        journal = Journal(self.state / 'journal.sqlite3'); journal.close()
+        (self.state / 'journal.sqlite3').chmod(0o600)
+        self.log = self.state / 'repair-cache-10b56bc96f76' / 'run.log'
+        self.log.parent.mkdir(mode=0o700)
+        self.log.write_bytes(b'preserved historical output\n'); self.log.chmod(0o600)
+
+    def bind(self, name):
+        path = self.state / name; path.parent.mkdir(mode=0o700, exist_ok=True)
+        # A real socket inode suffices for history typing; no IPC listener is
+        # started and environments with restricted socket() remain testable.
+        os.mknod(path, stat.S_IFSOCK | 0o600)
+        return path
+
+    def snapshot(self): return self.m.history({}, 'c'*40)
+
+    def test_five_real_tmux_sockets_are_typed_and_preserved_with_log_digest(self):
+        paths = [self.bind(name) for name in self.SOCKETS]
+        saved = self.snapshot()
+        self.assertEqual(set(saved['sockets']), set(self.SOCKETS))
+        self.assertEqual(saved['files'][str(self.log.relative_to(self.state))], sha256(self.log.read_bytes()))
+        self.assertEqual(set(saved), {'rows', 'files', 'sockets'})
+        for name, path in zip(self.SOCKETS, paths):
+            info = path.lstat()
+            self.assertEqual(saved['sockets'][name], dict(type='unix_socket', uid=0,
+                gid=info.st_gid, mode=0o600, device=info.st_dev, inode=info.st_ino,
+                ctime_ns=info.st_ctime_ns))
+            self.assertTrue(stat.S_ISSOCK(info.st_mode))
+            self.assertNotIn(name, saved['files'])
+        self.m.verify_history(saved, 'c'*40)
+        self.assertEqual(self.snapshot(), saved)
+
+    def test_unexpected_socket_and_fifo_fail_closed(self):
+        self.bind('repair-cache-10b56bc96f76/other.sock')
+        with self.assertRaisesRegex(Hold, 'untrusted_type'): self.snapshot()
+        (self.state / 'repair-cache-10b56bc96f76/other.sock').unlink()
+        os.mkfifo(self.state / 'repair-cache-10b56bc96f76/pipe', 0o600)
+        with self.assertRaisesRegex(Hold, 'untrusted_type'): self.snapshot()
+
+    def test_allowed_name_cannot_hide_regular_file_symlink_or_fifo(self):
+        path = self.state / self.SOCKETS[0]; path.parent.mkdir(mode=0o700)
+        path.write_bytes(b'not a socket'); path.chmod(0o600)
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_socket'): self.snapshot()
+        path.unlink(); path.symlink_to(self.log)
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_socket'): self.snapshot()
+        path.unlink(); os.mkfifo(path, 0o600)
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_socket'): self.snapshot()
+
+    def test_socket_owner_mode_and_parent_symlink_fail_closed(self):
+        path = self.bind(self.SOCKETS[0]); original_stat = Path.lstat
+        def wrong_owner(value):
+            info = original_stat(value)
+            if value == path:
+                values = list(info); values[4] = 997
+                return os.stat_result(values)
+            return info
+        with patch.object(Path, 'lstat', wrong_owner), \
+             self.assertRaisesRegex(Hold, 'pr75_context_history_socket'): self.snapshot()
+        path.chmod(0o620)
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_socket'): self.snapshot()
+        path.chmod(0o600)
+        original = path.parent; renamed = original.with_name('moved-private-root')
+        original.rename(renamed); original.symlink_to(renamed, target_is_directory=True)
+        with self.assertRaisesRegex(Hold, 'untrusted_owner_or_mode'): self.snapshot()
+
+    def test_completion_rejects_removed_replaced_or_added_socket(self):
+        path = self.bind(self.SOCKETS[0]); saved = self.snapshot()
+        path.unlink()
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_sockets'): self.m.verify_history(saved, 'c'*40)
+        self.bind(self.SOCKETS[0])
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_sockets'): self.m.verify_history(saved, 'c'*40)
+        saved = self.snapshot(); self.bind(self.SOCKETS[1])
+        with self.assertRaisesRegex(Hold, 'pr75_context_history_sockets'): self.m.verify_history(saved, 'c'*40)
+
+    def test_completion_keeps_regular_file_digest_and_unexpected_type_guards(self):
+        self.bind(self.SOCKETS[0]); saved = self.snapshot()
+        self.log.write_bytes(b'changed historical output\n')
+        with self.assertRaisesRegex(Hold, 'pr75_history_files'): self.m.verify_history(saved, 'c'*40)
+        self.log.write_bytes(b'preserved historical output\n')
+        self.bind('repair-cache-10b56bc96f76/unknown.sock')
+        with self.assertRaisesRegex(Hold, 'untrusted_type'): self.m.verify_history(saved, 'c'*40)
+
+    def test_completion_rejects_boolean_alias_or_forged_socket_metadata(self):
+        self.bind(self.SOCKETS[0]); saved = self.snapshot()
+        for key, value in [('uid', False), ('mode', 0o640), ('type', 'file'), ('extra', 1)]:
+            forged = copy.deepcopy(saved); forged['sockets'][self.SOCKETS[0]][key] = value
+            with self.subTest(key=key), self.assertRaisesRegex(Hold, 'pr75_context_history_sockets'):
+                self.m.verify_history(forged, 'c'*40)
+
+
+if __name__ == '__main__': unittest.main()

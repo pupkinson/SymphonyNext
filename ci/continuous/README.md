@@ -924,3 +924,30 @@ intent, receipt, package and archive. No success is reported. The single-use
 claim prevents replay, and the controller continues to reject incomplete or
 invalid completion. This fixup changes no profile, target, threshold, shared
 receipt grammar or native guard; native execution remains NOT_RUN.
+
+### Historical tmux socket inventory after the native type refusal
+
+Owner read-only diagnosis on2026-10-07 found five historical `tmux.sock`
+endpoints under state: `recovery-source-only-20260930`,
+`repair-cache-10b56bc96f76`, `repair-local-seed-151fc2eb5318`,
+`repair-cap-names-8fd4edc25a4e` and `repair-dialyzer-4662fbb392f5`.
+They remain in place. The context helper admits only those exact relative
+paths as root-owned Unix sockets with trusted directory ancestors and no
+group/world write bits. It records type, UID/GID, mode, device, inode and
+ctime_ns in a separate socket inventory; socket endpoints have no byte digest.
+ctime_ns also detects replacement when the filesystem reuses an inode.
+
+All ordinary historical files retain their SHA256 and original trusted-file
+guards. Unknown sockets, symlinks, FIFOs, replacement of a listed socket by a
+regular file, and owner/permission changes fail closed. Completion rescans
+filesystem types and requires the exact canonical socket inventory, then
+validates the existing journal rows/file hashes and original HOLD binding.
+Removed, added or changed historical endpoints cannot pass completion; no
+socket is connected, stopped, moved or deleted by this helper.
+
+Regression fixtures use actual filesystem socket inodes without creating an
+IPC listener. Root-local tests exercise real ownership/mode/ancestor guards;
+the negative UID case injects a changed lstat result because the cloud UID
+mapping forbids chown to997. Native journal/proof integrity and installation
+remain separate checks. The terminal593 owner run and its logs are preserved;
+this source repair does not replay it or activate the service/timer.

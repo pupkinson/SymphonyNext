@@ -5,6 +5,7 @@ import fcntl
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import time
 
@@ -33,6 +34,12 @@ DELTA = {'MANIFEST.sha256'} | {refresh.PREFIX + p for p in (
     'snci/repair_pr75_target.py', 'snci/repair_pr75_context.py',
     'tests/test_pr75_context.py', 'tests/test_pr75_target.py')}
 INSTALL, STATE, ETC = refresh.INSTALL, refresh.STATE, refresh.ETC
+HISTORICAL_SOCKETS = frozenset((
+    'recovery-source-only-20260930/tmux.sock',
+    'repair-cache-10b56bc96f76/tmux.sock',
+    'repair-local-seed-151fc2eb5318/tmux.sock',
+    'repair-cap-names-8fd4edc25a4e/tmux.sock',
+    'repair-dialyzer-4662fbb392f5/tmux.sock'))
 
 
 def paths(head):
@@ -97,9 +104,19 @@ def previous_receipt(policy):
     return decode(raw)
 
 
-def history(policy, head):
-    """Freeze every predecessor claim/artifact, including paging and target proofs."""
-    saved = {'rows': daily_limit.journal_rows(STATE), 'files': {}}
+def socket_metadata(path):
+    """Preserve only the five observed historical endpoints, without using IPC."""
+    require(str(path.relative_to(STATE)) in HISTORICAL_SOCKETS, 'pr75_context_history_socket_path')
+    trusted(path.parent, directory=True)
+    info = path.lstat()
+    require(stat.S_ISSOCK(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022,
+            'pr75_context_history_socket')
+    return dict(type='unix_socket', uid=info.st_uid, gid=info.st_gid,
+                mode=stat.S_IMODE(info.st_mode), device=info.st_dev, inode=info.st_ino,
+                ctime_ns=info.st_ctime_ns)
+
+
+def history_entries(head):
     excluded = {'blobs', 'pr75-context-' + head}
     for root in STATE.iterdir():
         if root.name in excluded or root.name.startswith('journal.sqlite3') or root.name == 'controller.lock':
@@ -107,9 +124,32 @@ def history(policy, head):
         trusted(root, directory=root.is_dir())
         paths = root.rglob('*') if root.is_dir() else [root]
         for path in paths:
+            if str(path.relative_to(STATE)) in HISTORICAL_SOCKETS:
+                yield path, socket_metadata(path)
+                continue
             trusted(path, directory=path.is_dir())
-            if path.is_file(): saved['files'][str(path.relative_to(STATE))] = pr75_profile.digest(path)
+            yield path, None
+
+
+def history(policy, head):
+    """Freeze byte artifacts and explicitly typed historical socket metadata."""
+    saved = {'rows': daily_limit.journal_rows(STATE), 'files': {}, 'sockets': {}}
+    for path, metadata in history_entries(head):
+        relative = str(path.relative_to(STATE))
+        if metadata is not None:
+            saved['sockets'][relative] = metadata
+        elif path.is_file():
+            saved['files'][relative] = pr75_profile.digest(path)
     return saved
+
+
+def verify_history(saved, head):
+    require(isinstance(saved, dict) and set(saved) == {'rows', 'files', 'sockets'}
+            and isinstance(saved['sockets'], dict), 'pr75_context_history_shape')
+    sockets = {str(path.relative_to(STATE)): metadata for path, metadata in history_entries(head)
+               if metadata is not None}
+    require(canonical(sockets) == canonical(saved['sockets']), 'pr75_context_history_sockets')
+    pr75_profile.verify_history(saved)
 
 
 def preflight(owner, head, api, source):
@@ -178,7 +218,7 @@ def validate_preparation(state, policy, raw):
     require(type(receipt['time']) is int and 0 <= receipt['time'] <= time.time(), 'pr75_context_receipt_time')
     runner.validate_result(receipt['quality'], profile)
     require(select_profile(saved['entries'], policy) == profile, 'pr75_context_completion_source_locks')
-    pr75_profile.verify_history(saved['history']); hold_binding(saved['history'])
+    verify_history(saved['history'], head); hold_binding(saved['history'])
     return proof
 
 
@@ -211,7 +251,7 @@ def perform(owner, head, api, source):
     write_new(directory / 'commit-intent.json', canonical(intent))
     pr75_profile.commit(owner, stage, archive, snapshot, future)
     refresh.verify_package(snapshot['new']); daily_limit.paused(owner); refresh.idle_native()
-    pr75_profile.verify_history(saved['history']); hold_binding(saved['history'])
+    verify_history(saved['history'], head); hold_binding(saved['history'])
     proof = dict(intent, status='PR75_CONTEXT_INSTALLED_PAUSED', inputs_sha256=sha256(canonical(saved)),
                  manifest_sha256=sha256(trusted(INSTALL / 'installed.json').read_bytes()))
     # A failed fsync or readback leaves the exact created bytes as evidence.
