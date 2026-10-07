@@ -62,6 +62,7 @@ class ProxyTests(unittest.TestCase):
                         v=recv();notifications.append(v)
                         assert not (v.get('method')=='item/tool/call' and 'id' in v)
                         if v.get('method')=='turn/completed':break
+                    client.shutdown(socket.SHUT_WR)
                     f.close()
                 except BaseException as e:failure.append(e)
             client.settimeout(10);thread=threading.Thread(target=drive);thread.start()

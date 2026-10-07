@@ -334,8 +334,9 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_re
     run_dir=RUN if run_dir is None else Path(run_dir)
     once(run_dir/'model-session.claim',b'One Symphony-managed model session only.\n')
     gate=Gate(source_reader=source_reader);p=None;selector=selectors.DefaultSelector();buffers={};end=time.monotonic()+limit
-    code='PROXY_NOT_STARTED'
+    code='PROXY_NOT_STARTED';eof={'client':False,'server':False}
     def checkpoint():
+        gate.state['transport_eof']=dict(eof)
         save(run_dir/'protocol.json',gate.state)
         if gate.report:save(run_dir/'review.json',{'head':HEAD,'text':gate.report,'tests':'NOT_RUN'})
     try:
@@ -345,16 +346,14 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_re
         buffers={'client':b'','server':b''};checkpoint()
         while time.monotonic()<end:
             events=selector.select(min(1,max(0,end-time.monotonic())))
-            if not events and p.poll() is not None:break
             for key,_ in events:
                 side=key.data;fd=key.fd
                 chunk=os.read(fd,65536)
                 if not chunk:
-                    require(not any(buffers.values()),'RPC_PARTIAL_FRAME_EOF')
-                    selector.unregister(key.fileobj)
+                    require(not buffers[side],'RPC_PARTIAL_FRAME_EOF')
+                    eof[side]=True;selector.unregister(key.fileobj)
                     if side=='client':
                         p.stdin.close()
-                    else:code='APP_SERVER_EOF';return gate,code
                     continue
                 buffers[side]+=chunk;require(len(buffers[side])<=2000000,'RPC_FRAME_LIMIT')
                 while b'\n' in buffers[side]:
@@ -378,8 +377,11 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_re
                         if value.get('method')=='turn/completed':
                             p.stdin.close()  # One turn only; permit clean Codex shutdown now.
             if gate.state['turn_status'] in ('failed','interrupted'):raise Hold('MODEL_TURN_'+gate.state['turn_status'].upper())
+            if all(eof.values()):break
+        # Process exit is not client EOF: drain both inputs within the same deadline.
+        require(all(eof.values()),'RPC_TRANSPORT_NOT_CLOSED')
         require(not any(buffers.values()),'RPC_PARTIAL_FRAME_EOF')
-        code='PROXY_TIMEOUT' if p.poll() is None else 'APP_SERVER_EXIT'
+        code='APP_SERVER_EOF'
     except (Hold,ValueError,OSError) as exc:
         code=str(exc) if isinstance(exc,Hold) else type(exc).__name__
         gate.state['failure']=code
