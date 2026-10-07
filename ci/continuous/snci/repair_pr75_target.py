@@ -117,7 +117,7 @@ def saved_snapshot(snapshot):
     return {k: snapshot[k] for k in ('tree', 'old_manifest', 'units', 'history', 'entries')}
 
 
-def validate_preparation(state, policy, raw):
+def validate_preparation(state, policy, raw, *, package=None):
     head = policy.get('installed_revision'); directory, _, archive = paths(head)
     require(Path(state) == STATE and raw == canonical(policy), 'pr75_target_completion_policy')
     before = trusted(directory / 'policy-before.json', private=True).read_bytes(); old = decode(before)
@@ -131,7 +131,8 @@ def validate_preparation(state, policy, raw):
     require(intent == expected and all(proof.get(k) == v for k, v in expected.items())
             and proof.get('status') == 'PR75_TARGET_INSTALLED_PAUSED'
             and proof.get('inputs_sha256') == sha256(saved_raw), 'pr75_target_completion_binding')
-    daily_limit.verify_manifest(INSTALL, proof['manifest_sha256'], head)
+    current = INSTALL if package is None else trusted(Path(package), directory=True)
+    daily_limit.verify_manifest(current, proof['manifest_sha256'], head)
     daily_limit.verify_manifest(archive, saved['old_manifest'], BASE)
     original = original_proof(old, before, package=archive)
     receipt_raw = trusted(STATE / profile['preparation'], private=True).read_bytes(); receipt = decode(receipt_raw)

@@ -21,9 +21,13 @@ PR75_SUCCESSOR_REQUEST = dict(PR75_REQUEST,
     head="8c5828b1a5c4a2261fb2cd0a021235109a8e07a3",
     tree="496889153378c3e22bd58c96cf0f6855364117e5")
 
+PR75_CONTEXT_REQUEST = dict(PR75_REQUEST,
+    head='6925de7e291d8cb36f83493d254679527a83c34d',
+    tree='b10931da9fa383bb5f22ca36f5f89e0038385e25')
+
 def validate_owner_request(request):
     require(isinstance(request,dict) and any(canonical(request)==canonical(pinned)
-                for pinned in (PR75_REQUEST, PR75_SUCCESSOR_REQUEST)),
+                for pinned in (PR75_REQUEST, PR75_SUCCESSOR_REQUEST, PR75_CONTEXT_REQUEST)),
             'owner_request_scope')
 
 def safe_path(path):

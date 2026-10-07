@@ -853,3 +853,101 @@ No new native paging probe is claimed: unchanged reviewer bytes retain the
 archived exact probe evidence; a new native review/check remains NOT_RUN.
 The historical request remains valid only for historical proofs or a separately
 installed historical policy; a label cannot widen either closed request.
+
+
+## Closed PR75 dependency-context admission
+
+CI source b7561f97 and its installed successor policy still pin 8c5828b.
+`repair_pr75_context.py` proposes a separate paused transition to exact PR75
+HEAD6925de7e291d8cb36f83493d254679527a83c34d,
+TREEb10931da9fa383bb5f22ca36f5f89e0038385e25, on the existing stacked base.
+The immutable `profiles-pr75-context.json` advances only the OIDC fixture and
+OIDC test blobs among68 locks; the other66 stay byte-pinned. The sn004 floor
+rises464→507 while maximum6 skips, coverage100, zero failures and every
+stage/source/cleanup assertion remain unchanged. Historical definitions and
+requests, main profile, owner/reviewer/runner/worker/unit bytes and scopes stay
+unchanged.
+
+This is a source proposal. A separate concrete owner admission and independent
+exact-source review are required before native installation. The single-use
+owner leaf requires a clean reviewed checkout, paused disabled timer, idle
+service (including failed/failed with both PIDs zero), absent workers, exact
+installed policy/package/COMPLETE and retained-image/keeper/ruleset readback.
+It binds all historical journal rows and prior state artifacts, including
+paging/target inputs, intents, completions, source and logs. The latest
+HOLD7cd15ad and older HOLD101338df/ff24dced remain terminal and immutable.
+
+The retained sn004 image is
+`sha256:13173082884c7fbe5bd03fc9db16a1deb0ec7af56d0dd71b4b391a252352c975`.
+Image reuse requires a fresh exact-target protected507+ run before a new
+acceptance receipt or installation. Author evidence and old native quality
+receipts cannot supply that result. The operation freezes inputs again after
+quality, stages only its closed nine-path delta, and records durable intent
+before archiving b756 and replacing package/policy. Failure before policy write
+restores the predecessor; unknown successful writes preserve matching package,
+archive, intent and claim for inspection. Neither outcome permits replay.
+
+Completion rehashes the current package, actual b756 archive and every older
+archive through the original paging/profile proof chain. It requires exact
+installed policy bytes, the new definition/request, fresh quality receipt,
+predecessor completion/native-probe bindings and unchanged history. The
+controller uses this context completion before claim or publication. New
+publishing rows remain reconcilable while every prior row stays unchanged.
+
+The future owner command, only after that separate native admission, is:
+
+```sh
+/usr/bin/python3 -I <clean-reviewed-checkout>/ci/continuous/snci/repair_pr75_context.py install --reviewed-head <ci-package-sha>
+```
+
+`verify --reviewed-head <ci-package-sha>` is a separate paused readback action.
+The timer remains disabled; installation, protected native quality, paid
+review/check, activation, production auth, Task2–5, merge and deployment are
+NOT_RUN by this source stage. Historical stages and consumed budgets are not
+reopened. Local tests exercise native boundaries with fixtures and certify
+only these source contracts.
+
+
+### PR80 preflight and failed-completion evidence fixup
+
+The context preflight validates the predecessor sn004 target receipt through
+its exact original completion/profile/paging chain. Its `pr75-target-<sha>`
+pointer is not passed to the shared refresh reader; main keeps that reader and
+its original closed grammar. Real-preflight source fixtures exercise actual
+package, archive, receipt and proof validators. Incorrect pointers/digests,
+identity, time, native-probe/quality evidence and predecessor proofs refuse
+before a claim or protected quality run.
+
+After package/policy commit, a failed COMPLETE file fsync, directory fsync or
+completion validation preserves any created COMPLETE bytes with the durable
+intent, receipt, package and archive. No success is reported. The single-use
+claim prevents replay, and the controller continues to reject incomplete or
+invalid completion. This fixup changes no profile, target, threshold, shared
+receipt grammar or native guard; native execution remains NOT_RUN.
+
+### Historical tmux socket inventory after the native type refusal
+
+Owner read-only diagnosis on2026-10-07 found five historical `tmux.sock`
+endpoints under state: `recovery-source-only-20260930`,
+`repair-cache-10b56bc96f76`, `repair-local-seed-151fc2eb5318`,
+`repair-cap-names-8fd4edc25a4e` and `repair-dialyzer-4662fbb392f5`.
+They remain in place. The context helper admits only those exact relative
+paths as root-owned Unix sockets with trusted directory ancestors and no
+group/world write bits. It records type, UID/GID, mode, device, inode and
+ctime_ns in a separate socket inventory; socket endpoints have no byte digest.
+ctime_ns also detects replacement when the filesystem reuses an inode.
+
+All ordinary historical files retain their SHA256 and original trusted-file
+guards. Unknown sockets, symlinks, FIFOs, replacement of a listed socket by a
+regular file, and owner/permission changes fail closed. Completion rescans
+filesystem types and requires the exact canonical socket inventory, then
+validates the existing journal rows/file hashes and original HOLD binding.
+Removed, added or changed historical endpoints cannot pass completion; no
+socket is connected, stopped, moved or deleted by this helper.
+
+Regression fixtures use actual filesystem socket inodes without creating an
+IPC listener. Root-local tests exercise real ownership/mode/ancestor guards;
+the negative UID case injects a changed lstat result because the cloud UID
+mapping forbids chown to997. Native journal/proof integrity and installation
+remain separate checks. The terminal593 owner run and its logs are preserved;
+this source repair does not replay it or activate the service/timer.
