@@ -1,76 +1,71 @@
 # GH87: immutable paged source-review candidate
 
-## Status and ownership
-This is a source-only candidate, not an installed queue update. The existing
-source-review queue and protected CI are different components. Workpad: GH87.
-Denis supplied the original queue.py and authorised its repair and continuation.
-The existing v1 queue can review this bounded package; v2 is not yet activated.
+## Current scope
+Source candidate only; not installed. The existing source-review queue and
+protected CI are separate components. Workpad GH87; PR90. Denis supplied the
+original queue.py and authorised this repair. No service, credentials, frozen
+CI, old claims, model/profile settings or DF Assistant resources are changed.
 
-## Contract
-Preserve v1 behaviour, the existing API write scope, claim/reserve journal,
-model and reasoning settings, one thread/turn, workflow, service, and installer.
-Opt-in snq-review/v2 adds context_sources pinned to head/base paths and blob IDs.
-Before model reservation, collect both changed source versions, the five scope
-documents, the documented HEAD spec-index groups and explicit context sources.
-Verify source identities, hashes, path/mode and complete PR diff; deduplicate
-identical blobs while retaining all aliases. Unknown external references are not
-followed. This is a closed input set, not a recursive arbitrary Markdown reader.
+The format v1, its limits, no-replay journal and existing privileges remain.
+Malformed legacy RPC sequences are now deliberately rejected; preserving a
+known protocol defect is not backwards compatibility. The candidate still has
+an old --install-start entry point, which is NOT an update/install instruction.
 
-The single snq_source_read(source_id,page) tool serves only this preloaded store.
-No shell, approval, host filesystem or network tool is granted. Exact thread,
-turn, call and request bindings and started/responded/completed lifecycle gate
-the response. All required pages and a matching final store/receipt are needed
-for source-review completion. Delivery is not proof of model understanding.
+## Paged source contract
+Opt-in snq-review/v2 adds context_sources pinned to head/base paths and blobs.
+Before model reservation, collect both changed versions, scope documents,
+documented HEAD spec-index groups and explicit context refs. Verify exact
+repository/head/base/tree, complete PR diff, hashes/path/mode; deduplicate
+identical blobs while retaining aliases. Unknown URLs/Markdown are not followed.
+The only tool is snq_source_read(source_id,page), over a preloaded store, not
+host filesystem, network or arbitrary commands. All required pages and the
+matching final store/receipt are mandatory. Delivery does not prove understanding.
 
-Legacy MAX_PACKET=650000 and PROMPT_LIMIT=670000 are unchanged. v2 limits:
-unique source 2 MiB; per blob 500000 bytes; index 100000 bytes; page response
-8192 bytes; 400 calls; delivered result bodies 4 MiB; 256 documents; 600 aliases;
-64 explicit refs. These source bounds do not grant extra model turns or funds.
-Paged include_mix_reference=true is explicitly unsupported; v1 keeps that mode.
+Legacy MAX_PACKET650000/PROMPT670000 remain. v2 bounds: source2MiB, blob500000,
+index100000, page response8192, calls400, delivered result bodies4MiB,
+documents256/aliases600/explicit refs64. No additional model turns or funds.
+Paged include_mix_reference=true is explicitly unsupported; v1 retains it.
 
-## Verification and provenance
+## GH91 source review and first repair
+Independent GH91 review of bf1e8917f69652d81b8366966c5adc2ba26a3c0d found three
+HIGH defects: unbound report messages; partial frame accepted on EOF; repeated
+start responses able to replace thread/turn identities. Its verdict was
+CHANGES_REQUIRED, not release approval. The full six supplied files were read.
+
+Repair changes only Gate, proxy and completed() relative to that candidate:
+- Report messages require current thread/turn and started/completed lifecycle.
+- Request IDs have exact types/bounds and are unique; responses consume pending
+  requests once. Thread/turn bindings and terminal phases cannot be overwritten.
+- EOF or loop exit with an incomplete buffered frame records a protocol failure.
+  Gate and persisted completion reject failure and non-clean proxy outcomes.
+The two old positive protocol fixtures now include proper initialization and
+message IDs/lifecycle. No regression was deleted. New negative tests cover all
+three findings; valid clean v1 and paged v2 exchanges remain covered.
+
+## Actual author verification
 Run from this directory:
 
     python3 -B -m unittest discover -s tests -v
 
-52 tests passed, zero failures/errors/skips, exit 0, Python 3.13.5. These are the
-complete supplied regression tests, not the unavailable historical queue suite.
-The subprocess/socketpair/pipe case uses a FAKE Codex peer, not a real model.
-The preparation test replaces GitHub, auth probe and quota boundaries; the
-source builder itself is real. Synthetic large-source reproduction is not PR84
-live acceptance. Neither native compatibility nor full product acceptance is
-certified by these tests.
+66 tests, zero failures/errors/skips, exit0, Python3.13.5. Python3.10 grammar
+checked. The 14 new tests first ran against unchanged bf1e891 source:24 failing
+assertions/subcases, exit1. After the repair all66 passed. Actual subprocess,
+socketpair and pipe cases exercise clean and partial client/server EOF with a
+FAKE Codex peer. GitHub/auth/quota boundaries are fixtures, not live acceptance.
+The historical full queue suite was not supplied;66 is this package's suite.
 
-Original owner file: 53204 bytes, SHA256
-7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1.
-Candidate: 75296 bytes, SHA256
-a464d16cad3c2178536b6f63944c3c5f1fa1ef45c3bfd23c877970e22bfa60a2.
-Fresh test log SHA256:
-09c06bd5cc49071ce820a78071f266e790cad18ecc510c3bd8d3faeeb37eb091.
-Author AST comparison against the uploaded original found changes only to Gate,
-proxy, parse_task, prepare_task, finish_task, main and added paging functions.
-The original and prior RED logs remain in the delivered archive, not this PR;
-an independent reviewer must not claim to have executed or inspected them here.
+Candidate SHA256 ad5e4eba5a1dedd3c141d634f5755348f2fc734b7ee985b6f2529a9376c6c07c.
+Owner original SHA2567fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1.
+RED log SHA2565c8cd4199c7a8ff5dc7777885724b6e3900f082d2682e9617e132e047c42e649.
+GREEN log SHA2569bbf562520a05a133c0071e1a55c4cff6f9992ab274b7cf64c99df5785c4a504.
+Original/RED artifacts remain in the user delivery; a source reviewer must not
+claim independent execution or inspection of files not actually supplied.
 
-Official Codex rust-v0.159.3 resolves to commit
-01fc69f4026735edfdf6789820549727a4867b11. The published DynamicToolCallParams and
-app-server response decoder agree with the selected field names. This limited
-static comparison is not a full lifecycle, model entitlement or binary test.
-The denied native schema generation and later denied scratch public-source
-fetch were not replayed or delegated. Native compatibility remains NOT_RUN.
-
-## Release boundary
-Do not use --install-start as an updater, replace /opt files directly, rewrite
-installed.json to suppress a mismatch, replay GH85/GH86, or publish trusted CI
-status. Installation needs independently reviewed source and actual authorised
-native compatibility/installed-state evidence. No new administrative access,
-service restart, changed frozen CI profile, merge/deploy or DF Assistant action
-is included. Before installation, rollback means leaving this draft unused.
-
-## Independent review focus
-Inspect the complete candidate and all four tests. Check lossless source
-coverage, budgets before reservation, malformed input and JSON/UTF-8 handling,
-protocol sequencing, stale target/store/receipts, no-replay preservation, and
-whether tests support the stated guarantees. Return concrete source findings
-with exact HEAD and file:line. Do not equate source-only acceptance with native
-verification; do not require unimplemented whole-product features for this fix.
+## Remaining gates
+Fresh independent source review of the repaired exact HEAD is required; GH91
+cannot approve its successor. Native Codex0.159.3 lifecycle, installed state,
+update procedure and complete PR84 review are NOT_RUN. Static reading of the
+published protocol types is not a binary test. Previously refused operations
+are not rerun or delegated. No installer, /opt mutation, policy/hash rewrite,
+trusted status, merge/deploy or permission expansion is authorised by this file.
+Before real installation, rollback is leaving the candidate unused.

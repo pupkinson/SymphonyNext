@@ -16,6 +16,8 @@ class GateTests(unittest.TestCase):
         self.g=q.Gate(source_reader=self.reader)
         self.head=patch.object(q,'HEAD',H);self.head.start();self.addCleanup(self.head.stop)
         self.g.client({'id':1,'method':'initialize','params':{'clientInfo':{'name':'symphony-orchestrator'}}})
+        self.g.server({'id':1,'result':{}})
+        self.g.client({'method':'initialized','params':{}})
         self.start=self.g.client({'id':2,'method':'thread/start','params':{'cwd':str(q.SPACE)}})
         self.g.server({'id':2,'result':{'thread':{'id':'thread1'}}})
         self.g.client({'id':3,'method':'turn/start','params':{'cwd':str(q.SPACE),'threadId':'thread1'}})
@@ -33,7 +35,8 @@ class GateTests(unittest.TestCase):
         self.g.server(self.item(sid,page,call,'item/completed'))
         return reply
     def report_and_complete(self):
-        self.g.server({'method':'item/completed','params':{'item':{'type':'agentMessage','text':H+' ACCEPTED source only; execution not performed.'}}})
+        self.g.server({'method':'item/started','params':{'threadId':'thread1','turnId':'turn1','item':{'id':'report1','type':'agentMessage','text':''}}})
+        self.g.server({'method':'item/completed','params':{'threadId':'thread1','turnId':'turn1','item':{'id':'report1','type':'agentMessage','text':H+' ACCEPTED source only; execution not performed.'}}})
         self.g.server({'method':'turn/completed','params':{'threadId':'thread1','turn':{'id':'turn1','status':'completed'}}})
     def test_only_source_tool_advertised(self):
         self.assertEqual(self.start['params']['dynamicTools'],[q.source_tool_spec()])
@@ -44,7 +47,7 @@ class GateTests(unittest.TestCase):
             for page in range(len(pages)):
                 self.assertTrue(self.one(sid,page,'call'+str(rid),rid)['result']['success']);rid+=1
         self.report_and_complete();self.assertTrue(self.g.complete())
-        self.g.state['app_server_exit']=0
+        self.g.state['app_server_exit']=0;self.g.state['proxy_outcome']='APP_SERVER_EOF'
         self.assertTrue(q.completed(self.g.state,{'head':H,'text':self.g.report},H))
         q.verify_source_receipt(q.SourceReader(self.store),self.g.state['source_read'])
     def test_early_completion_is_not_success(self):

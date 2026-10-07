@@ -158,73 +158,137 @@ def upstream_reference():
     finally:c.close()
 
 class Gate:
-    """No extra thread/turn, inherited tool access, or false completion."""
+    """One immutable thread/turn binding and complete source-only transport."""
     def __init__(self, source_reader=None):
         self.source_reader=source_reader; self.source_items={}; self.source_request_ids=set()
         self.state={'thread_requests':0,'turn_requests':0,'turn_status':'NOT_RUN','model':MODEL}
         self.thread_request=None;self.turn_request=None;self.thread=None;self.turn=None;self.report=''
+        self.phase='new';self.pending={};self.request_ids=set();self.report_items={}
         if source_reader is not None:self.state['source_read']=source_reader.receipt()
+
+    @staticmethod
+    def request_id(value):
+        require(type(value) is int and 0<=value<2**63
+                or isinstance(value,str) and 0<len(value)<=128,'RPC_REQUEST_ID')
+        return value
+
     def client(self,value):
+        require(isinstance(value,dict),'RPC_ENVELOPE')
         value=copy.deepcopy(value);method=value.get('method')
         require(method in ('initialize','initialized','thread/start','turn/start'),'RPC_CLIENT_METHOD_REFUSED')
         params=value.setdefault('params',{})
+        require(isinstance(params,dict),'RPC_CLIENT_PARAMS')
+        if method=='initialized':
+            require('id' not in value and self.phase=='initialize_replied','RPC_CLIENT_SEQUENCE')
+            self.phase='initialized'
+            return value
+        request_id=self.request_id(value.get('id'))
+        require(request_id not in self.request_ids,'RPC_REQUEST_ID_REUSED')
         if method=='initialize':
-            name=params.get('clientInfo',{}).get('name')
-            require(name=='symphony-orchestrator','NOT_SYMPHONY_CLIENT')
-            self.state['client_name']=name
-            params.setdefault('capabilities',{})['experimentalApi']=True
-        if method=='thread/start':
+            require(self.phase=='new','RPC_CLIENT_SEQUENCE')
+            info=params.get('clientInfo',{})
+            require(isinstance(info,dict) and info.get('name')=='symphony-orchestrator','NOT_SYMPHONY_CLIENT')
+            self.state['client_name']=info['name']
+            capabilities=params.setdefault('capabilities',{})
+            require(isinstance(capabilities,dict),'RPC_CLIENT_PARAMS')
+            capabilities['experimentalApi']=True
+            self.phase='initialize_pending'
+        elif method=='thread/start':
             require(self.state['thread_requests']==0,'SECOND_THREAD_REFUSED')
+            require(self.phase=='initialized','RPC_CLIENT_SEQUENCE')
             require(params.get('cwd')==str(SPACE),'WORKSPACE_MISMATCH')
-            self.state['thread_requests']=1;self.thread_request=value.get('id')
+            self.state['thread_requests']=1;self.thread_request=request_id
             params.pop('sandbox',None)
-            params.update({'model':MODEL,'permissions':PERMISSIONS,'approvalPolicy':'never','dynamicTools':[] if self.source_reader is None else [source_tool_spec()]})
+            params.update({'model':MODEL,'permissions':PERMISSIONS,'approvalPolicy':'never',
+                           'dynamicTools':[] if self.source_reader is None else [source_tool_spec()]})
+            self.phase='thread_pending'
         elif method=='turn/start':
             require(self.state['turn_requests']==0 and self.thread is not None,'SECOND_OR_EARLY_TURN_REFUSED')
+            require(self.phase=='thread_ready','RPC_CLIENT_SEQUENCE')
             require(params.get('cwd')==str(SPACE) and params.get('threadId')==self.thread,'TURN_TARGET_MISMATCH')
-            self.state['turn_requests']=1;self.turn_request=value.get('id')
+            self.state['turn_requests']=1;self.turn_request=request_id
             params.pop('sandboxPolicy',None)
             params.update({'model':MODEL,'effort':'low','permissions':PERMISSIONS,'approvalPolicy':'never'})
+            self.phase='turn_pending'
+        self.request_ids.add(request_id);self.pending[request_id]=method
         return value
+
+    def reply(self,value):
+        request_id=self.request_id(value.get('id'))
+        require(request_id in self.pending,'RPC_REPLY_NOT_PENDING')
+        method=self.pending[request_id]
+        expected={'initialize':'initialize_pending','thread/start':'thread_pending','turn/start':'turn_pending'}
+        require(self.phase==expected[method] and ('result' in value)!=('error' in value),'RPC_REPLY_SEQUENCE')
+        if 'error' in value:
+            self.pending.pop(request_id);self.phase='failed'
+            self.state['rpc_error']=rpc_diagnostic(value,method)
+            self.state['turn_status']='rejected' if method=='turn/start' else 'failed'
+            self.state['failure']='CODEX_RPC_REJECTED'
+            raise Hold('CODEX_RPC_REJECTED')
+        result=value['result'];require(isinstance(result,dict),'RPC_REPLY_SEQUENCE')
+        if method=='initialize':self.phase='initialize_replied'
+        else:
+            field='thread' if method=='thread/start' else 'turn'
+            item=result.get(field)
+            ident=item.get('id') if isinstance(item,dict) else None
+            require(isinstance(ident,str) and 0<len(ident)<=128,field.upper()+'_REPLY')
+            require(getattr(self,field) is None,'RPC_REPLY_SEQUENCE')
+            setattr(self,field,ident)
+            self.phase='thread_ready' if field=='thread' else 'inProgress'
+            if field=='turn':self.state['turn_status']='inProgress'
+        self.pending.pop(request_id)
+
+    def report_item(self,method,params,item):
+        require(self.phase=='inProgress' and self.state['turn_status']=='inProgress'
+                and params.get('threadId')==self.thread and params.get('turnId')==self.turn,'REPORT_TARGET')
+        ident=item.get('id')
+        require(isinstance(ident,str) and 0<len(ident)<=128,'REPORT_LIFECYCLE')
+        if method=='item/started':
+            require(ident not in self.report_items,'REPORT_LIFECYCLE')
+            self.report_items[ident]='started'
+        else:
+            require(self.report_items.get(ident)=='started','REPORT_LIFECYCLE')
+            require(isinstance(item.get('text'),str),'REPORT_TEXT')
+            self.report_items[ident]='completed';self.report=redact(item['text'])
+
     def server(self,value):
+        require(isinstance(value,dict),'RPC_ENVELOPE')
         method=value.get('method');params=value.get('params') or {}
+        require(isinstance(params,dict),'RPC_SERVER_PARAMS')
         if method=='item/tool/call' and 'id' in value and self.source_reader is not None:
             return self.source_call(value)
         require(not(method and 'id' in value),'SERVER_TOOL_OR_APPROVAL_REFUSED')
-        if value.get('id')==self.thread_request and self.thread_request is not None and 'result' in value:
-            self.thread=value['result'].get('thread',{}).get('id');require(isinstance(self.thread,str),'THREAD_REPLY')
-        if value.get('id')==self.turn_request and self.turn_request is not None and 'result' in value:
-            self.turn=value['result'].get('turn',{}).get('id');require(isinstance(self.turn,str),'TURN_REPLY')
-            self.state['turn_status']='inProgress'
+        if 'id' in value:
+            self.reply(value)
+            return None
         if method in ('item/started','item/completed'):
-            item=params.get('item') or {};kind=item.get('type')
+            item=params.get('item') or {};require(isinstance(item,dict),'RPC_SERVER_PARAMS')
+            kind=item.get('type')
             if kind=='dynamicToolCall' and self.source_reader is not None:
                 self.source_item(method,params,item)
                 return None
             require(kind in ('userMessage','agentMessage','reasoning','plan','contextCompaction'),'NATIVE_TOOL_ACTIVITY_REFUSED')
-            if method=='item/completed' and kind=='agentMessage':
-                text=item.get('text')
-                if isinstance(text,str):self.report=redact(text)
+            if kind=='agentMessage':self.report_item(method,params,item)
         if method=='turn/completed':
-            turn=params.get('turn') or {}
-            require(self.thread is not None and self.turn is not None and params.get('threadId')==self.thread and turn.get('id')==self.turn,'COMPLETION_ID_MISMATCH')
+            turn=params.get('turn') or {};require(isinstance(turn,dict),'COMPLETION_ID_MISMATCH')
+            require(self.phase=='inProgress' and self.thread is not None and self.turn is not None
+                    and params.get('threadId')==self.thread and turn.get('id')==self.turn,'COMPLETION_ID_MISMATCH')
             status=turn.get('status');require(status in ('completed','failed','interrupted'),'COMPLETION_STATUS_UNKNOWN')
-            if status=='completed' and self.source_reader is not None:
-                require(self.source_reader.complete() and all(v['state']=='completed' for v in self.source_items.values()),
-                        'SOURCE_CONTEXT_INCOMPLETE')
-            self.state['turn_status']=status
+            if status=='completed':
+                require(all(v=='completed' for v in self.report_items.values()),'REPORT_LIFECYCLE')
+                if self.source_reader is not None:
+                    require(self.source_reader.complete() and all(v['state']=='completed' for v in self.source_items.values()),
+                            'SOURCE_CONTEXT_INCOMPLETE')
+            self.state['turn_status']=status;self.phase=status
         if method=='thread/tokenUsage/updated':
             usage=(params.get('tokenUsage') or {}).get('total') or {}
             self.state['usage']={k:v for k,v in usage.items() if k in
                 ('inputTokens','cachedInputTokens','outputTokens','reasoningOutputTokens','totalTokens')
                 and type(v) is int and v>=0}
-        if 'error' in value and 'id' in value:
-            method='turn/start' if value['id']==self.turn_request else 'thread/start' if value['id']==self.thread_request else 'initialize'
-            self.state['rpc_error']=rpc_diagnostic(value,method)
-            if method=='turn/start':self.state['turn_status']='rejected'
-            raise Hold('CODEX_RPC_REJECTED')
+
     def source_target(self, params, tool):
-        require(self.state['turn_status']=='inProgress' and self.thread is not None and self.turn is not None
+        require(self.phase=='inProgress' and self.state['turn_status']=='inProgress'
+                and self.thread is not None and self.turn is not None
                 and params.get('threadId')==self.thread and params.get('turnId')==self.turn
                 and tool.get('tool')==SOURCE_TOOL and tool.get('namespace') is None,'SOURCE_TOOL_TARGET')
 
@@ -260,7 +324,8 @@ class Gate:
         return response
 
     def complete(self):
-        return (self.state['thread_requests']==self.state['turn_requests']==1
+        return (not self.state.get('failure') and self.phase=='completed' and not self.pending
+                and self.state['thread_requests']==self.state['turn_requests']==1
                 and self.state['turn_status']=='completed' and HEAD in self.report and len(self.report)>50
                 and (self.source_reader is None or self.source_reader.complete()))
 
@@ -285,6 +350,7 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_re
                 side=key.data;fd=key.fd
                 chunk=os.read(fd,65536)
                 if not chunk:
+                    require(not any(buffers.values()),'RPC_PARTIAL_FRAME_EOF')
                     selector.unregister(key.fileobj)
                     if side=='client':
                         p.stdin.close()
@@ -312,6 +378,7 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_re
                         if value.get('method')=='turn/completed':
                             p.stdin.close()  # One turn only; permit clean Codex shutdown now.
             if gate.state['turn_status'] in ('failed','interrupted'):raise Hold('MODEL_TURN_'+gate.state['turn_status'].upper())
+        require(not any(buffers.values()),'RPC_PARTIAL_FRAME_EOF')
         code='PROXY_TIMEOUT' if p.poll() is None else 'APP_SERVER_EXIT'
     except (Hold,ValueError,OSError) as exc:
         code=str(exc) if isinstance(exc,Hold) else type(exc).__name__
@@ -1016,6 +1083,7 @@ def target_still_matches(pr,manifest):
 def completed(protocol,report,head):
     return (protocol.get('thread_requests')==protocol.get('turn_requests')==1
         and protocol.get('turn_status')=='completed' and protocol.get('app_server_exit')==0
+        and protocol.get('proxy_outcome') in ('APP_SERVER_EOF','APP_SERVER_EXIT')
         and not protocol.get('failure') and report.get('head')==head
         and isinstance(report.get('text'),str) and head in report['text'] and len(report['text'])>50)
 

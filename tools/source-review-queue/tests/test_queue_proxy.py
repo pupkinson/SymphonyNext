@@ -31,7 +31,8 @@ for n,(sid,page) in enumerate(spec['pages']):
     assert content['source_id']==sid and content['page']==page
     item.update(status='completed',success=True)
     send({'method':'item/completed','params':{'threadId':'thread1','turnId':'turn1','item':item}})
-send({'method':'item/completed','params':{'item':{'type':'agentMessage',
+send({'method':'item/started','params':{'threadId':'thread1','turnId':'turn1','item':{'id':'report1','type':'agentMessage','text':''}}})
+send({'method':'item/completed','params':{'threadId':'thread1','turnId':'turn1','item':{'id':'report1','type':'agentMessage',
     'text':spec['head']+' ACCEPTED finite offline peer; no runtime evidence.'}}})
 send({'method':'turn/completed','params':{'threadId':'thread1','turn':{'id':'turn1','status':'completed'}}})
 assert sys.stdin.read()==''
