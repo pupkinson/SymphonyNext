@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from test_queue_context import q, H, manifest
-from test_queue_profiles import environment, account_result, V1, V2
+from test_queue_profiles import environment, account_result, add_prompt_receipt, V1, V2
 
 @contextlib.contextmanager
 def prepared(v2=True):
@@ -39,7 +39,7 @@ def completed_fixture(directory, profile):
     task=json.loads((directory/'task.json').read_text())
     reader=q.load_source_reader(directory,task['manifest'])
     for source_id,page in sorted(reader.required):reader.read_page({'source_id':source_id,'page':page})
-    q.save(directory/'run/protocol.json',dict(thread_requests=1,turn_requests=1,turn_status='completed',app_server_exit=0,proxy_outcome='APP_SERVER_EOF',model=profile['model'],review_profile=profile,source_read=reader.receipt()))
+    q.save(directory/'run/protocol.json',add_prompt_receipt(directory,dict(thread_requests=1,turn_requests=1,turn_status='completed',app_server_exit=0,proxy_outcome='APP_SERVER_EOF',model=profile['model'],review_profile=profile,source_read=reader.receipt())))
     q.save(directory/'run/review.json',dict(head=H,text=H+' Complete synthetic source review; not live model or release approval.'))
 
 class SchemaDowngradeTests(unittest.TestCase):
@@ -94,9 +94,9 @@ class SchemaDowngradeTests(unittest.TestCase):
             launch.assert_not_called()
 
     def test_actual_old_v1_job_without_new_fields_still_runs(self):
-        with prepared(False) as (_,_,_,d,_),worker_boundary() as launch:
-            task=json.loads((d/'task.json').read_text());task.pop('limits_profile',None);q.save(d/'task.json',task)
-            meta=json.loads((d/'packet.json').read_text());meta.pop('limits_profile',None);meta.pop('task_schema',None);meta.pop('task_sha256',None);q.save(d/'packet.json',meta)
+        with prepared(False) as (_,api,_,d,_),patch.object(q,'Api',return_value=api),worker_boundary() as launch:
+            task=json.loads((d/'task.json').read_text());task.pop('limits_profile',None);task.pop('prompt_binding',None);q.save(d/'task.json',task)
+            meta=json.loads((d/'packet.json').read_text());meta.pop('limits_profile',None);meta.pop('prompt_binding',None);meta.pop('task_schema',None);meta.pop('task_sha256',None);q.save(d/'packet.json',meta)
             self.assertEqual(q.main(),0)
             self.assertEqual(launch.call_args.kwargs['profile']['task_schema'],V1)
             self.assertIsNone(launch.call_args.kwargs['source_reader'])

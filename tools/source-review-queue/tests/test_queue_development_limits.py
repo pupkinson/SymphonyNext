@@ -20,6 +20,7 @@ class DevelopmentLimitTests(unittest.TestCase):
     def old_journal(self,d):
         task=q.decode(q.read(d/'task.json'));meta=q.decode(q.read(d/'packet.json'))
         task.pop('limits_profile',None);meta.pop('limits_profile',None)
+        task.pop('prompt_binding',None);meta.pop('prompt_binding',None)
         meta['task_sha256']=q.sha(q.wire_json(task))
         q.save(d/'task.json',task);q.save(d/'packet.json',meta)
         return task
@@ -121,7 +122,7 @@ class DevelopmentLimitTests(unittest.TestCase):
             self.assertEqual(launch.call_args.kwargs['limit'],5400)
 
     def test_old_worker_retains_original_budget(self):
-        with prepared(False) as (_,_,_,d,_),worker_boundary() as launch,patch.object(q.signal,'setitimer') as timer:
+        with prepared(False) as (_,api,_,d,_),patch.object(q,'Api',return_value=api),worker_boundary() as launch,patch.object(q.signal,'setitimer') as timer:
             self.old_journal(d)
             self.assertEqual(q.main(),0)
             self.assertEqual(timer.call_args_list[0].args[1],1700)
@@ -140,7 +141,7 @@ class DevelopmentLimitTests(unittest.TestCase):
             launch.assert_not_called()
 
     def test_pre_pin_v1_stays_legacy(self):
-        with prepared(False) as (_,_,_,d,_),worker_boundary() as launch,patch.object(q.signal,'setitimer') as timer:
+        with prepared(False) as (_,api,_,d,_),patch.object(q,'Api',return_value=api),worker_boundary() as launch,patch.object(q.signal,'setitimer') as timer:
             task=self.old_journal(d);meta=q.decode(q.read(d/'packet.json'))
             meta.pop('task_sha256',None);meta.pop('task_schema',None);q.save(d/'packet.json',meta)
             self.assertEqual(q.load_prepared_limits(d,task),OLD)

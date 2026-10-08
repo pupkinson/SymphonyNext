@@ -1,3 +1,69 @@
+# Exact prompt delivery binding — 2026-10-08
+
+GH96/P1 source correction in existing PR90; owner admission GH87 comment6067390168.
+This is a source candidate, NOT an installed queue or a release approval.
+Independent exact-new-HEAD review and the normal admitted update/runtime gates
+remain required. The earlier limits increase is preserved.
+
+## Changed behavior
+
+Preparation pins the full UTF8 prompt's schema, SHA256 and byte length in both
+task.json and packet.json; the whole-task hash includes that binding. This pins
+task instructions as well as the v1 embedded source packet or v2 source catalog.
+Worker validation occurs before a model process is launched, and again immediately
+before forwarding turn/start. The proxy serializes the same validated immutable
+bytes, not a second unverified file read. A write loop handles short writes.
+
+Only after the entire canonical JSON frame is written and flushed does the
+service journal receive a prompt_delivery receipt. It records the prepared
+context, turn envelope without duplicate prompt text, wire byte length/hash,
+and the forwarding fact. Finalization checks the task/packet/prompt again,
+requires a matching receipt and actual thread/request/turn lifecycle, and
+reconstructs the exact canonical frame to verify its hash. Missing/altered
+receipts, changed instructions, truncation or partial forwarding cannot create
+a new successful source verdict. Existing source-page/model/profile/EOF guards
+remain in force. A sender receipt establishes bytes forwarded by this adapter,
+not independent backend identity, reasoning quality or a signature against a
+coherent rewrite of the entire trusted service-owned journal.
+
+## Genuine legacy jobs and history
+
+Old prepared jobs lacking input pins are NOT blessed by hashing their current
+prompt. Within the existing scoped GitHub read capability, their current issue
+body/title must match the saved issue_signature and exact manifest. The unchanged
+historical renderer regenerates the expected prompt from those inputs and the
+hash-verified saved packet; the existing file must match it byte-for-byte.
+Unavailable/changed inputs fail closed. No old task/packet/limits file is migrated
+or rewritten, and prior worker bounds/page layouts remain unchanged. A previous
+run without an actual forwarding receipt cannot gain new success on upgrade.
+Existing terminal final.json records retain their historical meaning; they are
+not replayed, recertified or presented as proof of the new guard.
+
+## Source verification
+
+Run `python3 -B -m unittest discover -s tests -v` in this directory.
+The baseline121 tests passed. Sixteen new tests initially failed on the unchanged
+parent, including actual pipe counterexamples that returned false source success.
+After the correction and six additional controls,143 supplied tests pass. One
+additional RED identified a missing task-snapshot requirement for a present new
+prompt marker; repair1/2 added that requirement. Existing synthetic finalization
+fixtures now contain an explicit synthetic delivery receipt; their original
+assertions are retained. Genuine legacy fixtures remove all new marker fields
+and use a scoped fake issue read, rather than silently treating new jobs as old.
+
+Real subprocess/socketpair tests verify v1 and paged v2, positive complete input,
+large UTF8 frames, instruction replacement followed by restoration, truncation,
+post-send mutation, missing/forged receipts and partial-write failure. Additional
+controls cover legacy reconstruction without metadata edits, changed legacy
+issue signatures, immutable closed results and preservation of old limits.
+All peers/accounts/GitHub data in these tests are synthetic; no real model or
+installed service was called. Exact commands, retained failures, hashes and
+publication readback are recorded in GH87. TLS/PR75, native HOLDs, protected CI,
+main/release, credentials, installed files and DF Assistant remain untouched.
+
+<details>
+<summary>Preserved preceding limits report — historical P1 status below</summary>
+
 # Prospective development limits — 2026-10-08
 
 Source-only candidate for the existing PR90/GH87. Owner authority is GH95
@@ -181,5 +247,7 @@ No earlier refused schema-generation/download/diagnostic operation is replayed.
 Before those gates, leave the candidate unapplied; do not edit installed.json
 merely to suppress verification or reuse old claims/review approvals.
 EOF gating requires the upstream client to close its input after the final turn.
+
+</details>
 
 </details>

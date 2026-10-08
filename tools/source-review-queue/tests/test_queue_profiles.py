@@ -50,6 +50,17 @@ def account_result(profile):
                 model_entitlement='NOT_TESTED',model_turn='NOT_RUN')
 
 
+def add_prompt_receipt(directory, protocol):
+    """Synthetic unit completion only; real transport proofs are separate tests."""
+    context=q.load_prompt_context(directory)
+    raw=q.checked_prompt_bytes(directory,context)
+    request={'id':3,'method':'turn/start','params':{'cwd':str(q.SPACE),'threadId':'thread1',
+             'input':[{'type':'text','text':raw.decode('utf-8')}]}}
+    protocol.update(thread_id='thread1',turn_id='turn1',turn_request_id=3,
+                    prompt_delivery=q.prompt_delivery_receipt(context,request,q.wire_json(request)+b'\n'))
+    return protocol
+
+
 class ProfileTests(unittest.TestCase):
     def profile(self,schema=V2):
         self.assertTrue(hasattr(q,'review_profile'),'per-schema profile selector missing')
@@ -200,7 +211,7 @@ class ProfileTests(unittest.TestCase):
             for sid,idx in sorted(reader.required):reader.read_page({'source_id':sid,'page':idx})
             proto=dict(thread_requests=1,turn_requests=1,turn_status='completed',app_server_exit=0,
                        proxy_outcome='APP_SERVER_EOF',model='gpt-6.1-sol',review_profile=p,source_read=reader.receipt())
-            q.save(d/'run/protocol.json',proto)
+            q.save(d/'run/protocol.json',add_prompt_receipt(d,proto))
             q.save(d/'run/review.json',dict(head=H,text=H+' A complete source-only fixture report, not native review.'))
             result=q.finish_task(887,api)
             self.assertEqual(result['status'],'REVIEW_PROFILE_CHANGED');self.assertFalse(result['release_approval'])
@@ -212,7 +223,7 @@ class ProfileTests(unittest.TestCase):
             for sid,idx in sorted(reader.required):reader.read_page({'source_id':sid,'page':idx})
             proto=dict(thread_requests=1,turn_requests=1,turn_status='completed',app_server_exit=0,
                        proxy_outcome='APP_SERVER_EOF',model='gpt-5.5',review_profile=p,source_read=reader.receipt())
-            q.save(d/'run/protocol.json',proto)
+            q.save(d/'run/protocol.json',add_prompt_receipt(d,proto))
             q.save(d/'run/review.json',dict(head=H,text=H+' A complete source-only fixture report, not native review.'))
             result=q.finish_task(887,api)
             self.assertEqual(result['status'],q.SUCCESS);self.assertFalse(result['release_approval'])
