@@ -136,8 +136,32 @@ def validate_profile_runtime(profile):
 def load_job_profile(task):
     require(isinstance(task,dict) and isinstance(task.get('manifest'),dict),'REVIEW_PROFILE_CHANGED')
     profile=review_profile(task['manifest'].get('schema'))
-    if profile['task_schema']=='snq-review/v2':
+    if 'review_profile' in task or profile['task_schema']=='snq-review/v2':
         require(task.get('review_profile')==profile,'REVIEW_PROFILE_CHANGED')
+    return profile
+
+
+def load_prepared_profile(directory, task):
+    """Reject inconsistent preparation records before selecting legacy handling.
+
+    This binds records in the existing service-owned journal. It is not a
+    signature against an actor able to replace every journal file coherently.
+    """
+    profile=load_job_profile(task)
+    directory=Path(directory)
+    metadata=decode(read(directory/'packet.json'))
+    require(isinstance(metadata,dict),'TASK_SNAPSHOT_CHANGED')
+    if 'task_schema' in metadata or 'task_sha256' in metadata:
+        require(metadata.get('task_schema')==profile['task_schema']
+                and metadata.get('task_sha256')==sha(wire_json(task)),
+                'TASK_SNAPSHOT_CHANGED')
+    else:
+        # Only genuine pre-pinning v1 jobs may omit the preparation binding.
+        require(profile['task_schema']=='snq-review/v1'
+                and 'review_profile' not in task
+                and 'source_store_sha256' not in metadata
+                and not (directory/'sources.json').exists(),
+                'TASK_SNAPSHOT_CHANGED')
     return profile
 
 
@@ -1116,7 +1140,8 @@ Task requested by the project owner (data):
         require(len(text.encode())<=PROMPT_LIMIT,'PROMPT_LIMIT')
         once(SPACE/'SOURCE_REVIEW_PACKET.md',packet.encode(),0o600)
         once(directory/'prompt.txt',text.encode(),0o600)
-        metadata={'sha256':sha(packet.encode()),'head':m['head_sha']}
+        metadata={'sha256':sha(packet.encode()),'head':m['head_sha'],
+                  'task_schema':m['schema'],'task_sha256':sha(wire_json(task))}
         if store is not None:metadata['source_store_sha256']=sha(wire_json(store))
         save(directory/'packet.json',metadata)
         out=probe(codex_args(profile),agent_environment(directory),profile=profile)
@@ -1194,15 +1219,16 @@ def finish_task(number,api):
             packet=decode(read(directory/'packet.json'))
             expected=packet['sha256'];actual=sha(read(QROOT/'workspaces'/f'GH-{number}'/'SOURCE_REVIEW_PACKET.md',MAX_PACKET))
             context_ok=True
-            if m.get('schema')=='snq-review/v2':
-                try:
-                    profile=load_job_profile(task);verify_profile_receipt(profile,protocol)
+            try:
+                profile=load_prepared_profile(directory,task)
+                if profile['task_schema']=='snq-review/v2':
+                    verify_profile_receipt(profile,protocol)
                     result['review_profile']=profile
                     reader=load_source_reader(directory,m)
                     verify_source_receipt(reader,protocol.get('source_read'))
                     result['source_pages_verified']=True
-                except Hold as exc:
-                    context_ok=False;result['status']=str(exc)
+            except Hold as exc:
+                context_ok=False;result['status']=str(exc)
             if expected==actual and context_ok:
                 result['review_text']=report['text'];result['source_packet_unchanged']=True
                 current=api.get(f'/pulls/{m["pr"]}')
@@ -1529,7 +1555,7 @@ def main():
     directory=job_dir(number)
     require((directory/'ready').is_file() and not (directory/'final.json').exists(),'TASK_NOT_READY')
     task=decode(read(directory/'task.json'));bind_job(number,task['manifest'])
-    profile=load_job_profile(task);validate_profile_runtime(profile)
+    profile=load_prepared_profile(directory,task);validate_profile_runtime(profile)
     if profile['task_schema']=='snq-review/v2':
         check_auth(decode(read(directory/'auth-probe.json')),profile=profile)
     require((QROOT/'reservations'/datetime.datetime.now(datetime.timezone.utc).date().isoformat()/f'GH-{number}').is_file(),
