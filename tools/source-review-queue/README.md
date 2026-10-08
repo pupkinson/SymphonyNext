@@ -1,3 +1,89 @@
+# Prospective development limits — 2026-10-08
+
+Source-only candidate for the existing PR90/GH87. Owner authority is GH95
+comment6066736597, implementation admission GH87 comment6066853172.
+Not installed; GH96 actual-prompt binding P1 remains unresolved. This change
+does not grant source approval, native/trusted checks, merge, deployment,
+new model privileges or extra attempts for any terminated task.
+
+## Behavior, not a global budget reset
+
+New prepare_task calls pin `snq-development-limits/2026-10-08` into task.json
+and packet.json and the existing whole-task SHA256 snapshot. Worker start and
+successful finalization validate that binding. A context-local policy selects
+limits; imported legacy constants remain unchanged. Genuine old journals keep
+`snq-legacy-limits/v1`, the old1700s worker bound and old4096-byte page layout.
+Reader instances retain their selected layout across caller scopes. No old
+claim/deadline/reservation/evidence file is migrated or rewritten. This remains
+a service-owned consistency check, not a signature against an actor rewriting
+all journal files coherently.
+
+| Limit | Legacy jobs | Newly prepared jobs |
+| --- | ---: | ---: |
+| v1 full packet bytes | 650000 | 2097152 |
+| v1 prompt bytes | 670000 | 2162688 |
+| v2 unique source bytes | 2097152 | 16777216 |
+| Individual blob bytes | 500000 | 4194304 |
+| Page response bytes | 8192 | 32768 |
+| Reader calls | 400 | 4096 |
+| Source result bytes | 4194304 | 67108864 |
+| Catalog bytes | 100000 | 1048576 |
+| Documents / aliases / explicit refs | 256 / 600 / 64 | 2048 / 8192 / 512 |
+| Worker bound, seconds | 1700 | 5400 |
+
+The raw page target is16384bytes for new readers, reduced until UTF8/JSON wire
+bounds fit. New default metadata reads allow8MiB; API response envelopes allow
+32MiB and serialized stores102960448bytes. These dependent bounds prevent the
+old1MiB/default or5MB/base64 readers from defeating the advertised source size.
+Each bound remains enforced; not every maximum can be attained simultaneously
+for heavily escaped data. API pagination/current100-changed-path validation,
+issue/comment caps, account quotas, model selection, one-turn/tool restrictions,
+full hash/receipt validation and no-replay remain unchanged.
+
+The generated, NOT installed WORKFLOW has turn_timeout_ms5700000, hook timeout
+900000, read timeout120000 and stall timeout900000. The worker retains its own
+per-job bound; the supervisor buffer is not extra worker permission. A full
+end-to-end prepared-environment90-minute run has NOT been executed here.
+Owner instruction budgets for future source development are4hours with the
+last30minutes reserved, and direct reviewer instructions90minutes with the
+last15minutes reserved. Those planning budgets are distinct from actual worker
+timers and do not retroactively extend old executions.
+
+## Capacity and installation limits
+
+Bytes are not model tokens. A16MiB source store is not a16MiB monolithic model
+prompt. Prefer complete paged sources and deduplication; reject missing context
+and respect actual provider context/tool limits. No backend metadata, access,
+sandbox, TLS/OIDC650/1500ms deadlines, assertions, CI profiles, release gates,
+installed units, production or DF Assistant was changed. --install-start remains
+a fresh-install path, NOT an updater. Candidate installation must wait for
+independent review, resolution of GH96 P1 and an admitted update/rollback path.
+
+## Verification
+
+Run `python3 -B -m unittest discover -s tests -v` here. The100existing regressions
+are retained, plus21prospective-limit tests. The old-v1 test fixture additionally
+removes the new limit-profile fields when constructing a genuinely pre-profile
+journal; its assertions were not removed. Test/source/account/process doubles
+are not model entitlement, backend capacity or native installation evidence.
+
+Real cached PR75 public source objects reconstruct the identical1005922-byte
+full packet (SHA256 b2ee0a1e61c235dc5c9bfd894f314396ffa4f85141d648fcfb6fd271dbc23e65):
+legacy source_packet rejects it; the development profile accepts it without
+truncation. Other tests exercise>500000-byte blobs,>2MiB stores, UTF8 boundaries,
+new upper-limit refusals, restored contexts, unchanged legacy layouts/deadlines,
+worker/finalizer snapshot tampering and actual proxy default-budget selection.
+
+Historical failure evidence remains. Initial new tests failed on the unchanged
+source. The first implementation passed119tests but a new direct-proxy regression
+found an unresolved None default; one repair fixed dynamic budget selection and
+made source installation metadata describe the new profile accurately. Full
+121tests then passed; final exact-source results are recorded in GH87, not
+inferred from this README. No real model call or protected/native action ran.
+
+<details>
+<summary>Preserved historical predecessor report (not current acceptance)</summary>
+
 # GH87: immutable paged source review and schema-bound profiles
 
 ## Scope and status
@@ -95,3 +181,5 @@ No earlier refused schema-generation/download/diagnostic operation is replayed.
 Before those gates, leave the candidate unapplied; do not edit installed.json
 merely to suppress verification or reuse old claims/review approvals.
 EOF gating requires the upstream client to close its input after the final turn.
+
+</details>

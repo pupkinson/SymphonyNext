@@ -95,7 +95,8 @@ class SchemaDowngradeTests(unittest.TestCase):
 
     def test_actual_old_v1_job_without_new_fields_still_runs(self):
         with prepared(False) as (_,_,_,d,_),worker_boundary() as launch:
-            meta=json.loads((d/'packet.json').read_text());meta.pop('task_schema',None);meta.pop('task_sha256',None);q.save(d/'packet.json',meta)
+            task=json.loads((d/'task.json').read_text());task.pop('limits_profile',None);q.save(d/'task.json',task)
+            meta=json.loads((d/'packet.json').read_text());meta.pop('limits_profile',None);meta.pop('task_schema',None);meta.pop('task_sha256',None);q.save(d/'packet.json',meta)
             self.assertEqual(q.main(),0)
             self.assertEqual(launch.call_args.kwargs['profile']['task_schema'],V1)
             self.assertIsNone(launch.call_args.kwargs['source_reader'])
