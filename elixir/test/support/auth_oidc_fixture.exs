@@ -116,51 +116,103 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
   def delayed_token_endpoint(f, connection_delay, handshake_delay) do
     root = Agent.get(f.state, & &1.root)
+    owner = self()
+    ready = make_ref()
 
     opts = [
       ip: {127, 0, 0, 1},
       active: false,
-      backlog: 0,
+      mode: :binary,
       certfile: Path.join(root, "cert.pem"),
       keyfile: Path.join(root, "key.pem"),
       sni_fun: fn _ ->
-        Agent.update(f.state, &update_in(&1, [:counts, :tls_handshake], fn count -> (count || 0) + 1 end))
-        Process.sleep(handshake_delay)
+        # OTP may invoke SNI again for a TLS 1.3 HelloRetryRequest. This is
+        # one handshake, not another connection or another delay budget.
+        unless Process.get(ready) do
+          Process.put(ready, true)
+          stage(f, :tls_handshake)
+          Process.sleep(handshake_delay)
+        end
+
         []
       end
     ]
 
     {:ok, listener} = :ssl.listen(0, opts)
     {:ok, {_, port}} = :ssl.sockname(listener)
-    {:ok, filler} = :gen_tcp.connect({127, 0, 0, 1}, port, [:binary, active: false], 1_000)
     url = "https://localhost:#{port}/token"
     Agent.update(f.state, &Map.put(&1, :token_url, url))
     ExUnit.Callbacks.on_exit(fn -> :ssl.close(listener) end)
 
-    ExUnit.Callbacks.start_supervised!(
-      {Task,
-       fn ->
-         Process.sleep(connection_delay)
-         {:ok, queued} = :ssl.transport_accept(listener, 2_000)
-         :ssl.close(queued)
-         :gen_tcp.close(filler)
-         {:ok, socket} = :ssl.transport_accept(listener, 2_000)
-         Agent.update(f.state, &update_in(&1, [:counts, :tls_accept], fn count -> (count || 0) + 1 end))
+    server =
+      ExUnit.Callbacks.start_supervised!(
+        {Task,
+         fn ->
+           stage(f, :fixture_ready)
+           send(owner, {:staged_endpoint_ready, ready})
 
-         try do
-           with {:ok, socket} <- :ssl.handshake(socket, 2_000),
-                {:ok, request} <- :ssl.recv(socket, 0, 1_000),
-                true <- String.starts_with?(request, "POST ") do
-             Agent.update(f.state, &update_in(&1, [:counts, :token], fn count -> (count || 0) + 1 end))
+           try do
+             {:ok, socket} = :ssl.transport_accept(listener, 5_000)
+             stage(f, :tls_accept)
+
+             try do
+               # Dispatch starts at the real client accept, never at fixture
+               # setup; no filler connection or operating-system backlog race.
+               Process.sleep(connection_delay)
+               stage(f, :handshake_dispatch)
+
+               with {:ok, socket} <- :ssl.handshake(socket, 2_000),
+                    {:ok, request} <- :ssl.recv(socket, 0, 1_000),
+                    true <- String.starts_with?(request, "POST ") do
+                 stage(f, :token)
+                 body = ~s|{"error":"invalid_grant"}|
+                 :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
+               end
+             after
+               :ssl.close(socket)
+             end
+           after
+             :ssl.close(listener)
+             stage(f, :fixture_done)
            end
-         after
-           :ssl.close(socket)
-         end
-       end},
-      id: make_ref()
-    )
+         end},
+        id: make_ref()
+      )
 
-    Map.put(config(f), :token_url, url)
+    Agent.update(f.state, &Map.put(&1, :staged_server, server))
+
+    receive do
+      {:staged_endpoint_ready, ^ready} -> Map.put(config(f), :token_url, url)
+    after
+      1_000 -> raise "staged endpoint readiness missing"
+    end
+  end
+
+  def staged_events(f), do: Agent.get(f.state, &Enum.reverse(Map.get(&1, :staged_events, [])))
+
+  def await_staged_done(f) do
+    server = Agent.get(f.state, &Map.fetch!(&1, :staged_server))
+    monitor = Process.monitor(server)
+
+    receive do
+      {:DOWN, ^monitor, :process, ^server, reason} ->
+        ExUnit.Assertions.assert(reason in [:normal, :noproc])
+        ExUnit.Assertions.assert(Enum.any?(staged_events(f), &(elem(&1, 0) == :fixture_done)))
+        ExUnit.Assertions.refute(Process.alive?(server))
+        :ok
+    after
+      2_000 -> raise "staged endpoint termination missing"
+    end
+  end
+
+  defp stage(f, name) do
+    at = System.monotonic_time(:millisecond)
+
+    Agent.update(f.state, fn data ->
+      data
+      |> update_in([:counts, name], &((&1 || 0) + 1))
+      |> Map.update(:staged_events, [{name, at}], &[{name, at} | &1])
+    end)
   end
 
   def record_log(f, log), do: Agent.update(f.state, &Map.put(&1, :captured_log, log))

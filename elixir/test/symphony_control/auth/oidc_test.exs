@@ -523,15 +523,16 @@ defmodule SymphonyControl.Auth.OidcTest do
   end
 
   test "staged connection dispatch and TLS handshake cannot produce a late POST" do
-    f = OidcFixture.start!()
+    f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
     cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
     started = System.monotonic_time(:millisecond)
-    assert {:error, _} = exchange(f, cfg, 1_500)
+    assert {:error, _} = staged_exchange(f, cfg, 1_500)
     assert System.monotonic_time(:millisecond) - started < 1_700
     assert OidcFixture.calls(f, :tls_accept) == 1
     assert OidcFixture.calls(f, :tls_handshake) == 1
-    Process.sleep(1_000)
+    assert :ok == OidcFixture.await_staged_done(f)
     assert OidcFixture.calls(f, :token) == 0
+    assert_staged_events(f)
   end
 
   test "missing access lifetime uses signed ID expiry without extending it" do
@@ -539,6 +540,65 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert {:ok, identity} = exchange(f)
     assert identity.credential_expires_at_ms <= System.system_time(:millisecond) + 120_000
     assert identity.credential_expires_at_ms > System.system_time(:millisecond)
+  end
+
+  defp staged_exchange(f, cfg, ms) do
+    started = System.monotonic_time(:millisecond)
+    caller = Task.async(fn -> exchange(f, cfg, ms) end)
+    assert_receive {:jwks_waiting, provider}, 1_000
+    {:links, links} = Process.info(caller.pid, :links)
+    worker = Enum.find(links, &(&1 != self()))
+    assert is_pid(worker)
+    monitor = Process.monitor(worker)
+    send(provider, :release_jwks)
+    result = Task.await(caller, 5_000)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, reason}, 500
+    assert reason in [:normal, :killed]
+    refute Process.alive?(worker)
+    refute Process.alive?(caller.pid)
+    IO.puts("staged exchange lifecycle: " <> inspect({started, System.monotonic_time(:millisecond), reason, :caller_and_worker_terminated}))
+    result
+  end
+
+  defp assert_staged_events(f) do
+    events = OidcFixture.staged_events(f)
+    assert Enum.map(events, &elem(&1, 0)) == [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :fixture_done]
+    times = Map.new(events)
+    assert times.handshake_dispatch - times.tls_accept >= 600
+    assert times.fixture_done - times.tls_handshake >= 700
+    IO.puts("staged TLS monotonic events (no credentials): " <> inspect(events))
+  end
+
+  test "longer permitted window confirms staged endpoint can receive one real POST" do
+    f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
+    cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
+    # This endpoint deliberately returns a fixed 400 after receiving POST.
+    assert {:error, :unknown_outcome} = staged_exchange(f, cfg, 5_000)
+    assert :ok == OidcFixture.await_staged_done(f)
+    assert OidcFixture.calls(f, :tls_accept) == 1
+    assert OidcFixture.calls(f, :tls_handshake) == 1
+    assert OidcFixture.calls(f, :token) == 1
+    events = OidcFixture.staged_events(f)
+    assert Enum.map(events, &elem(&1, 0)) == [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :token, :fixture_done]
+    IO.puts("positive staged TLS monotonic events (no credentials): " <> inspect(events))
+  end
+
+  test "staged TLS fixture retains both delays after an adverse setup scheduling pause" do
+    f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
+    cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
+    pause_started = System.monotonic_time(:millisecond)
+    marker = make_ref()
+    Process.send_after(self(), {:setup_pause_done, marker}, 800)
+    assert_receive {:setup_pause_done, ^marker}, 1_000
+    assert System.monotonic_time(:millisecond) - pause_started >= 800
+    started = System.monotonic_time(:millisecond)
+    assert {:error, _} = staged_exchange(f, cfg, 1_500)
+    assert System.monotonic_time(:millisecond) - started < 1_700
+    assert OidcFixture.calls(f, :tls_accept) == 1
+    assert OidcFixture.calls(f, :tls_handshake) == 1
+    assert :ok == OidcFixture.await_staged_done(f)
+    assert OidcFixture.calls(f, :token) == 0
+    assert_staged_events(f)
   end
 
   test "malformed discovery documents and throttling fail closed before POST" do

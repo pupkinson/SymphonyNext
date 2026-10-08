@@ -70,3 +70,19 @@ full Telemetry archive equivalence is NOT_VERIFIED. Existing token_type/unknown-
 acceptance is classified explicitly; no stricter protocol contract is added.
 Actual client model/effort/speed remain UNKNOWN. History and frozen controls are preserved;
 new independent review/trusted native/live acceptance remain separate, auth stays disabled.
+
+
+TLS fixture attempt20261007 stopped **BLOCKED repair_cycles_exhausted (2/2)**.
+Cloud baseline507/0/6,100%; uncommitted candidate509/1/6,100% exposes a charlist/binary
+fixture failure in the new positive POST control. The1500ms/<1700ms deadline and
+negative TLS-stage/latePOST assertions remain. Full gates/commit/push/newHEAD are
+NOT_RUN; auth remains disabled. See [actual evidence report](docs/engineering/authentik-project-access.md).
+
+
+AUTH-TLS-SOURCE-20261008-NEXT recovered the exact historical TLS draft and fixed
+its real socket binary-mode failure. Final Config/OIDC96/0, bounded TLS/positive/
+setup-pause controls, strict gates, make all509/0/6 and fixed-seed confirmation
+509/0/6 passed with coverage100%. Earlier650ms/readiness failures remain in the
+engineering report; cause UNKNOWN. New attempt2/2; publication readback is in
+workpad33. Independent review/native check/live acceptance remain NOT_RUN; auth
+stays disabled and historical native HOLD is open.

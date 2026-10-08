@@ -751,3 +751,231 @@ Author source gates do not establish full Task1/SN005/production acceptance.
 | cleanup-pg-status | 3 | `e138ccb54fdb08283c6eb21159c53207bbbbf07077246e2804e18d22efe6e250` |
 
 Exact argv/cwd/start/endUTC for these records are retained in commands.jsonl; finalization adds later records to the final evidence manifest/checkpoint.
+
+## TLS fixture source attempt — 2026-10-07 (BLOCKED checkpoint)
+
+`SN005-AUTH-PROTOCOL-01-TLS-FIXTURE-20261007` is a new source attempt, independent
+of closed source2/2 and immutable native42283ecf. [ACCEPTED6036287648](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6036287648)
+preceded tracked edits. T0 `2026-10-07T10:39:04Z`, absolute deadline
+`2026-10-07T11:09:04Z`, one writer, repair cycles **2/2**, profile changes **0**.
+Implementation stopped after cycle2 failed; this checkpoint does not grant another cycle.
+Requested GPT-6.1 Sol/xhigh/current client speed; actual backend/effort/speed **UNKNOWN**.
+No model was substituted and no additional agent was started.
+
+Fresh connector/fetch and exact blobs verified baseline HEAD
+`6925de7e291d8cb36f83493d254679527a83c34d`, tree
+`b10931da9fa383bb5f22ca36f5f89e0038385e25`, PR base
+`233dda1878533a425574074b8d34344b50d41cf7`. HEAD remains unchanged; the owned
+`/workspace/scratch/sn005-tls-fixture-src-20261007` checkout is **DIRTY**, with an
+uncommitted six-path draft. Commit/non-force push/new remote source are **NOT_RUN**.
+Primary checkout remains clean. Frozen fixture/test/product blobs respectively:
+`8656a8602b7641b1f0a6450ab95f221b2d8b3405`,
+`be43772cf9dfb2ec029203d59b66becbd4ac1b05`,
+`0add8aba2e92d70d179e1e836b2d6fb81e07a4c4`.
+Product bytes, dependency lock and protected controls have no delta.
+
+All eight spec-index composition hashes verified for0.5+MCP-SN031-r2; policy0.5
+SHA256 `831e8f86170211d2b800960c64ce977d7816167501fb9ec831bdbce702e097a9`.
+Elixir/Mix1.19.5, OTP28/ERTS16.4 and setup succeeded. Cloud observed revision89,
+quota4CPU,16GiB,pids.max=max, OTP smp4:4 and empty ERL_FLAGS differ from owner-reported
+protected2CPU/4GiB/pids256/+S2:2/networknone-loopback. **Cloud equivalence is not proved**.
+
+Owner-reported native42283ecf: HOLD worker_stage_exit_coverage, final1, coverage2,
+507/1/6,100%,seed876309/maxcases4; tls_accept expected1/observed0 at original line531.
+Owner-provided worker-log SHA256
+`94f5765f898350c31b23c18b9102c843e080a302463210edb1a51ba52a6d223c`
+is **not independently verified**. Full private native log was not read.
+The reported er_child_setup error32 has **UNKNOWN** causal relation. Native replay,
+private native reads, resource/profile/worker changes and check publication were not performed.
+
+### Actual observations and unfinished draft
+
+The first unchanged line525 command was GREEN. Config/OIDC baseline94/0 and
+full fixed-seed baseline507/0/6 also passed; there is **no Cloud product semantic RED**.
+A new adverse setup-pause regression against the old fixture failed at SNI count2
+instead of1. This is **fixture RED**, not the native tls_accept0 failure or product RED.
+It shows setup/handshake sensitivity; exact native causality remains UNKNOWN.
+
+The uncommitted fixture removes filler TCP/backlog0, acknowledges readiness, records
+credential-free monotonic stage events, delays handshake dispatch600ms after an actual
+client transport accept, and applies SNI700ms once per connection (OTP can call SNI
+again). Discovery/JWKS200ms each deliberately consume the same exchange deadline;
+this measures a composite real-wire deadline rather than relying on OS backlog timing.
+The1500ms exchange deadline, elapsed<1700ms, tls_accept1/tls_handshake1 and latePOST0
+assertions remain. The800ms adverse setup pause is a controlled mailbox timer barrier,
+not an enlarged auth timeout. Caller/worker monitors and explicit fixture done replace
+an absence assertion made after an arbitrary sleep.
+
+Cycle1: both bounded negative controls passed; the new long-window positive expected
+forbidden but observed unknown_outcome. Cycle2 corrected that fixed400 result expectation
+and added real caller/worker lifecycle assertions. Config/OIDC then reported96/1.
+The positive control exposed **another fixture defect**: ssl.recv returns a charlist,
+while String.starts_with?/2 requires a binary. The fixture crashes before recording POST.
+The positive wire control therefore remains **FAILED**, not GREEN. Its raw synthetic
+request stack remains confined to local evidence; no raw request is published here.
+A minimal next-attempt proposal is explicit binary mode for this SSL listener, followed
+by the same positive/negative controls and all frozen gates. It is **NOT_APPLIED/NOT_RUN**;
+repair2/2 is exhausted and no production adapter edit is proposed.
+
+Candidate fixed-seed full run:509 tests/1 failure/6 skips, configured coverage100%,exit2.
+It was already running when implementation stopped. PostgreSQL stop completed at
+10:54:37.929072Z, before the final test/coverage command finished at10:54:53.001529Z;
+no additional DB failure appeared, but this ordering is explicitly retained and does
+not establish an uninterrupted candidate PG fixture gate. No candidate source READY claim.
+
+Actual commands below ran from the owned worktree's `elixir` directory unless noted.
+Complete argv/cwd/start/endUTC/exit/outputSHA256 are in local `commands.jsonl`.
+
+| Label / command | Actual result | Exit | Output SHA256 |
+| --- | --- | --- | --- |
+| `mix setup` | dependencies unchanged | 0 | `ccaf88601071b79d900e450dc998fb76c434b84cd58baf4ab0d422ce70c71967` |
+| `mix test test/symphony_control/auth/oidc_test.exs:525 --seed 876309 --trace` | 1/0 | 0 | `08d9360751b33ad28009e33a191bd4f1e61def4b6dba3d842092c19a425dca28` |
+| `mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace --seed 876309` | 94/0 | 0 | `14ec4b465580e104cf99d04de4041b11bd2d701357247dc9cdf0e1aaa9410c45` |
+| `mix test --cover --seed 876309 --max-cases 4` | 507/0/6;100% | 0 | `bb25174eeb871fc830d858a2711f9821b20d250bff80333ca2b53c587a3a1214` |
+| `mix test test/symphony_control/auth/oidc_test.exs:544 --seed 876309 --trace` | 1/1;fixture SNI count2 | 2 | `31f22aa50df7c1f3e247638d2e72ca5f731db82d08dbebcee4d2aee8cdde061c` |
+| `mix test test/symphony_control/auth/oidc_test.exs:525 test/symphony_control/auth/oidc_test.exs:555 test/symphony_control/auth/oidc_test.exs:568 --seed 876309 --trace` | 3/1;positive typed-result mismatch | 2 | `3313370826024772ee6b587a8155c858148cea4f85ddf042e3c8a8ecc198a6e0` |
+| `same complete Config/OIDC command` | 96/1;positive charlist crash | 2 | `fbed59028d3a2174214d1ce17ae8f473c1332e09e5e292a9892d7195b7b13df6` |
+| `same fixed-seed full coverage command` | 509/1/6;100% | 2 | `3d31a3017ed125dd2fc9ba6a19a59522fd7e5eb35cb294280690b622cc62b5ae` |
+
+Format commands on the two admitted test files exited0. Full makeall, final format-check,
+specs/strictCredo/Dialyzer, scheduler-load repeat and independent/trusted/live acceptance
+are **NOT_RUN** after repair exhaustion; configured coverage100% does not offset test failure.
+Bootstrap/MCP/manifest/scope/actual PR-body checkpoint checks have their actual results
+in the final workpad, rather than assumed success here.
+
+Owned PostgreSQL17.11 used fresh0700 data/socket directories, no TCP, private local
+sn004_fixture/sn004_test,port55474; init/start/readiness exited0. Stop **0**, status **3**
+(no server running), executed before optional metadata. Mix/ExUnit runs finished, both
+negative protocol workers were killed and callers terminated; positive worker exited normally,
+fixture listener/socket closed in after blocks even when its charlist assertion failed.
+No owned DB or test VM is retained running. Evidence and source draft remain preserved.
+
+Evidence root: `/workspace/scratch/SN005-AUTH-PROTOCOL-01-TLS-FIXTURE-20261007`.
+Frozen lockSHA256 `13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`.
+All earlier reports/history remain unchanged. Six allowed paths only; Task2–5/auth activation,
+merge/deploy/native retry excluded. Independent readonly review of any future newHEAD and
+separately reviewed CI retarget/trusted check remain separate **NOT_RUN** stages.
+
+**VERIFIED:** baseline GREEN; fixture RED; two negative candidate wire controls and their
+stage timestamps/lifecycle; candidate positive failure; source/lock identity; PG stop0/status3.
+**INFERRED:** stage-relative dispatch removes dependence on an already elapsed setup timer.
+**UNKNOWN:** exact native failure cause, actual model profile and Cloud/native equivalence.
+**BLOCKED:** repair_cycles_exhausted; positive control/full candidate suite; all unrun gates,
+commit/push/newHEAD and full Task1/SN005/live acceptance.
+
+Checkpoint evidence limitation: initial document-reading and some diagnostic shells were
+outside the command recorder; their complete argv/start/end/hash record is unavailable.
+No retrospective timings or exit codes are manufactured. The listed test/setup/gate/cleanup
+records are retained with actual outputs. The first manifest checkpoint exited1 because
+the two changed test-file records were stale; checkpoint bookkeeping updated these existing
+records and the repeated43-entry check exited0. No further fixture repair was applied.
+
+
+## AUTH-TLS-SOURCE-20261008-NEXT — recovered source checkpoint (2026-10-08)
+
+**RECOVERED; final author source gates passed, with earlier failures retained.**
+Owner Denis explicitly admitted this new source-only cycle; ACCEPTED
+[6064724231](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6064724231).
+T0 `2026-10-08T16:39:48.149604+00:00`; deadline `2026-10-08T17:09:48.149604+00:00`; last300s reserved from
+`2026-10-08T17:04:48.149604+00:00`. One writer, repair2/2, profile changes0, no additional
+executors. Real visible model/effort/speed and Cloud task URL UNKNOWN; observed
+session `01a1085f-06b1-722a-94dc-f5b333728047`. This is an additional bounded
+project attempt, not a reset/replay of closed source/native history.
+
+Published baseline at start / pre-publication Git HEAD `6925de7e291d8cb36f83493d254679527a83c34d`,
+HEAD tree `b10931da9fa383bb5f22ca36f5f89e0038385e25`, PR base
+`233dda1878533a425574074b8d34344b50d41cf7`. Own worktree
+`/workspace/scratch/auth-tls-source-next-20261008` is DIRTY in exactly six allowed
+paths at this pre-publication snapshot; commit/push outcome belongs to the final workpad readback. Primary and original historical worktrees
+were preserved. Spec0.5+MCP-SN031-r2 composition hashes/policy0.5/source blobs
+verified. Production Oidc/Config/Clock, dependencies/lock, shared infrastructure,
+CoreTest, requirements, CI and thresholds are byte-unchanged.
+
+### Provenance and observed fixture behavior
+
+The original Cloud directories were available in this environment. Exported all
+six dirty full files, binary unstaged patch, empty staged patch/untracked inventory
+and2195 original evidence/data files before applying a copy in the new worktree.
+Patch bytes match SHA256
+`8683f7727ef571678bba27b1fba41f8eb1a87d1d30826030f79c51747e526025`;
+original journal/manifest hashes independently matched. Read-only export manifest
+`507e9c27967d6b43bc49642da1961fa69c723d1bfc098566bfc23323ae401b4f`.
+No old scripts, drivers or processes executed. Original bytes rechecked unchanged.
+
+Published baseline: staged1/0, Config/OIDC94/0, broad507/0/6, coverage100%, exits0
+with seed876309 (broad max-cases4). Applying the recovered draft reproduced
+**fixture RED3/1, exit2**: real ssl.recv returns a charlist to String.starts_with?,
+then positive endpoint termination assertion detects function_clause. This is B,
+not a semantic product RED or a reproduction of native A(tls_accept0).
+Repair1 sets explicit `mode: :binary`; scoped3/0 and two bounded repeats with
+two owned CPU workers pass. Recovered synchronization starts dispatch delay600ms
+after real-client accept, awaits readiness/done, removes filler/backlog/timer-from-setup
+dependency, and counts one SNI handshake despite TLS1.3 repeated SNI callback.
+Negative tests retain1500ms deadline/<1700ms elapsed, tls_accept1/tls_handshake1,
+POST0 after explicit endpoint completion and terminated caller/worker; positive
+5000ms window receives a real POST once and fixed400. Adverse setup pause800ms
+retains both delays measured from accept/SNI, not setup. Credential-free monotonic
+ready/accept/dispatch/SNI/token/done and caller/worker observations are retained.
+
+Initial candidate Config/OIDC96/1 and isolated unchanged line5161/1 failed because
+the existing650ms absolute-deadline test saw token count0 instead of1. Bounded
+confirmation96/0 and final96/0 passed; cause UNKNOWN, failed evidence preserved,
+no assertion/deadline changed. Strict Credo exit16 found three IO.inspect diagnostics;
+repair2 replaces them with explicit IO.puts+inspect, preserving observations and
+all assertions. Strict lint/specs then exit0.
+
+**Mandatory candidate broad seed876309/max-cases4:509/1/6, coverage100%, exit2.**
+Failure is unchanged ProjectReadHttpTest line184/189: immediately after repository
+and listener restart Health.readiness().ready was false. No causal attribution
+to TLS or production defect is established; fixing unrelated source is outside
+this frozen scope. One explicitly bounded confirmation on unchanged source/seed876309/max-cases4 then passed509/0/6, coverage100%, exit0. Earlier failure remains recorded; it is not rewritten as PASS. Full make all was executed once: exit0,
+509 tests, 0 failures, 6 skipped; stage exits and actual seed are in the journal. A successful make
+run cannot erase the failed fixed-seed gate. Related commit/push are authorized only after final manifest/scope/readback checks; their actual outcome is recorded separately.
+
+### Gates, resources and handoff
+
+Cloud Elixir/Mix1.19.5, OTP28 ERTS16.4, schedulers4;4CPU/16GiB/pids.max=max
+differs from protected2CPU/4GiB/pids256/+S2:2/loopback-only. No Cloud/native
+equivalence, native HOLD resolution or error32/PID causality is claimed.
+Owned PostgreSQL17.11 uses new0700 data/socket, private Unix socket port55474,
+no TCP, sn004_fixture/sn004_test. Init/start/readiness exits0. It remained alive
+through complete fixed-seed coverage and make all/process waits; only then stop0
+and status3 confirmed cleanup. CPU load children were terminated and reaped.
+No foreign resource/process or historical attempt was changed.
+
+| Command label | Actual exit | Complete output SHA256 |
+| --- | --- | --- |
+| `recovery-export` | 0 | `037ca34b5c08afafd4416a8904c0b3fe8d3b897aa959d2955066a21dda9217d6` |
+| `elixir-version` | 0 | `b7bc746ca83ed80c14bbb1d4a097a39a1e61e01f8d50cf14c35dcfefd2faa765` |
+| `mix-version` | 0 | `c5d8941ea9c5bb7a6b2a755fafb64c04ba91b6345eb1f62ec2e3b594353e4305` |
+| `setup` | 0 | `6f25aa31edc985edb1f85da02cf70317bccdf43dc2382654128b1f73f2329a5b` |
+| `baseline-staged` | 0 | `7904b5d8d20ce4c40354082a975bf8690a3db01e02003fb4100e85666148dadf` |
+| `baseline-auth` | 0 | `6dc2c6a4e02cf45d61d0511de8c5fcc6895c1a1f64cb179c5b786bed95b0655c` |
+| `baseline-cover` | 0 | `dde400414a097e6a92e86f20ad39047f6b174daa6ac5090806b1956d605a39a5` |
+| `recovered-red` | 2 | `3a1755c2503a4d094989f13a746c121af6a35b6507e1930110bbd24509819e38` |
+| `staged-green` | 0 | `8c9a96b3201eb9d3feba4abb1c9d7f75d35d5fa4fb82b0cab9b0d037a46b43c6` |
+| `candidate-auth` | 2 | `9bb570e1efc7189ace99789dd4c8f9c6cbf8d6e69dc6c7f8047ac769e3cacfec` |
+| `diagnostic-existing-deadline` | 2 | `eb3d34c8b25ed61e960492c691b89f11171de6124e0f7c74966c005b588810b5` |
+| `candidate-auth-confirm` | 0 | `4bd8542679bae764d916d0d069c060295a1251597683d605df2d0d7a7fb5ad60` |
+| `loaded-staged-1` | 0 | `47dbe1a65dec41482e4890162c109d0a1117171d9e35b9de375515b549dccd5c` |
+| `loaded-staged-2` | 0 | `fbdb7c90b756ea46cb2c10642f03de6c54f28965b014d7f8f08116d6443cb937` |
+| `strict-lint` | 16 | `d042ab7c348ae67ea2677ab9f56dad96c631081cb6582d5f2530bc50ba898364` |
+| `strict-lint-green` | 0 | `51bd26ff6c53b4b01adccf56ff69eff9cab342fa94b6e2c35b1a9a5e5e2d09cd` |
+| `final-auth` | 0 | `5d824fa58b6515d68e6cf951b27af8cde2c46efa1c6e898659a1500866c5c861` |
+| `candidate-cover` | 2 | `980ed9b0e325a3de40327565f45446be7c82cd597ac1386cdee8f9d1eb311b4b` |
+| `candidate-cover-confirm` | 0 | `d2eda5384c70ffabdc463a264ffa6c80837648773c62824f31af57800d93657b` |
+| `make-all` | 0 | `fb3d98f74eaec8093c1243083ba81a9b6d8df008c1fe56218a2bbe50addee144` |
+| `standalone-dialyzer` | NOT_RUN | — |
+| `bootstrap` | 0 | `5ac80e6514bd6b15dbbd112f5610195d73a547778332a18d19ed1dbfb072be4e` |
+| `mcp-contracts` | 0 | `078efdecf324cf6a54dd91322c09a2b3b24b9ab35e476e63652dfcc6d02149ea` |
+| `cleanup-pg-stop` | 0 | `ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d` |
+| `cleanup-pg-status` | 3 | `e138ccb54fdb08283c6eb21159c53207bbbbf07077246e2804e18d22efe6e250` |
+
+All argv/cwd/start/endUTC/stdout+stderr hashes and owned-resource evidence are
+in `/workspace/scratch/AUTH-TLS-SOURCE-20261008-NEXT/commands.jsonl`.
+Final MANIFEST/scope/PR-body/remote readbacks are subsequent checkpoint records.
+Independent review of a new HEAD, trusted native check, native retarget/replay,
+live acceptance, Task2–5/auth activation/merge/deploy are NOT_RUN. An exact-baseline
+HEAD/candidate-tree packet and dirty patch/full files are prepared; independent exact-new-HEAD review remains NOT_RUN; the final packet binds any published commit after readback.
+Next bounded step: independent exact-candidate source/evidence review, including the retained intermittent650ms/repository-restart failures, before any separate protected/native check. Historical native422 remains HOLD; full SN005/working Authentik acceptance
+is BLOCKED. Checkpoint generated at `2026-10-08T17:02:52.702973+00:00` within the original budget.
