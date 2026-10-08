@@ -61,7 +61,8 @@ defmodule SymphonyControl.Auth.OidcFixture do
       startup_log: false
     ]
 
-    server = ExUnit.Callbacks.start_supervised!({Bandit, server_opts}, id: make_ref())
+    server_id = make_ref()
+    server = ExUnit.Callbacks.start_supervised!({Bandit, server_opts}, id: server_id)
     {:ok, {_, port}} = ThousandIsland.listener_info(server)
     origin = "https://localhost:#{port}"
     Agent.update(state, &Map.put(&1, :origin, origin))
@@ -72,7 +73,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
       File.rm_rf!(root)
     end)
 
-    %{state: state, server: server, origin: origin, secret_ref: secret, ca: ca}
+    %{state: state, server: server, server_id: server_id, origin: origin, secret_ref: secret, ca: ca}
   end
 
   def config(fixture) do
@@ -260,7 +261,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
       "code_challenge_methods_supported" => if(Keyword.get(data.opts, :pkce) == :plain, do: ["plain"], else: ["S256"])
     }
 
-    discovery_response(conn, data, document)
+    barrier_response(conn, data, :discovery, fn -> discovery_response(conn, data, document) end)
   end
 
   defp respond(conn, :jwks, _state, data) do
@@ -268,11 +269,13 @@ defmodule SymphonyControl.Auth.OidcFixture do
     {_, public} = data.signing |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
     kid = if Keyword.get(data.opts, :fault) == :unknown_kid and Map.get(data.counts, :jwks, 0) == 0, do: "old", else: "current"
 
-    if Keyword.get(data.opts, :fault) == :malformed_jwks do
-      json(conn, 200, %{"keys" => [%{"kty" => "RSA", "n" => "?", "e" => "AQAB"}]})
-    else
-      json(conn, 200, %{"keys" => [Map.put(public, "kid", kid)]})
-    end
+    barrier_response(conn, data, :jwks, fn ->
+      if Keyword.get(data.opts, :fault) == :malformed_jwks do
+        json(conn, 200, %{"keys" => [%{"kty" => "RSA", "n" => "?", "e" => "AQAB"}]})
+      else
+        json(conn, 200, %{"keys" => [Map.put(public, "kid", kid)]})
+      end
+    end)
   end
 
   defp respond(conn, :token, state, data) do
@@ -287,7 +290,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
     auth = "Basic " <> Base.encode64("control-client:synthetic-client-secret-canary")
 
     cond do
-      get_req_header(conn, "authorization") != [auth] ->
+      conn.method != "POST" or get_req_header(conn, "authorization") != [auth] ->
         json(conn, 401, %{"error" => "invalid_client"})
 
       not is_map(expectations) ->
@@ -297,11 +300,44 @@ defmodule SymphonyControl.Auth.OidcFixture do
         json(conn, 400, %{"error" => "invalid_grant"})
 
       true ->
-        token_response(conn, state, data, expectations, params)
+        # read_body returned :ok and every code/client/PKCE binding passed.
+        # A connection accept or the earlier request counter is not this barrier.
+        barrier_response(conn, data, :token, fn -> token_response(conn, state, data, expectations, params) end)
     end
   end
 
   defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+
+  defp barrier_response(conn, data, stage, respond) do
+    case Map.get(Keyword.get(data.opts, :barriers, %{}), stage) do
+      nil ->
+        respond.()
+
+      {owner, ref} when is_pid(owner) and is_reference(ref) ->
+        monitor = Process.monitor(owner)
+        send(owner, {:oidc_barrier, ref, stage, :ready, self(), System.monotonic_time(:millisecond)})
+
+        outcome =
+          receive do
+            {^ref, :release} -> :released
+            {:DOWN, ^monitor, :process, ^owner, _} -> :owner_down
+          after
+            1_000 -> :abandoned
+          end
+
+        try do
+          if outcome == :released do
+            send(owner, {:oidc_barrier, ref, stage, :released, self(), System.monotonic_time(:millisecond)})
+            respond.()
+          else
+            send_resp(conn, 503, "fixture barrier abandoned")
+          end
+        after
+          Process.demonitor(monitor, [:flush])
+          send(owner, {:oidc_barrier, ref, stage, :done, self(), System.monotonic_time(:millisecond), outcome})
+        end
+    end
+  end
 
   defp discovery_response(conn, data, document) do
     case Keyword.get(data.opts, :fault) do

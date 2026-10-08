@@ -979,3 +979,172 @@ live acceptance, Task2–5/auth activation/merge/deploy are NOT_RUN. An exact-ba
 HEAD/candidate-tree packet and dirty patch/full files are prepared; independent exact-new-HEAD review remains NOT_RUN; the final packet binds any published commit after readback.
 Next bounded step: independent exact-candidate source/evidence review, including the retained intermittent650ms/repository-restart failures, before any separate protected/native check. Historical native422 remains HOLD; full SN005/working Authentik acceptance
 is BLOCKED. Checkpoint generated at `2026-10-08T17:02:52.702973+00:00` within the original budget.
+
+
+## SN005-DEADLINE-POST-BARRIER-20261008 — separate source-only P2 repair
+
+Owner admission [6068039141](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6068039141);
+executor [ACCEPTED6068294050](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6068294050).
+New T0 `2026-10-08T20:08:53.827823Z`, absolute deadline
+`2026-10-09T00:08:53.827823Z`; implementation stops by23:38:53Z to reserve
+the final1800s of this14400s allowance for export/publication/owned cleanup.
+One writer; repairs2/2, profile changes0, no additional agents. Actual exposed
+model/effort/speed and Cloud task URL UNKNOWN; session
+`01a1085f-06b1-722a-94dc-f5b333728047`. This is a new admitted task; no old
+allowance/counter/journal is reset. In particular, the old AUTH-TLS-SOURCE attempt
+remains terminal **BLOCKED budget_violation**, including its28.518396s late
+finalization corrected in [6065132178](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6065132178).
+Old native422 HOLD and both prior source2/2 histories remain immutable.
+
+Fresh baseline HEAD `bf1f983fe2ddc58d66d89836b8055bad98145eb7`, TREE
+`047a5db67a56c9a1d3598c482aa320d3e3aa5f79`, PR BASE
+`233dda1878533a425574074b8d34344b50d41cf7`; existing draftPR75 / branch
+`feat/sn005-oidc-protocol-20261004`. Own initially CLEAN detached worktree
+`/workspace/scratch/sn005-deadline-post-barrier-src-20261008`. Fresh GitHub/fetch,
+worktree/process inventory and source/spec0.5+MCP-SN031-r2/policy0.5 hashes verified.
+No competing source writer observed. Old dirty/staged/unstaged/untracked inventory,
+full files and historical evidence bindings exported read-only before edits;
+bound old evidence bytes were rechecked unchanged. This repair starts from the
+published bf1 source, not a replay of the old TLS driver or an unverified draft.
+
+### Observed baseline, fixture RED and minimal repair
+
+Unchanged isolated deadline line516 failed1/1, exit2, token count0 instead of1;
+the unchanged complete Config/OIDC baseline then passed96/0, exit0. Both outputs
+are retained. This reproduces P2's missing scheduling precondition in Cloud; it
+does not establish every historical failure's cause or reproduce native A.
+Generic delay200ms applies separately to discovery/JWKS/token, so the original
+test could spend its650ms budget before reaching the token endpoint.
+
+The new regression first failed1/1, exit2, because no reference-bound validated
+POST barrier event arrived, although the unchanged fixture returned a valid
+signed identity. This is **fixture RED**, not semantic product/native RED.
+Repair1 adds scoped reference/owner-bound barriers for discovery/JWKS/token.
+The token barrier is reached only after `read_body` returns the complete body
+and real POST/client/code/redirect/PKCE validation succeeds; neither a socket
+accept nor the earlier call counter substitutes for that observation.
+
+The negative test creates its absolute deadline ONCE, before public Oidc.exchange:
+`started+650ms`. It confirms validated POST receipt before that deadline and
+releases the response at the SAME deadline+20ms, using an absolute monotonic timer.
+No deadline is renewed after POST. The caller returns fixed unknown_outcome
+within850ms of the original start; one POST and caller/worker termination are
+asserted. The valid signed positive control uses the same650ms window and succeeds
+after immediate release. A separate test holds discovery until original start+150ms,
+then holds JWKS past the original650ms deadline, proving shared pre-token budget,
+no late token POST and cleanup. No artificial pre-token200ms race remains in the
+post-receipt test. Invalid PKCE binding cannot emit the validated-body event.
+
+Provider ready/released/done observations contain only references, stage names,
+PIDs and monotonic timestamps. Barriers monitor their owner and fail after a
+bounded1000ms no-progress interval; owner-death and abandoned-release controls
+assert fixed503 and termination. Test cleanup cancels its timers, releases held
+providers and stops the owned supervised HTTPS listener, preventing a failed
+assertion from leaving an indefinite request wait. Negative tests verify response
+release is after the original deadline, explicit done and provider/listener absence.
+
+Initial3/0 fixture GREEN and candidate101/0 Config/OIDC passed. Strict Credo
+exit4 found one overlong assert_receive line; repair2 introduces a local remaining
+time without changing its value or timeout. Specs/strict Credo then exit0.
+Final candidate Config/OIDC101/0 exit0 retains all prior controls. The test delta
+replaces one race-prone test with six cases: net+5 tests, no new skips/exclusions.
+
+Two bounded loaded repeats passed7/0 each, covering the three deadline cases,
+owner/no-progress cleanup and TLS positive endpoint. Their original line selectors
+also selected an expiry control rather than both TLS negatives; these outputs
+are retained without claiming those missing scenarios. One explicitly corrected
+six-scenario run under two owned CPU workers passed6/0: POST negative/positive,
+pre-token budget, TLS negative/positive and adverse setup pause. All load children
+were terminated and reaped. No retry-until-pass or seed change was used.
+TLS1500ms/<1700ms, tls_accept1/tls_handshake1/latePOST0 and the working real-POST
+positive endpoint remain unchanged. Native A is still OPEN/HOLD.
+
+### Full gates and resource lifetime
+
+`mix test --cover --seed 876309 --max-cases 4`:514/0/6, configured coverage100%, exit0.
+`make -C elixir all` ran once:514/0/6, actual seed772427/max-cases8, coverage100%,
+exit0. Setup/build/format/specs+strictCredo/coverage/deps/Dialyzer stage exits0;
+Dialyzer0 errors/0 skips. The existing Makefile's MIX command was wrapped solely
+to record each unchanged argv/exit; checks, thresholds and protected profiles
+were not edited. Bootstrap12/0 and MCP input contracts11/0, exits0.
+
+Own PostgreSQL17.11: new0700 data/socket directories, private Unix socket port55474,
+sn004_fixture/sn004_test, listen_addresses empty (no TCP). Init/start/database/
+readiness exits0. It stayed running through the final targeted suite, fixed-seed
+coverage, full make and completed dependent process waits. Only after every
+Mix/make process completed, pg_ctl stop exited0 and status exited3 (no server).
+No foreign DB or process was used/stopped. Runtime Cloud Elixir/Mix1.19.5, OTP28
+ERTS16.4,4CPU/16GiB/pids.max=max/schedulers4 differs from protected
+2CPU/4GiB/pids256/+S2:2/loopback-only; equivalence is not claimed.
+
+Production Oidc SHA256 `056f08b40209a8d40a95d222ccc078d1db88ff33a6d922b1328b26ea0a73145b`
+and mix.lock `13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073`
+remain unchanged, as do Config/Clock/CoreTest/test_helper, canonical requirements,
+CI/worker/locks/policy/thresholds. Only the six admitted paths change; documentation
+appends this checkpoint and MANIFEST refreshes their existing records.
+
+### Actual command evidence
+
+Complete verification/resource argv, cwd, start/endUTC, exits and separate
+stdout/stderr/output SHA256 are in
+`/workspace/scratch/SN005-DEADLINE-POST-BARRIER-20261008/commands.jsonl`.
+The table below binds the complete combined output; no failure is rewritten as PASS.
+
+| Command label | Exit | Complete output SHA256 |
+| --- | --- | --- |
+| `elixir-version` | 0 | `b7bc746ca83ed80c14bbb1d4a097a39a1e61e01f8d50cf14c35dcfefd2faa765` |
+| `mix-version` | 0 | `c5d8941ea9c5bb7a6b2a755fafb64c04ba91b6345eb1f62ec2e3b594353e4305` |
+| `setup` | 0 | `ee1a58046d7c6fc0bc5f8b67e28a3abe4c536626dbc9fc09bc90b55ae890b326` |
+| `baseline-deadline` | 2 | `85ceb7070e384bb2a97de45b5e8643841f40cd6f7889b67379f9a8bd30ba6968` |
+| `baseline-auth` | 0 | `fc0493c1d1c06096c7aebca700a6f0aa77f810ff28a210b2c666d6fd4d6fd7d2` |
+| `fixture-barrier-red` | 2 | `beb47ff575931297920c2cfbeafab6d992446474e366344b08d360682f18b848` |
+| `barrier-green` | 0 | `d930ccf11aa46e8d8b074747c3e544440f09bec6fc7450de6bd34e526b97f9ac` |
+| `pg-init` | 0 | `ff692dd6e475e85d68904b803bae698f0cdb10f0f1b087bf6bd3138cad896a7a` |
+| `candidate-auth` | 0 | `55b87a0880a7e463466912a86040038a2c901a8922127026bb7f67d2937cdacd` |
+| `pg-start` | 0 | `66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad` |
+| `strict-lint` | 4 | `3a8aba449ed5e3a1e928d2124b63e66fcb8695fce0451a47440897a0a1408f90` |
+| `pg-createdb` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `pg-ready` | 0 | `b0e4a6f05a9389c169ea1ef2621ee19f67b4ab3cca36b42b388211b3226b97cc` |
+| `strict-lint-green` | 0 | `e7be7c99933fde35702bcb16c44bfedaf525835a954f22444a64132ea51bfd42` |
+| `loaded-controls-1` | 0 | `3a546ea2fc8fdd4086eaa15c751304a7c08dc91b15c0eef3d8fcd8a7890ff48d` |
+| `loaded-controls-2` | 0 | `bcdcfcf318869e46f30c2a04c0a68d5f8678eb0c053e718e692a49b5e6114093` |
+| `loaded-required-controls-1` | 0 | `ef2b40aebc2f4224293ed86171ae325a57d68ada15987716a26bc7995e0cdc9c` |
+| `bootstrap` | 0 | `19205df4c3ef1da195d5483f61a3552b3046d3fee52101fbb61c75dd976f5d2e` |
+| `mcp-contracts` | 0 | `90e9de3e62ea64ee1af964b7538416ef42a7aedb7871df281aced05f35f512ae` |
+| `final-auth` | 0 | `be885eb22c54b06496324c8a1bbd886a0f70ae669ed1c0ac2ed44cf05ed95fbb` |
+| `candidate-cover` | 0 | `294bd3a406e9b8edfde8382e2b03a4f34bb800c3725a8f81041fd48e1f74728c` |
+| `make-stage-1791491622595809495-setup` | 0 | `fc011cc4198c0064f528dfe57afc346b89cbb99cd3fa62edde5a33df18091d08` |
+| `make-stage-1791491625038539733-build` | 0 | `10c153ae9a01b37aff57f3c667ec951cb2ac28b2e0f9b2717231d480e8b8d45f` |
+| `make-stage-1791491631676357513-format` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `make-stage-1791491632901501222-lint` | 0 | `9a8b87c1e5a081e99e36407f7ce3bf77b4d9a2df4dc0435e6042213c3845e123` |
+| `make-stage-1791491639089288923-test` | 0 | `1ca8e78e81f1051320c29d11c1748771f071fe38b6ffc78b8e73a01cd6bee627` |
+| `make-stage-1791491730753739900-deps.get` | 0 | `db093bb8992d050d0c0001876308c16024347ed25ed5aac2e91eec142d0b9b93` |
+| `make-stage-1791491734815984235-dialyzer` | 0 | `3ef469a7b0285a1a7c38cfc6b51389e2695056e26dc8e9dfd5acd0a1306b4f0e` |
+| `make-all` | 0 | `6a35605e4590cc7be8d0b55781a4826901c229cc2863bdd3ae3c1c1d20e78b36` |
+| `dependent-processes-complete` | 0 | `eb5be4fb270ff7730da246614925f86a427127585839acd3680b79c40b681f05` |
+| `cleanup-pg-stop` | 0 | `ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d` |
+| `cleanup-pg-status` | 3 | `e138ccb54fdb08283c6eb21159c53207bbbbf07077246e2804e18d22efe6e250` |
+
+Tested executable source SHA256:
+
+- `elixir/test/support/auth_oidc_fixture.exs`: `661f6b1acd6260bdf6a9f7a528ee7ebde33b1eadd06ca1af7c2937353be09122`.
+- `elixir/test/symphony_control/auth/oidc_test.exs`: `4915535cb0efaa6db64409e0a7af1cb324ba974a56958332102640c90ada481e`.
+
+This pre-publication report snapshot was generated at `2026-10-08T20:39:25.441459+00:00`; source test bytes
+were rechecked after all gates. The worktree is DIRTY in the admitted paths until
+explicit staging/commit. Final manifest/scope/PR-body/commit/non-force push and
+fresh remote HEAD/tree/clean readback belong to the subsequent final workpad
+checkpoint; they are not inferred from the tests. The final packet includes a
+portable patch/full changed files, exact-source identities and complete retained
+RED/GREEN/gate logs. No new owning issue/PR or trusted status is created.
+
+VERIFIED: observed P2 baseline failure, fixture RED→GREEN, unchanged650/850 bounds,
+real validated POST, pre-token shared budget, positive/negative TLS controls,
+source gates and owned cleanup. INFERRED: removing the pre-token scheduling race
+addresses the reproduced fixture precondition; it does not prove protected/native
+behavior. UNKNOWN: actual exposed model/effort/speed and causes of all older failures.
+BLOCKED: native quality/fullSN005/live Authentik acceptance. Independent review of
+the new HEAD, trusted native check, live acceptance and Task2–5/auth activation/
+merge/deploy remain NOT_RUN. PR90's blocked native dependency preparation is not
+replayed. Next bounded step: independent read-only review of the exact published
+candidate and this retained evidence; no second model is started by the author.

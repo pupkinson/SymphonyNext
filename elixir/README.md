@@ -504,3 +504,15 @@ setup-pause controls, strict gates, make all509/0/6 and fixed-seed confirmation
 engineering report; cause UNKNOWN. New attempt2/2; publication readback is in
 workpad33. Independent review/native check/live acceptance remain NOT_RUN; auth
 stays disabled and historical native HOLD is open.
+
+
+SN005-DEADLINE-POST-BARRIER-20261008 replaces the650ms test's pre-token timing race
+with a reference-bound acknowledgement of a complete validated HTTPS POST. Its
+response is held past the SAME original deadline; the850ms bound, onePOST and
+caller/worker/provider cleanup remain. A signed positive control and separate
+discovery/JWKS shared-budget regression pass. Final Config/OIDC101/0; fixed-seed
+coverage and make all514/0/6,100%, all stage exits0. TLS1500ms/<1700ms/latePOST0
+controls remain intact. Actual commands/hashes and preserved failure history are
+in the engineering report. Closed old source attempts (including budget_violation)
+and native422 HOLD remain unchanged. Independent new-HEAD review/trusted/live
+acceptance remain separate and NOT_RUN; production auth stays disabled.

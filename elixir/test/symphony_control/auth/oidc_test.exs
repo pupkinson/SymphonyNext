@@ -513,13 +513,169 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert OidcFixture.calls(f, :token) == 1
   end
 
-  test "one absolute deadline includes discovery keys and token without renewal" do
-    f = OidcFixture.start!(delay_ms: 200)
-    start = System.monotonic_time(:millisecond)
-    assert {:error, :unknown_outcome} == exchange(f, nil, 650)
-    elapsed = System.monotonic_time(:millisecond) - start
-    assert elapsed < 850
+  test "a complete validated POST is held beyond the original absolute deadline without renewal" do
+    ref = make_ref()
+    f = OidcFixture.start!(barriers: %{token: {self(), ref}})
+    {caller, started, expires} = barrier_exchange(f)
+    {provider, received_at} = await_barrier(ref, :token, expires)
+    {worker, monitor} = monitor_exchange_worker(caller)
+    assert received_at < expires
+    release_at_deadline(provider, ref, expires)
+    assert_exchange_timeout(caller, worker, monitor, started)
+    finish_barrier(f, ref, :token, provider, expires)
+    assert OidcFixture.calls(f, :discovery) == 1
+    assert OidcFixture.calls(f, :jwks) == 1
     assert OidcFixture.calls(f, :token) == 1
+  end
+
+  test "the same POST barrier permits a valid signed response before the original deadline" do
+    ref = make_ref()
+    f = OidcFixture.start!(barriers: %{token: {self(), ref}})
+    {caller, started, expires} = barrier_exchange(f)
+    {provider, received_at} = await_barrier(ref, :token, expires)
+    {worker, monitor} = monitor_exchange_worker(caller)
+    send(provider, {ref, :release})
+    assert {{:ok, %{subject: "human-1"}}, returned_at} = Task.await(caller, 1_000)
+    assert received_at < expires
+    assert returned_at < expires
+    assert returned_at - started < 850
+    assert_exchange_stopped(caller, worker, monitor)
+    finish_barrier(f, ref, :token, provider)
+    assert OidcFixture.calls(f, :token) == 1
+  end
+
+  test "discovery and JWKS spend the same original budget and cannot start a late POST" do
+    discovery_ref = make_ref()
+    keys_ref = make_ref()
+    f = OidcFixture.start!(barriers: %{discovery: {self(), discovery_ref}, jwks: {self(), keys_ref}})
+    {caller, started, expires} = barrier_exchange(f)
+    {discovery, discovery_at} = await_barrier(discovery_ref, :discovery, expires)
+    {worker, monitor} = monitor_exchange_worker(caller)
+    timer = Process.send_after(discovery, {discovery_ref, :release}, started + 150, abs: true)
+    on_exit(fn -> Process.cancel_timer(timer) end)
+    {keys, keys_at} = await_barrier(keys_ref, :jwks, expires)
+    assert keys_at >= started + 150
+    assert keys_at > discovery_at
+    release_at_deadline(keys, keys_ref, expires)
+    assert_exchange_timeout(caller, worker, monitor, started)
+    assert_receive {:oidc_barrier, ^discovery_ref, :discovery, :released, ^discovery, released_at}, 1_000
+    assert released_at >= started + 150
+    assert_receive {:oidc_barrier, ^discovery_ref, :discovery, :done, ^discovery, _, :released}, 1_000
+    finish_barrier(f, keys_ref, :jwks, keys, expires)
+    assert OidcFixture.calls(f, :discovery) == 1
+    assert OidcFixture.calls(f, :jwks) == 1
+    assert OidcFixture.calls(f, :token) == 0
+  end
+
+  test "an invalid POST binding cannot signal the validated-body barrier" do
+    ref = make_ref()
+    f = OidcFixture.start!(barriers: %{token: {self(), ref}})
+    code = OidcFixture.issue_code(f, Map.to_list(Map.put(@expectations, :verifier, String.duplicate("x", 43))))
+    assert {:error, :unknown_outcome} == Oidc.exchange(OidcFixture.config(f), code, @expectations, deadline())
+    refute_receive {:oidc_barrier, ^ref, :token, :ready, _, _}
+    assert OidcFixture.calls(f, :token) == 1
+    stop_supervised!(f.server_id)
+    refute Process.alive?(f.server)
+  end
+
+  for failure <- [:owner_down, :abandoned] do
+    test "fixture barrier cleans up when #{failure} without a release" do
+      ref = make_ref()
+      test = self()
+
+      owner =
+        if unquote(failure) == :owner_down do
+          spawn_link(fn ->
+            receive do
+              event -> send(test, event)
+            end
+
+            receive do
+              :stop -> :ok
+            end
+          end)
+        else
+          test
+        end
+
+      on_exit(fn -> if owner != test and Process.alive?(owner), do: Process.exit(owner, :kill) end)
+      f = OidcFixture.start!(barriers: %{discovery: {owner, ref}})
+      caller = Task.async(fn -> Req.get(f.origin <> "/discovery", connect_options: [transport_opts: [cacerts: [f.ca]]], retry: false) end)
+      assert_receive {:oidc_barrier, ^ref, :discovery, :ready, provider, _}, 1_000
+      provider_monitor = Process.monitor(provider)
+      if unquote(failure) == :owner_down, do: send(owner, :stop)
+      assert {:ok, %{status: 503, body: "fixture barrier abandoned"}} = Task.await(caller, 2_000)
+
+      if unquote(failure) == :abandoned do
+        assert_receive {:oidc_barrier, ^ref, :discovery, :done, ^provider, _, :abandoned}, 1_000
+      else
+        refute Process.alive?(owner)
+      end
+
+      stop_supervised!(f.server_id)
+      assert_receive {:DOWN, ^provider_monitor, :process, ^provider, _}, 1_000
+      refute Process.alive?(provider)
+      refute Process.alive?(caller.pid)
+      refute Process.alive?(f.server)
+    end
+  end
+
+  defp barrier_exchange(f) do
+    cfg = OidcFixture.config(f)
+    code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+    started = System.monotonic_time(:millisecond)
+    expires = started + 650
+    caller = Task.async(fn -> {Oidc.exchange(cfg, code, @expectations, expires), System.monotonic_time(:millisecond)} end)
+    on_exit(fn -> if Process.alive?(caller.pid), do: Process.exit(caller.pid, :kill) end)
+    {caller, started, expires}
+  end
+
+  defp await_barrier(ref, stage, expires) do
+    remaining = max(expires - System.monotonic_time(:millisecond), 0)
+    assert_receive {:oidc_barrier, ^ref, ^stage, :ready, provider, received_at}, remaining
+    on_exit(fn -> send(provider, {ref, :release}) end)
+    assert received_at < expires
+    IO.puts("absolute deadline fixture ready (no credentials): " <> inspect({stage, received_at, expires}))
+    {provider, received_at}
+  end
+
+  defp monitor_exchange_worker(caller) do
+    {:links, links} = Process.info(caller.pid, :links)
+    worker = Enum.find(links, &(&1 != self()))
+    assert is_pid(worker)
+    {worker, Process.monitor(worker)}
+  end
+
+  defp release_at_deadline(provider, ref, expires) do
+    timer = Process.send_after(provider, {ref, :release}, expires + 20, abs: true)
+    on_exit(fn -> Process.cancel_timer(timer) end)
+  end
+
+  defp assert_exchange_timeout(caller, worker, monitor, started) do
+    assert {{:error, :unknown_outcome}, returned_at} = Task.await(caller, 1_000)
+    assert returned_at - started < 850
+    assert_exchange_stopped(caller, worker, monitor)
+    IO.puts("absolute deadline caller lifecycle (no credentials): " <> inspect({started, started + 650, returned_at, :caller_and_worker_terminated}))
+  end
+
+  defp assert_exchange_stopped(caller, worker, monitor) do
+    assert_receive {:DOWN, ^monitor, :process, ^worker, reason}, 500
+    assert reason in [:normal, :killed]
+    refute Process.alive?(worker)
+    refute Process.alive?(caller.pid)
+  end
+
+  defp finish_barrier(f, ref, stage, provider, expires \\ nil) do
+    assert_receive {:oidc_barrier, ^ref, ^stage, :released, ^provider, released_at}, 1_000
+    if expires, do: assert(released_at > expires)
+    assert_receive {:oidc_barrier, ^ref, ^stage, :done, ^provider, done_at, :released}, 1_000
+    assert done_at >= released_at
+    monitor = Process.monitor(provider)
+    stop_supervised!(f.server_id)
+    assert_receive {:DOWN, ^monitor, :process, ^provider, _}, 1_000
+    refute Process.alive?(provider)
+    refute Process.alive?(f.server)
+    IO.puts("absolute deadline fixture events (no credentials): " <> inspect({stage, released_at, done_at, :provider_and_listener_terminated}))
   end
 
   test "staged connection dispatch and TLS handshake cannot produce a late POST" do
