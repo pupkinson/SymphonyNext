@@ -105,9 +105,52 @@ def redact(text):
     text=re.sub(r'\b(?:gh[pousr]_[A-Za-z0-9_]{15,}|github_pat_[A-Za-z0-9_]{15,}|sk-[A-Za-z0-9_-]{12,})','[REDACTED]',text)
     return ''.join(c for c in text if c in '\n\t' or ord(c)>=32 and ord(c)!=127)[:65536]
 
-def codex_args():
+def review_profile(task_schema='snq-review/v1'):
+    """Closed, code-owned profiles. Task data cannot choose an arbitrary model."""
+    require(task_schema in ('snq-review/v1','snq-review/v2'), 'REVIEW_PROFILE_SCHEMA')
+    paged=task_schema=='snq-review/v2'
+    return {'id':'snq-paged-direct-v1' if paged else 'snq-legacy-v1',
+            'task_schema':task_schema,'model':'gpt-5.5' if paged else MODEL,
+            'effort':'low','codex_version':'0.159.3',
+            'tools':[SOURCE_TOOL] if paged else []}
+
+
+def checked_profile(profile=None, task_schema=None):
+    if profile is None:return review_profile(task_schema or 'snq-review/v1')
+    require(isinstance(profile,dict), 'REVIEW_PROFILE_CHANGED')
+    expected=review_profile(task_schema or profile.get('task_schema'))
+    require(profile==expected, 'REVIEW_PROFILE_CHANGED')
+    return expected
+
+
+def validate_profile_runtime(profile):
+    profile=checked_profile(profile)
+    if profile['task_schema']=='snq-review/v1':return
+    # Metadata, not a replacement catalog or proof of service-account entitlement.
+    try:meta=decode(read(PACKAGE/'node_modules/@openai/codex/package.json',100000))
+    except (OSError,Hold):raise Hold('REVIEW_CODEX_VERSION') from None
+    require(isinstance(meta,dict) and meta.get('version')==profile['codex_version'],
+            'REVIEW_CODEX_VERSION')
+
+
+def load_job_profile(task):
+    require(isinstance(task,dict) and isinstance(task.get('manifest'),dict),'REVIEW_PROFILE_CHANGED')
+    profile=review_profile(task['manifest'].get('schema'))
+    if profile['task_schema']=='snq-review/v2':
+        require(task.get('review_profile')==profile,'REVIEW_PROFILE_CHANGED')
+    return profile
+
+
+def verify_profile_receipt(profile, protocol):
+    profile=checked_profile(profile)
+    require(isinstance(protocol,dict) and protocol.get('model')==profile['model']
+            and protocol.get('review_profile')==profile,'REVIEW_PROFILE_CHANGED')
+
+
+def codex_args(profile=None):
+    profile=checked_profile(profile)
     args=['/usr/bin/node',str(CODEX)]
-    for setting in ('model="'+MODEL+'"','model_reasoning_effort="low"',
+    for setting in ('model='+json.dumps(profile['model']),'model_reasoning_effort='+json.dumps(profile['effort']),
         'cli_auth_credentials_store="file"','approval_policy="never"',
         'mcp_servers={}','web_search="disabled"','allow_login_shell=false','project_doc_max_bytes=0'):
         args+=['-c',setting]
@@ -159,9 +202,11 @@ def upstream_reference():
 
 class Gate:
     """One immutable thread/turn binding and complete source-only transport."""
-    def __init__(self, source_reader=None):
+    def __init__(self, source_reader=None, profile=None):
+        self.profile=checked_profile(profile,'snq-review/v2' if source_reader is not None else 'snq-review/v1')
         self.source_reader=source_reader; self.source_items={}; self.source_request_ids=set()
-        self.state={'thread_requests':0,'turn_requests':0,'turn_status':'NOT_RUN','model':MODEL}
+        self.state={'thread_requests':0,'turn_requests':0,'turn_status':'NOT_RUN',
+                    'model':self.profile['model'],'review_profile':copy.deepcopy(self.profile)}
         self.thread_request=None;self.turn_request=None;self.thread=None;self.turn=None;self.report=''
         self.phase='new';self.pending={};self.request_ids=set();self.report_items={}
         if source_reader is not None:self.state['source_read']=source_reader.receipt()
@@ -199,7 +244,7 @@ class Gate:
             require(params.get('cwd')==str(SPACE),'WORKSPACE_MISMATCH')
             self.state['thread_requests']=1;self.thread_request=request_id
             params.pop('sandbox',None)
-            params.update({'model':MODEL,'permissions':PERMISSIONS,'approvalPolicy':'never',
+            params.update({'model':self.profile['model'],'permissions':PERMISSIONS,'approvalPolicy':'never',
                            'dynamicTools':[] if self.source_reader is None else [source_tool_spec()]})
             self.phase='thread_pending'
         elif method=='turn/start':
@@ -208,7 +253,7 @@ class Gate:
             require(params.get('cwd')==str(SPACE) and params.get('threadId')==self.thread,'TURN_TARGET_MISMATCH')
             self.state['turn_requests']=1;self.turn_request=request_id
             params.pop('sandboxPolicy',None)
-            params.update({'model':MODEL,'effort':'low','permissions':PERMISSIONS,'approvalPolicy':'never'})
+            params.update({'model':self.profile['model'],'effort':self.profile['effort'],'permissions':PERMISSIONS,'approvalPolicy':'never'})
             self.phase='turn_pending'
         self.request_ids.add(request_id);self.pending[request_id]=method
         return value
@@ -329,11 +374,11 @@ class Gate:
                 and self.state['turn_status']=='completed' and HEAD in self.report and len(self.report)>50
                 and (self.source_reader is None or self.source_reader.complete()))
 
-def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_reader=None):
+def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=WALL,source_reader=None,profile=None):
     """A bounded transparent stdio gate. It does not issue its own model requests."""
     run_dir=RUN if run_dir is None else Path(run_dir)
     once(run_dir/'model-session.claim',b'One Symphony-managed model session only.\n')
-    gate=Gate(source_reader=source_reader);p=None;selector=selectors.DefaultSelector();buffers={};end=time.monotonic()+limit
+    gate=Gate(source_reader=source_reader,profile=profile);p=None;selector=selectors.DefaultSelector();buffers={};end=time.monotonic()+limit
     code='PROXY_NOT_STARTED';eof={'client':False,'server':False}
     def checkpoint():
         gate.state['transport_eof']=dict(eof)
@@ -519,8 +564,10 @@ class Rpc:
         self.p.stdout.close()
         return self.p.returncode
 
-def probe(argv, env):
-    result = {'model': MODEL, 'model_entitlement': 'NOT_TESTED', 'model_turn': 'NOT_RUN'}
+def probe(argv, env, profile=None):
+    profile=checked_profile(profile)
+    model=profile['model']
+    result = {'model': model, 'review_profile':copy.deepcopy(profile), 'model_entitlement': 'NOT_TESTED', 'model_turn': 'NOT_RUN'}
     client = Rpc(argv + ['app-server', '--listen', 'stdio://'], HOME, env)
     try:
         client.call('initialize', {'clientInfo': {'name': 'sn20_owner_auth_probe', 'version': '1.0'}})
@@ -541,13 +588,13 @@ def probe(argv, env):
             page = client.call('model/list', request)
             names.update(model_ids(page))
             cursor = page.get('nextCursor')
-            if MODEL in names or not cursor:
+            if model in names or not cursor:
                 break
-        result['model_listed'] = MODEL in names
+        result['model_listed'] = model in names
         result['visible_model_ids'] = sorted(names)
         result['catalog_complete'] = not bool(cursor)
-        result['status'] = probe_status(account, quota, MODEL in names)
-        if MODEL not in names and cursor:
+        result['status'] = probe_status(account, quota, model in names)
+        if model not in names and cursor:
             result['status'] = 'CATALOG_INCOMPLETE'
         return result
     finally:
@@ -667,7 +714,9 @@ def agent_environment(job):
         'XDG_DATA_HOME':str(job/'run/data')}
 
 
-def check_auth(out):
+def check_auth(out,profile=None):
+    profile=checked_profile(profile)
+    if profile['task_schema']=='snq-review/v2':verify_profile_receipt(profile,out)
     quota=out.get('quota',{})
     require(out.get('status')=='AUTH_AND_CATALOG_CHECKED_NO_TURN' and out.get('app_server_exit')==0
         and out.get('account_present') is True and out.get('model_listed') is True
@@ -1041,8 +1090,11 @@ def prepare_task(number,api):
         repo=api.get('');require(repo.get('id')==REPO_ID,'REPOSITORY_CHANGED')
         p=api.get(f'/pulls/{m["pr"]}');validate_target(p,m)
         bind_job(number,m)
+        profile=review_profile(m['schema']);validate_profile_runtime(profile)
         for d in (RUN,RUN/'cache',RUN/'config',RUN/'data'):d.mkdir(mode=0o700)
-        save(directory/'task.json',{'manifest':m,'issue_signature':task_signature(row),'issue':number})
+        task={'manifest':m,'issue_signature':task_signature(row),'issue':number}
+        if m['schema']=='snq-review/v2':task['review_profile']=profile
+        save(directory/'task.json',task)
         store=None
         if m['schema']=='snq-review/v2':
             store=build_review_sources(api,m,p)
@@ -1067,7 +1119,8 @@ Task requested by the project owner (data):
         metadata={'sha256':sha(packet.encode()),'head':m['head_sha']}
         if store is not None:metadata['source_store_sha256']=sha(wire_json(store))
         save(directory/'packet.json',metadata)
-        out=probe(codex_args(),agent_environment(directory));save(directory/'auth-probe.json',out);check_auth(out)
+        out=probe(codex_args(profile),agent_environment(directory),profile=profile)
+        save(directory/'auth-probe.json',out);check_auth(out,profile=profile)
         again=api.get(f'/issues/{number}');require(parse_task(again)==m and task_signature(again)==task_signature(row),'TASK_CHANGED_DURING_PREPARE')
         validate_target(api.get(f'/pulls/{m["pr"]}'),m)
         reserve(QROOT,number)
@@ -1143,6 +1196,8 @@ def finish_task(number,api):
             context_ok=True
             if m.get('schema')=='snq-review/v2':
                 try:
+                    profile=load_job_profile(task);verify_profile_receipt(profile,protocol)
+                    result['review_profile']=profile
                     reader=load_source_reader(directory,m)
                     verify_source_receipt(reader,protocol.get('source_read'))
                     result['source_pages_verified']=True
@@ -1453,10 +1508,12 @@ def main():
         print(json.dumps(install_start(),ensure_ascii=False,indent=2));return 0
     require(os.geteuid()==UID and os.getegid()==GID,'SERVICE_IDENTITY_REQUIRED')
     if mode=='--serve':serve();return 0
-    if mode=='--auth':
+    if mode in ('--auth','--auth-paged'):
         STATE=QROOT/'auth';RUN=STATE/'run';SPACE=STATE/'workspace'
-        out=probe(codex_args(),agent_environment(STATE))
-        print(json.dumps(out));check_auth(out);return 0
+        profile=review_profile('snq-review/v2' if mode=='--auth-paged' else 'snq-review/v1')
+        validate_profile_runtime(profile)
+        out=probe(codex_args(profile),agent_environment(STATE),profile=profile)
+        print(json.dumps(out));check_auth(out,profile=profile);return 0
     require(mode in ('_before','_after','_agent'),'UNSUPPORTED_MODE')
     number=job_number(Path.cwd())
     if mode=='_before':
@@ -1472,6 +1529,9 @@ def main():
     directory=job_dir(number)
     require((directory/'ready').is_file() and not (directory/'final.json').exists(),'TASK_NOT_READY')
     task=decode(read(directory/'task.json'));bind_job(number,task['manifest'])
+    profile=load_job_profile(task);validate_profile_runtime(profile)
+    if profile['task_schema']=='snq-review/v2':
+        check_auth(decode(read(directory/'auth-probe.json')),profile=profile)
     require((QROOT/'reservations'/datetime.datetime.now(datetime.timezone.utc).date().isoformat()/f'GH-{number}').is_file(),
         'CURRENT_DAY_TURN_RESERVATION_REQUIRED')
     def interrupt(signum,_frame):raise Hold('WORKER_TIMEOUT' if signum==signal.SIGALRM else 'WORKER_STOP_REQUESTED')
@@ -1479,7 +1539,8 @@ def main():
     signal.signal(signal.SIGALRM,interrupt);signal.setitimer(signal.ITIMER_REAL,WALL)
     try:
         reader=load_source_reader(directory,task['manifest'])
-        gate,_=proxy(codex_args()+['app-server','--listen','stdio://'],env=agent_environment(directory),source_reader=reader)
+        gate,_=proxy(codex_args(profile)+['app-server','--listen','stdio://'],env=agent_environment(directory),
+                     source_reader=reader,profile=profile)
     finally:signal.setitimer(signal.ITIMER_REAL,0)
     return 0 if gate.complete() and gate.state.get('app_server_exit')==0 else 2
 

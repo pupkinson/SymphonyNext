@@ -120,7 +120,9 @@ class PersistenceTests(unittest.TestCase):
             if path=='/pulls/84':return copy.deepcopy(a.pr)
             return old(path)
         a.get=get
-        with tempfile.TemporaryDirectory() as t,patch.object(q,'QROOT',Path(t)),patch.object(q,'probe',return_value={}),patch.object(q,'check_auth'):
+        with tempfile.TemporaryDirectory() as t,patch.object(q,'QROOT',Path(t)),patch.object(q,'PACKAGE',Path(t)/'package'),patch.object(q,'probe',return_value={}),patch.object(q,'check_auth'):
+            meta=q.PACKAGE/'node_modules/@openai/codex/package.json'
+            meta.parent.mkdir(parents=True);meta.write_text('{"version":"0.159.3"}')
             space=Path(t)/'workspaces/GH-887';space.mkdir(parents=True)
             saved={k:getattr(q,k) for k in ('STATE','RUN','SPACE','HEAD','BASE','TREE')}
             try:
