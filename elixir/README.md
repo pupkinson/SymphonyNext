@@ -55,6 +55,45 @@ tracker issue can become a dispatch candidate again after restart.
 
 ## Prerequisites
 
+### Disabled Authentik protocol adapter (Task1)
+
+`SymphonyControl.Auth.Config`, `Oidc` and `Clock` are source-only modules; they are
+not installed in the application supervisor or HTTP pipeline. Authentication stays
+disabled. The adapter pins Oidcc 3.9.0, uses operator-bound HTTPS endpoints, S256,
+one token POST, one key refresh, and a shared maximum 5-second network deadline.
+Secret values are read through owned file references and are never configuration
+fields. Test CA trust is confined to the disposable HTTPS fixture.
+
+Run the focused protocol suite from this directory after `mix setup`:
+
+```sh
+mix test test/symphony_control/auth/config_test.exs test/symphony_control/auth/oidc_test.exs --trace
+```
+
+The fixture requires an existing `openssl` binary and loopback listeners. Full
+`make all` also requires the existing disposable SN004 PostgreSQL fixture described
+in [control-foundation.md](../docs/engineering/control-foundation.md). Neither a
+focused GREEN nor compilation enables live SSO. Evidence, previous native history
+and the Cloud gate blockers are in
+[authentik-project-access.md](../docs/engineering/authentik-project-access.md).
+
+The separately approved 2026-10-05 fixup adds a valid UTF8 Content-Type parameter
+regression with structural binary/integer-list telemetry checks. Header values preserve
+wire bytes, while nonUTF8 values are refused inside the adapter callback. Targeted49/0,
+full CoreTest52/0 and broad462/0/6 with coverage100% are observed. Only three CoreTest
+retry cases select local empty memory fixtures; assertions/timers/ranges are unchanged.
+Final exact-source gates and owned PostgreSQL cleanup are in the checkpoint/workpad.
+Pin/lock/coverage policy and prior histories are preserved. Authentication stays disabled;
+independent review/trusted checks/live acceptance remain separate.
+
+The 2026-10-06 repair also checks current credential UTC expiry at caller acceptance,
+after the existing absolute monotonic deadline guard. The real HTTPS queued-result
+tests cover expiry before resumption and a still-valid positive control:51/1 semantic
+RED then51/0 GREEN. Both check one token POST, worker termination and captured-log
+redaction. The HTTPS fixture and dependency/coverage policies remain unchanged.
+Final full gates, exact source bindings and owned PostgreSQL cleanup are in the
+engineering report/checkpoint; auth activation and trusted checking remain separate.
+
 We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
 
 ```bash
@@ -438,3 +477,54 @@ Control component tests require isolated PostgreSQL through `SN004_TEST_PG_SOCKE
 See [the configuration and test guide](../docs/engineering/control-foundation.md)
 for startup, migration, health, authorization and test limits. Default startup
 keeps control disabled; production tracker and Authentik acceptance remain separate.
+
+The separately admitted 2026-10-06 dependency-context continuation adds43 tests:
+scoped structural telemetry/log checks over real signed-token HTTPS malformed responses
+and scanner controls. Baseline and candidate94/0 pass; makeall507/0/6, coverage100%,
+strict Credo and Dialyzer pass. No semantic product RED was reproduced; oidc.ex is
+unchanged. [Complete licensed dependency source context](../docs/engineering/oidcc-3.9.0-review-context.md) binds the actual
+selected Oidcc/Telemetry files; Oidcc selected Hex-source equivalence is verified,
+full Telemetry archive equivalence is NOT_VERIFIED. Existing token_type/unknown-field
+acceptance is classified explicitly; no stricter protocol contract is added.
+Actual client model/effort/speed remain UNKNOWN. History and frozen controls are preserved;
+new independent review/trusted native/live acceptance remain separate, auth stays disabled.
+
+
+TLS fixture attempt20261007 stopped **BLOCKED repair_cycles_exhausted (2/2)**.
+Cloud baseline507/0/6,100%; uncommitted candidate509/1/6,100% exposes a charlist/binary
+fixture failure in the new positive POST control. The1500ms/<1700ms deadline and
+negative TLS-stage/latePOST assertions remain. Full gates/commit/push/newHEAD are
+NOT_RUN; auth remains disabled. See [actual evidence report](../docs/engineering/authentik-project-access.md).
+
+
+AUTH-TLS-SOURCE-20261008-NEXT recovered the exact historical TLS draft and fixed
+its real socket binary-mode failure. Final Config/OIDC96/0, bounded TLS/positive/
+setup-pause controls, strict gates, make all509/0/6 and fixed-seed confirmation
+509/0/6 passed with coverage100%. Earlier650ms/readiness failures remain in the
+engineering report; cause UNKNOWN. New attempt2/2; publication readback is in
+workpad33. Independent review/native check/live acceptance remain NOT_RUN; auth
+stays disabled and historical native HOLD is open.
+
+
+SN005-DEADLINE-POST-BARRIER-20261008 replaces the650ms test's pre-token timing race
+with a reference-bound acknowledgement of a complete validated HTTPS POST. Its
+response is held past the SAME original deadline; the850ms bound, onePOST and
+caller/worker/provider cleanup remain. A signed positive control and separate
+discovery/JWKS shared-budget regression pass. Final Config/OIDC101/0; fixed-seed
+coverage and make all514/0/6,100%, all stage exits0. TLS1500ms/<1700ms/latePOST0
+controls remain intact. Actual commands/hashes and preserved failure history are
+in the engineering report. Closed old source attempts (including budget_violation)
+and native422 HOLD remain unchanged. Independent new-HEAD review/trusted/live
+acceptance remain separate and NOT_RUN; production auth stays disabled.
+
+
+SN005-OWNER-DOWN-OBSERVER-41D840 repairs the fixture cleanup regression: a surviving
+observer receives the actual reference/stage/provider-bound completion outcome.
+Owner death must report owner_down; no release must report abandoned. The old
+test passed with DOWN handling removed; the repaired test rejects that mutant,
+and both cases pass after exact-byte restoration. Config/OIDC101/0 and one full
+make all514/0/6,coverage100%,all stage exits0 passed. This is prior closed2/2 plus
+one separately admitted additional cycle1/1; historical reports remain. The650ms
+POST/shared-budget and stagedTLS controls are byte-unchanged, auth disabled and
+native HOLD remains. New independent review/trusted/live acceptance are NOT_RUN;
+actual commands, mutation hashes and owned PostgreSQL cleanup are in the report.
