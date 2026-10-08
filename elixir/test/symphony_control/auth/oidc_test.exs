@@ -599,18 +599,15 @@ defmodule SymphonyControl.Auth.OidcTest do
         end
 
       on_exit(fn -> if owner != test and Process.alive?(owner), do: Process.exit(owner, :kill) end)
-      f = OidcFixture.start!(barriers: %{discovery: {owner, ref}})
+      f = OidcFixture.start!(barriers: %{discovery: {owner, ref}}, barrier_observer: test)
       caller = Task.async(fn -> Req.get(f.origin <> "/discovery", connect_options: [transport_opts: [cacerts: [f.ca]]], retry: false) end)
       assert_receive {:oidc_barrier, ^ref, :discovery, :ready, provider, _}, 1_000
       provider_monitor = Process.monitor(provider)
       if unquote(failure) == :owner_down, do: send(owner, :stop)
       assert {:ok, %{status: 503, body: "fixture barrier abandoned"}} = Task.await(caller, 2_000)
 
-      if unquote(failure) == :abandoned do
-        assert_receive {:oidc_barrier, ^ref, :discovery, :done, ^provider, _, :abandoned}, 1_000
-      else
-        refute Process.alive?(owner)
-      end
+      assert_receive {:oidc_barrier, ^ref, :discovery, :done, ^provider, _, unquote(failure)}, 1_000
+      if unquote(failure) == :owner_down, do: refute(Process.alive?(owner))
 
       stop_supervised!(f.server_id)
       assert_receive {:DOWN, ^provider_monitor, :process, ^provider, _}, 1_000

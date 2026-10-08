@@ -1148,3 +1148,133 @@ the new HEAD, trusted native check, live acceptance and Task2–5/auth activatio
 merge/deploy remain NOT_RUN. PR90's blocked native dependency preparation is not
 replayed. Next bounded step: independent read-only review of the exact published
 candidate and this retained evidence; no second model is started by the author.
+
+
+## Owner-down observer repair — SN005-OWNER-DOWN-OBSERVER-41D840
+
+Denis launched one additional source-only repair for
+[P2 inline4224147701](https://github.com/pupkinson/SymphonyNext/pull/75#discussion_r4224147701),
+qualified by coordinator4224166358 and [handoff6069127083](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6069127083).
+[ACCEPTED6069483906](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6069483906)
+preceded tracked edits. T0 `2026-10-08T21:28:00.540139Z`, deadline
+`2026-10-09T01:28:00.540139Z`; final1800s reserved from00:58:00.540139Z.
+The preceding POST-barrier attempt remains CLOSED2/2; this separately admitted
+additional cycle used1/1. Zero profile changes, one writer, zero extra agents.
+Earlier source/native attempts and budget_violation records are not renewed.
+Actual exposed model/effort/speed/taskURL remain UNKNOWN; Cloud revision197 was
+observed current/running. Fresh GitHub/fetch and a clean isolated checkout agreed
+on HEAD41d840cc75fb773251b2b88f8631affbce7679e5,
+TREEa909c047c1e298f5577bc439c385e3c1fa07052f,
+BASE233dda1878533a425574074b8d34344b50d41cf7. Prior writer was released;
+no competing writer was found in current33/95/PR75. Old six dirty files,
+staged/unstaged/untracked inventory and sealed historical evidence were copied
+and hash-verified without changing their original worktrees.
+
+### Observable completion and mutation evidence
+
+The fixture accepts an optional `barrier_observer` PID for its existing `:done`
+message. The monitored owner still controls readiness/release and owner death;
+the observer receives the actual completion outcome with the same unique
+reference, stage and provider PID. With no observer, completion still goes to
+the owner. Both existing real HTTPS503 cleanup tests now require their exact
+`:owner_down` or `:abandoned` outcome and retain owner/caller/provider/listener
+termination assertions. No new short timing bound or production behavior is added.
+
+All observations below use the same command, from the indicated isolated copy:
+`mix test test/symphony_control/auth/oidc_test.exs:582 --seed 876309 --trace`.
+
+| Fixture/test state | Actual result | Exit |
+| --- | --- | --- |
+| Published parent, unchanged tests | 2/0 | 0 |
+| Parent in separate mutation copy, only DOWN receive clause removed | 2/0; old test misses mutation | 0 |
+| Outcome assertions added, original fixture | 2/1; owner_down event missing; fixture RED | 2 |
+| Optional observer implemented | 2/0 | 0 |
+| Same new tests, only DOWN clause removed in mutation copy | 2/1; actual abandoned versus expected owner_down; abandonment passes | 2 |
+| Exact candidate fixture bytes restored, same new tests | 2/0 | 0 |
+
+The mutant changed only the DOWN receive clause relative to each saved fixture.
+Restoration checked full bytes and SHA256, without reset/clean; no mutant is
+published. Candidate fixtureSHA256
+`3677fbf3507bc404b16ee475b56420de9a1225e395bc8115bf631a768ff0ad46`
+and testsSHA256 `1dc67f0d778e320bacb1be9c3ac0468ae839acf0586a53bce6ab846dcc318ef2`
+match the restored copy. This is fixture regression RED, not semantic product
+or native RED. Original owner-down handling already worked; the repaired test
+now distinguishes it from the unchanged1000ms fallback.
+
+### Gates, frozen controls and resource cleanup
+
+Final Config/OIDC:101/0, seed876309, exit0; no new tests/skips. Related explicit
+deadline/POST/invalid-binding/owner cleanup/threeTLS controls:9/0, seed876309, exit0.
+One full `make -C elixir all`:514/0/6, actual seed535217/max-cases8, coverage100%,
+exit0. Setup/build/format/specs+strictCredo/coverage/deps/Dialyzer stages all0;
+Dialyzer0 errors/0 skips. Bootstrap12/0 and MCP contracts11/0, exits0.
+All test commands were sequential, verified from start/end records. Make's dev
+setup/build/format overlapped the end of targeted tests using separate dev/test
+build paths; its coverage test started only after targeted completion. The
+dependency lock and executable source bytes stayed unchanged during these gates.
+
+Elixir/Mix1.19.5, OTP28 ERTS16.4; version/setup exits0. Frozen Oidcc3.9.0 and
+mix.lockSHA13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073 retained.
+Cloud cgroupCPU quota4,16GiB,pids.max=max,schedulers4 (nproc5 observed) differs
+from protected2CPU/4GiB/pids256/+S2:2/loopback-only. Native equivalence is not claimed.
+Own PostgreSQL17.11 uses new0700 data/socket, private Unix55474,
+sn004_fixture/sn004_test, empty listen_addresses/noTCP. Init/start/readiness0.
+It stayed alive through all dependent gates and final process completion checks;
+stop2026-10-08T21:41:04.830392Z exit0, status3. No running own server or owned
+HTTPS temp fixture remains; previous zombies/init/foreign processes were untouched.
+
+Byte comparisons preserve the whole stagedTLS fixture implementation and test
+suffix, including all threeTLS scenarios/helpers,1500ms/<1700ms/accept1/handshake1/
+latePOST0/positive/adverse setup. Validated POST/one650msdeadline/<850ms,
+discovery/JWKS shared-budget/positive/invalid-binding blocks and helpers are also
+byte-identical. Production Oidc/Config/Clock, dependencies, CoreTest/test_helper,
+canonical requirements/index/policy and CI/thresholds/exclusions are unchanged.
+Only the six admitted paths change; MANIFEST retains43 existing records and
+updates only the five changed allowed source/document hashes.
+
+### Complete command records and portable handoff
+
+Evidence root `/workspace/scratch/SN005-OWNER-DOWN-OBSERVER-41D840`;
+own checkout `/workspace/scratch/sn005-owner-down-observer-src`, sequential
+mutation copy `/workspace/scratch/sn005-owner-down-observer-mutation`.
+`commands.jsonl` and raw `.stdout/.stderr/.output` retain complete argv/cwd,
+start/endUTC, exits and separate hashes. Selected complete output hashes:
+
+| Command label | Exit | SHA256 |
+| --- | --- | --- |
+| `elixir-version` | 0 | `b7bc746ca83ed80c14bbb1d4a097a39a1e61e01f8d50cf14c35dcfefd2faa765` |
+| `mix-version` | 0 | `c5d8941ea9c5bb7a6b2a755fafb64c04ba91b6345eb1f62ec2e3b594353e4305` |
+| `mix-setup` | 0 | `3f9498e43d094a45da3d9a6bf870b9b3de5c7d5ad34a8a0615269b9800878b0c` |
+| `baseline-owner-cases` | 0 | `1bef5cda406afc4d2b2dff057b08b7b0ca6e1c546083049de62f196de170e314` |
+| `baseline-down-disabled` | 0 | `f1699d7783f5d9e91c75550ebd4f926151d99518ef130389f78b6fdf3bd18115` |
+| `observer-fixture-red` | 2 | `cc0e929f966a1647d8e1faff6d7aab4f054b671ca12833ef0a7343b621d49101` |
+| `observer-green` | 0 | `0a767bf1397c5c829febef4b4a1a0db700c2d56d8b9e2e08a8ad38f38cad744d` |
+| `candidate-down-disabled` | 2 | `85242d03c812b333adcbb9720cd4d05188bae2e3d99126a8c782342b168d1834` |
+| `candidate-mutation-restore` | 0 | `922ae86ddb8b2fc8c4f1f72cd09aca0fa202b667ae6564079a1bfc86161f14f1` |
+| `restored-observer-green` | 0 | `c663f1789f2020a3b825a0e0542ba2531e5b19f1af6eb3051a6a50ab75790240` |
+| `related-deadline-tls-cleanup` | 0 | `f687fb97f08871d023822febeb22659362ab031bad1fbbd779e0a1c839ebfae2` |
+| `final-config-oidc` | 0 | `542133ee0a600be5eed2b52537be1ee06848bd0aa1e253146b29790683c1a666` |
+| `make-all` | 0 | `08f4f460ab9e957b38814db76ed5f9a2f18889af3ee37c4f48c45c02a45f5943` |
+| `bootstrap` | 0 | `d1a78221f4c616afcb6cc481132d1cfe215654ca22d4c8f55833501402b327dc` |
+| `mcp-contracts` | 0 | `cae7d5cea057dfae49fff50a39b7b2390ce23a693428c60cbc409d0b71f862b0` |
+| `dependent-processes-complete` | 0 | `d89fd5090089373161f10e8499098319b0a8c2ff2cc50df1e5e08476388eb77e` |
+| `pg-stop` | 0 | `ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d` |
+| `pg-status` | 3 | `e138ccb54fdb08283c6eb21159c53207bbbbf07077246e2804e18d22efe6e250` |
+
+Report snapshotUTC `2026-10-08T21:42:19.234226+00:00`; elapsed858.694s.
+Publication, final MANIFEST/scope/actualPRbody checks and fresh remote tuple/clean
+readback are subsequent recorded steps in the final33 checkpoint, not inferred
+from runtime GREEN. Portable patch/full changed files/evidence and an exact-HEAD
+review handoff are prepared separately; the restored mutant copy is not published.
+
+VERIFIED: old test misses the controlled mutation; new outcome assertions detect
+it; normal/restored fixture and mandatory author gates pass with owned cleanup.
+INFERRED: the test now protects the owner-death branch independently of fallback
+timing. UNKNOWN: client model/effort/speed and root cause of old nativeA failure.
+BLOCKED: fullSN005/native quality/live Authentik acceptance. Auth stays disabled,
+native422 HOLD/history unchanged. Independent review of the new HEAD/trusted
+native/live acceptance NOT_RUN; no reviewer is launched or self-accepted here.
+Task2–5/PR90 blocked dependency preparation/main/release/production/DF Assistant/
+credentials/permissions/CI/rootdrivers/merge/deploy remain excluded.
+Next bounded action: independent read-only review of the exact published HEAD
+and preserved mutation/gate packet; subsequent native/live stages remain separate.

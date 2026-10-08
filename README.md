@@ -98,3 +98,15 @@ controls remain intact. Actual commands/hashes and preserved failure history are
 in the engineering report. Closed old source attempts (including budget_violation)
 and native422 HOLD remain unchanged. Independent new-HEAD review/trusted/live
 acceptance remain separate and NOT_RUN; production auth stays disabled.
+
+
+SN005-OWNER-DOWN-OBSERVER-41D840 repairs the fixture cleanup regression: a surviving
+observer receives the actual reference/stage/provider-bound completion outcome.
+Owner death must report owner_down; no release must report abandoned. The old
+test passed with DOWN handling removed; the repaired test rejects that mutant,
+and both cases pass after exact-byte restoration. Config/OIDC101/0 and one full
+make all514/0/6,coverage100%,all stage exits0 passed. This is prior closed2/2 plus
+one separately admitted additional cycle1/1; historical reports remain. The650ms
+POST/shared-budget and stagedTLS controls are byte-unchanged, auth disabled and
+native HOLD remains. New independent review/trusted/live acceptance are NOT_RUN;
+actual commands, mutation hashes and owned PostgreSQL cleanup are in the report.

@@ -314,6 +314,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
         respond.()
 
       {owner, ref} when is_pid(owner) and is_reference(ref) ->
+        observer = Keyword.get(data.opts, :barrier_observer, owner)
         monitor = Process.monitor(owner)
         send(owner, {:oidc_barrier, ref, stage, :ready, self(), System.monotonic_time(:millisecond)})
 
@@ -334,7 +335,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
           end
         after
           Process.demonitor(monitor, [:flush])
-          send(owner, {:oidc_barrier, ref, stage, :done, self(), System.monotonic_time(:millisecond), outcome})
+          send(observer, {:oidc_barrier, ref, stage, :done, self(), System.monotonic_time(:millisecond), outcome})
         end
     end
   end
