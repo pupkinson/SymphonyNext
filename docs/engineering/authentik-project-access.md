@@ -1278,3 +1278,114 @@ Task2–5/PR90 blocked dependency preparation/main/release/production/DF Assista
 credentials/permissions/CI/rootdrivers/merge/deploy remain excluded.
 Next bounded action: independent read-only review of the exact published HEAD
 and preserved mutation/gate packet; subsequent native/live stages remain separate.
+# Task2 durable state — source continuation 2026-10-09
+
+Task2 adds a separately testable local state layer. Authentication remains disabled;
+HTTP login, middleware, IdP eligibility and live revocation belong to Tasks3–5.
+Task1 stays pinned at `1a01e11846a9516edb1b2066bab0511f2d1b314f` with source acceptance
+only. Historical native HOLD and trusted/native/live gates remain open.
+
+The new migration `20261004000000` creates seven `control_auth_*` tables: users,
+exact issuer/subject identities, sessions, pending logins, memberships, platform
+grants and logout JTIs. UUID foreign keys, immediate unique keys, required fields,
+recognized human roles, positive revisions and expiry bounds are database contracts.
+The original CreateProjects migration and project rows are preserved. Auth state has
+no automatic registration or IdP email/group/admin mapping. Session identity has a
+composite foreign key to the exact local identity and user.
+
+`Store` is an internal control API, not a request authorizer. It owns each bounded
+operation; callers must not nest it in their own Repo transactions or retry an unknown
+write. `put_login/4` stores SHA256 state/browser hashes and encrypted nonce/verifier.
+`consume_login/4` uses a browser/config/boot/time-guarded UPDATE RETURNING inside a
+transaction and decrypts only after confirmed commit. A foreign browser does not
+consume the legitimate flow; the lifetime is exactly300000ms, exclusive at expiry.
+Consumed records survive process restart.
+
+`open_session/4` requires an existing active local issuer/subject identity and issues
+32random bytes encoded as an opaque URL-safe handle. The database stores its SHA256,
+never the handle. Rotation revokes the old row and inserts a fresh session atomically;
+only a confirmed transaction releases the new handle. Sessions expire at the smaller
+of3600000ms and credential expiry. Reads never extend that lifetime.
+
+`Actor` carries session/local-user UUIDs, issuer/subject, config generation and boot
+epoch. It has no roles, email or tokens and grants no authority. `local_actor/3` checks
+current local state and authenticated ciphertext; it makes no IdP eligibility claim.
+`actor_current?/3` repeats those checks. `permissions/4` rereads current local
+memberships or the independent `runtime_identity_read` platform grant. The only
+project permission this slice produces is `:project_read`; all five human roles can
+read their own explicitly assigned project. It grants no mutation or admission right.
+
+UTC and monotonic elapsed times must agree exactly in the same boot epoch. Either
+expiry or clock uncertainty fails closed; this conservative rule can require a new
+login after an observed clock offset change. A new boot epoch always rejects old
+sessions and pending flows, while persistent consumed/revoked/JTI state remains.
+No continuity across restart is promised. `revoke/3` and `accept_logout/5` accept only
+internal tagged selectors; exact issuer plus sid/sub intersection prevents cross-user
+logout. JTI deduplication and revocation commit together, with at least3600000ms
+retention. This does not verify a logout JWT; signature/HTTP handling is Task4.
+
+`TokenVault.seal/open/3` uses OTP AES-256-GCM with a runtime32byte key reference.
+Envelope v1 is one version byte, a fresh12byte nonce,16byte tag, then ciphertext.
+Store AAD encodes version, flow/session kind, UUID and config generation. Callers
+cannot choose the nonce. Wrong AAD/key/tamper returns a sanitized error; missing or
+malformed keys fail without plaintext fallback. Token maps remain private encrypted
+terms and are not returned in Actor or permission results.
+
+Every Store query/transaction uses timeout500ms, queue:false, log:false; one outer
+750ms task bounds the complete operation, including pool checkout and COMMIT.
+Timeout/connection loss on writes returns `:unknown_outcome`, never a flow or handle.
+Unknown outcomes require scoped reconciliation; no automatic exchange retry.
+
+Health accepts legacy version `[20260925000000]` only with auth disabled and no auth
+tables. The exact two-version set `[20260925000000,20261004000000]` requires both
+project and auth contracts. The internal `:control_auth_enabled` flag requires that
+second set; this task does not connect or enable a production auth supervisor.
+Missing/future versions, missing or weakened FK/unique/check constraints, nullable
+required fields and invalid backing indexes fail readiness. Liveness and the public
+health response shape remain unchanged; health never applies migrations.
+
+Only an owner-provisioned disposable Unix-socket PostgreSQL fixture is used for
+source tests. `AuthDbFixture` requires `SN005_TEST_PG_SOCKET`, `SN005_TEST_PG_PORT`,
+`SN005_TEST_PG_USER`, `SN005_TEST_PG_DB`, and `SN005_TEST_KEY_ROOT`, creates a random
+isolated schema and runs the standard migrator. Synthetic key files are private and
+removed by test cleanup. These test variables do not configure production. Existing
+SN004 tests keep their original own-fixture contract. PostgreSQL is kept alive until
+all dependent processes finish, then only the owned postmaster is stopped and reaped.
+
+Source verification and publication results are recorded in the exact-head review
+handoff. Fixture GREEN is distinct from independent review, protected checks and real
+Authentik acceptance. No production migration, merge or auth activation is authorized
+by this source layer. Down migration deliberately refuses destructive auth-state
+removal; any recovery needs a separately reviewed compatible procedure.
+
+Task2 source verification in the newly published Cloud task: fresh tools7/7 match
+the owner-provided PostgreSQL17.11 binary hashes, agent UID/GID1000:1000; an owned
+private Unix-socket smoke completed successfully and removed its data/socket/process.
+Admission is [#33/comment6083322412](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6083322412).
+The separate application fixture stayed alive through all Mix/make processes;
+cleanup confirmed stop0, status3, readiness2, exact owned waitpid0 and absent
+socket/pidfile/postmaster. No installation or privilege transition was needed.
+
+Final targeted auth plus unchanged foundation/schema tests:61/0. Full
+`make -C elixir all`:551tests/0failures/6existing live skips, configured coverage100%,
+format/build/specs/strictCredo/Dialyzer exit0. Bootstrap12/0 and MCP11/0. Existing
+project migration, legacy tests, Config/Clock/Oidc, dependency locks, policies and CI
+are unchanged. All43original MANIFEST records remain, with9new auth contract records.
+
+Evidence includes one confirmed parallel flow consumer, wrong-browser non-consumption,
+299999/300000ms flow boundaries, exact local identity/no registration, session
+absolute/credential limits, current membership/platform separation, durable revoked
+and consumed rows across restart, malformed-role refusal, AES/AAD/key/tamper
+negatives, and direct SQL constraint violations. A deferred trigger delayed COMMIT:
+the API returned unknown_outcome without a handle/plaintext; rotation and consumption
+rolled back in the observed fixture. This proves that timeout scenario, not every
+possible network-loss outcome. A suspended pool and pool death also failed closed.
+
+Failures are retained: initial legacy+enabled readiness RED; restart fixture startup
+readiness failures; mistaken autogenerated check names; missing-auth-version legacy
+fallback; initial style findings; first full run547/0/6 with99.85%coverage; malformed
+membership role RED. Two Task2 repair cycles were used, with no agents/profile
+changes or reset of Task1/setup history. The final full-run output SHA256 is
+`9c58e30c7348198b450369c150e9bec245df79690b932a8eac0d3416f4399107`.
+These are implementer source tests; independent review and trusted/native/live
+acceptance remain NOT_RUN. Historical native HOLD remains open and auth stays disabled.

@@ -110,3 +110,13 @@ one separately admitted additional cycle1/1; historical reports remain. The650ms
 POST/shared-budget and stagedTLS controls are byte-unchanged, auth disabled and
 native HOLD remains. New independent review/trusted/live acceptance are NOT_RUN;
 actual commands, mutation hashes and owned PostgreSQL cleanup are in the report.
+# Task2 auth state layer
+
+The optional control source now includes durable one-time login flows, revocable local
+sessions, current local rights and an OTP AES-256-GCM TokenVault. Exact local
+issuer/subject bindings are required; IdP email/groups/admin claims do not register
+users or grant access. Actor values carry no permissions. The new auth migration and
+readiness contract are tested only on disposable PostgreSQL, with legacy project
+schema compatibility preserved. Authentication remains disabled; browser integration,
+IdP eligibility, trusted/native checks and live acceptance are separate open gates.
+See [the engineering contract](docs/engineering/authentik-project-access.md).

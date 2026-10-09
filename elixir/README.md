@@ -528,3 +528,21 @@ one separately admitted additional cycle1/1; historical reports remain. The650ms
 POST/shared-budget and stagedTLS controls are byte-unchanged, auth disabled and
 native HOLD remains. New independent review/trusted/live acceptance are NOT_RUN;
 actual commands, mutation hashes and owned PostgreSQL cleanup are in the report.
+# Task2 local auth state
+
+`SymphonyControl.Auth.Store`, `Actor` and `TokenVault` add the local state contract;
+they are not wired into the production supervisor or HTTP authentication pipeline.
+The auth migration is `20261004000000_create_control_auth.exs`. Health accepts the
+legacy project-only schema with auth disabled, or the exact project+auth schema with
+all constraints. No migration runs automatically.
+
+For owner-provisioned disposable PostgreSQL only, set the non-production test
+bindings `SN005_TEST_PG_SOCKET`, `SN005_TEST_PG_PORT`, `SN005_TEST_PG_USER`,
+`SN005_TEST_PG_DB`, `SN005_TEST_KEY_ROOT`; retain the existing owned SN004 fixture
+bindings for legacy tests. The key root must be private and owned by the test identity.
+Run `mix test test/symphony_control/auth/store_test.exs
+test/symphony_control/auth/vault_test.exs test/symphony_control/auth/schema_test.exs
+test/symphony_control/foundation_test.exs test/symphony_control/schema_contract_test.exs
+--trace`, then `make all`. Keep PostgreSQL alive through all dependent processes.
+Keys and test canaries are synthetic; no production credentials or shared database
+are used. See the root engineering report for time, transaction and recovery semantics.
