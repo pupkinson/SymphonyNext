@@ -1610,3 +1610,199 @@ authorization. That rejection is retained separately and is not bypassed.
 No trusted CI/native/live/production result is claimed. Authentication remains
 disabled, native HOLD remains open, and Tasks3–5 do not gain an accepted dependency
 until independent review of the exact repaired candidate.
+
+# PR97 remaining F2 — final measured sample repair, 2026-10-10
+
+This is implementer verification of the **remaining F2/P1** in the existing draft
+PR97, starting from HEAD `6d6e026cadc8689f1207c242ee430a10a396323e`, TREE
+`67a1b3f13972b0ecc5914b1d756fa2401255c396`, sole parent
+`b6cfb8da44a3237b426dfc03cad60203d9f979fd`. PR BASE stays
+`1a01e11846a9516edb1b2066bab0511f2d1b314f`; PR75 and its ref stay unchanged.
+The [independent review](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6100649401)
+closed F1/F3/F4/F5 at source within its stated boundaries and left F2 open.
+That review supersedes the earlier all-five-open/review-pending descriptions above.
+This new author evidence does not independently close F2 or accept all Task2.
+A **new independent exact-HEAD review is pending**; no reviewer was launched.
+
+[Admission](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6101725332)
+records the owner's separate direct implementer authorization, exact source,
+private fixture, source/publication scope and budget. Historical Task2 **2/2 CLOSED**,
+F1–F5 additional **2/2 CLOSED**, setup **2/2** and every historical failure,
+interruption, T0/deadline and refusal remain. New F2-only repair is **1/1 used**,
+agents/profile changes0, session/model/effort/speed UNKNOWN. Conservative T0
+`2026-10-10T20:10:00Z` precedes the first clock receipt20:10:03Z; fixed deadline
+`2026-10-11T00:10:00Z`, final1800s reserve begins `2026-10-10T23:40:00Z`.
+The earlier allowances are not renewed. SPECv0.5, PR79/82/84, autonomy inside
+the contract, auth disabled, PR75 ACCEPTED_SOURCE_ONLY and native HOLD remain.
+No Task3–5, live/trusted/native activation, main/release/CI/production changes.
+
+## Native anchor and the one acceptance decision
+
+Previously valid_at? checked lifetime against a measured Clock map, then caller
+acceptance compared actual local time only with the overall750ms deadline.
+A sample measured before expiry but delivered/processed afterwards could release
+plaintext, a handle, Actor or rights. Another Clock request alone cannot solve this.
+
+Clock keeps now/0, now(timeout) and start_link/1 compatible. It adds trusted
+server-internal native_anchor, native_unit (ticks/second) and native_clock (the
+local Clock producer PID). These fields confer no authority on external callers.
+The existing UTC/monotonic fields, sample_valid, bracket, continuity and epoch
+rotation rules remain. Store signatures, schema, migrations and SQL are unchanged.
+
+The pre-code [rationale](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6101811931)
+was recorded before production edits. With native UTC U, stable offset O and
+native monotonic M=U-O, let u/m be their floor-converted ms values. Clock supplies
+`A = min(convert(u,ms,native)-O, convert(m,ms,native))`: the earlier bucket start,
+never after the measurement. For minimum UTC object/credential expiry E and
+stored UTC/monotonic issue i/j, remaining ms is
+`R = min(E-u, E-i-(m-j))`. Store retains its original strict valid_at? checks and
+private lifetime metadata through accept_fresh; it does not unwrap success there.
+
+**The caller acceptance point is Store.accept/3's final native-time branch:**
+after the final bounded Clock.now, one actual local native N must satisfy BOTH
+`N < original_operation_deadline` and `A <= N < A + convert(R,ms,native)`.
+The native unit and trusted producer must match the current local Clock.
+Missing/malformed/future anchors, wrong units or another producer fail closed.
+Only this branch releases the guarded value. actor_current? projects refusal to
+false. Lifetime expiry remains forbidden, and an exhausted operation deadline
+retains read dependency_unavailable/write unknown_outcome classification.
+Confirmed consumption/insertion is not undone by a refusal; unknown COMMIT is
+still unknown, with no retry or rollback claim. The coherent F3 SQL snapshot stays.
+
+Conversion floors, including negative absolute native time, and converts remaining
+deltas down rather than up. In measured OTP28.5 native rate is1e9ticks/s;
+1ms=1e6ticks. Floor subadditivity means `A+convert(E-u)` cannot exceed UTC expiry
+translated to native, nor can the monotonic bound be extended. At most the
+sub-ms bucket difference is lost conservatively; no epsilon, TTL extension,
+exact elapsed equality, polling, new transaction or deadline restart is used.
+Age includes measurement, send, receive and caller validation. The anchor is
+not created when the reply arrives. Continuity assumes the trusted Clock's
+reviewed stable-offset bracket and VM monotonic axis; observed uncertainty,
+offset/rollback and epoch discontinuity still deny. OS jump detection is not
+instantaneous. After the last synchronous decision the scheduler may pause the
+caller/VM; this is not a hard realtime guarantee of return from arbitrary suspension.
+Stable owner-controlled regular key resources and earlier OS/cleanup limits remain.
+
+## Genuine RED and causal public-result matrix
+
+Production Store/Clock were byte-identical to6d6e026c during RED (receipt012).
+First new Store run010 exited2:43 selected/23 expected failures,40 existing tests
+excluded. All20 expiry controls released success; all20 timely controls succeeded.
+Three native-field negatives also failed on that original code. Clock contract011
+separately failed because the original sample lacked native_unit (1/1, exit2).
+These are new semantic REDs, not the historical581/91 results or a DB setup failure.
+The first FAIL released synthetic nonce/verifier after confirmed flow consumption.
+Original test/source bytes, firstFAIL, stdout/stderr and causal JSON are preserved.
+
+The new SnapshotClock freezes the actual measured map **before** its release
+barrier. It returns that same map, without resampling after release. Every control
+observes real SQL/COMMIT completion and actual worker/ref before arming the last
+caller-side Clock barrier; worker termination and caller identity are checked.
+A real Clock send trace verifies exact `{tag,same_sample}`; the queue control also
+observes that exact message in the suspended caller's mailbox. No successful
+Store/Task reply is fabricated and no private valid_at? call substitutes for Store.
+
+Legacy static clocks remain logical ms samples with an explicit native measurement
+anchor; their arbitrary monotonic1000 epoch is never compared directly with VM
+native time. New controls use a1:1 native-to-logical ticking map and an explicit
+origin, so the actual native expiry follows from the same mapping. Only own
+ExUnit seams and standard OTP tracing/suspension/interpreter tools are used;
+there are no production/env/HTTP test hooks.
+
+| Family / independent bound | Both send-delay and queued-reply negative | Both timely positives |
+|---|---|---|
+| consume_login,300000ms flow | Same final sample crosses flow expiry; forbidden, no nonce/verifier; committed consumed_at retained, retry denied | Actual nonce/verifier returned once; retry denied |
+| open_session,early credential | No handle; confirmed inserted session remains (no rollback inference) | Opaque handle returned |
+| local_actor / actor_current?,credential200ms | No Actor / false; stored session remains | Actor / true |
+| local_actor / actor_current?,3600000ms session with7200000ms credential | Independent session limit denies despite live credential | Actor / true |
+| permissions project/platform,early credential | No project_read/runtime_identity_read | Exact explicit grant returned |
+| permissions project/platform,independent session | No rights through expired session | Exact explicit grant returned |
+
+Flow controls retain exactly300000ms lifetime and advance299800ms before the
+native ticking origin; session-limit controls advance3599800ms with credentials
+still valid. Both leave200ms before final measurement. Original299999/300000
+and min3600000/credential business assertions are retained unchanged.
+RED negatives elapsed220.143–222.522ms; final samples had196–199ms remaining.
+Related GREEN negatives elapsed220.343–223.177ms; positives1.741–7.588ms.
+An explicit assertion requires **actual operation elapsed<750ms**: an overrun is
+a fixture failure, never F2 GREEN. Timely public controls cover every matrix family.
+Missing/future/foreign-producer/unit anchors deny; signed negative native flooring
+is checked. Existing real production Clock roundtrip/ordinary skew positives,
+uncertainty, epoch/offset/rollback negatives, and all F1/F3/F4/F5 regressions pass.
+No mutation was published or required; original-source RED provides the causal check.
+
+## Source gates, failures and own resources
+
+Own worktree/evidence is `/workspace/work/pr97-f2-20261010T201000Z`.
+Prepared Elixir/Mix1.19.5, OTP28.5, PG17.11 and seven PG binary pins were verified.
+Only locked application dependencies were obtained with deps.get --check-locked,
+in own `deps`; MIX_BUILD_ROOT is own `build` for targeted/full gates. mix.lock
+SHA25613489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073 and mix.exs
+SHA256954f31a47abaf52d742d7e24e6b199b14bf8302e341c208765dbabcc426fc59c are unchanged.
+No toolchain/system installs, version/registry/TLS/checksum changes or Republish.
+
+Actual non-root uid/gid1000:1000 created private `/tmp/sn005f2-201000` data/socket/key
+roots. Resource correction6101739901 preceded creation: unchanged SN004 tests
+require port55474/sn004_fixture/sn004_test; own SN005 role/db is sn005_f2_201000.
+The cluster uses only the unique private Unix socket, listen_addresses='', peer
+mapping from existing agent identity, no passwords/TCP/OS users/privilege changes.
+Its real transactional smoke and role/database readbacks passed before tests;
+FIXTURE_READY6101750455 records PID1318. Every test uses its random isolated schema
+and synthetic private keys. PG stays alive through all dependent processes.
+
+Preserved new failures:007 startup hit sandbox Unix bind EPERM; own failed cluster
+was cleaned and PID1277 absent. Same tool's supported network permission enabled
+own socket startup008; no alternative account/tool or policy refusal bypass.
+010 compile-time family-comparison warnings were removed without weakening tests.
+019 initial make exit2 stopped at five new-line-length Credo issues, before tests,
+coverage or Dialyzer;020 presentation-only correction/lint passed. This is one
+F2 implementation, not another algorithm/allowance; the incomplete make is kept.
+The GREEN checkpoint's first automatic permission review timed out; GitHub
+readback confirmed no write, and one exact same-tool retry published6101861683.
+That timeout was not a policy rejection or semantic test failure.
+
+Actual gates (all command receipts retain argv/cwd/UTC/exits/raw streams/SHA256):
+
+| Receipt | Actual result | Exit |
+|---|---|---|
+|010 original Store F2 RED |43selected/23failures;20expiry leaks and20timely positives; firstFAIL retained |2|
+|011 original Clock contract RED |1selected/1failure; missing native sample contract |2|
+|014 F2 targeted GREEN |45/0 |0|
+|016 Store/Clock/Vault/schema/foundation GREEN |136/0 |0|
+|017 bootstrap snapshot |12/0 |0|
+|018 MCP input contracts |11/0 |0|
+|019 incomplete full make |Credo5line-lengthissues; no full-test claim |2|
+|020 presentation-only format/lint correction |No logic change; format/specs/strictCredo passed |0|
+|021 final full standard make |626/0/6existing skips; configured coverage100%; Dialyzer0errors |0|
+
+Receipt021 ran20:30:44.253964Z–20:34:49.500133Z. Its stdout SHA256
+`10cdf365d9932cd83365a91f0abeda546ba58af16bb29193f1ea449280505484`, stderr
+`47a90c0059291b39dafb0bf37fe231483bd2451645f73ca0acc3230b5c17c73f`.
+Five normal Hex record fetches reported timeout/cache fallback; pinned resolution
+was unchanged and the standard gate completed. No checksum/TLS/lock bypass.
+The final full matrix again passed all20expiry negatives and20timely positives;
+each negative's <750ms assertion passed. Causal rows are in full-matrix.json.
+
+Own cleanup is complete after every PG-dependent process finished:008-pg-stop
+exit0 at20:37:58Z, exact waitpid1318 exit0, stopped status3/readiness2, pidfile,
+socket/lock and /proc/1318 absent, private root removed. Server log and command
+receipts are retained. This attests only this attempt's owned fixture and never
+relabels older interrupted-environment cleanup.
+
+Final53-entry MANIFEST/scope/frozen-byte/diff and actual PR-body template checks
+are recorded with exits and hashes in the exact-HEAD publication handoff/export.
+
+
+All53 original MANIFEST entries are retained; only hashes for changed paths are
+updated. Eight source-composition pins, frozen paths/lock bytes and allowlist are
+verified. Existing historical raw packet e8049330bc98fc7debfb110e21a7c4710f42a17feb42c65a9c40f99f95bc0bd8
+is absent at its exact previous path in this VM and was not overwritten or required.
+A separate new export contains patch/full source/bundles/ledger/raw command and
+publication receipts, RED/GREEN matrix, cleanup and reviewer index; no PG data,
+keys, caches, dependencies/builds or invented download URL are included.
+Final commit/tree and publication/cleanup/export seals are recorded in exact-HEAD
+PR97/#33/#95 handoff after source gates; this tracked report cannot self-name its
+future commit hash. Historical interrupted-environment cleanup remains NOT_ATTESTABLE.
+Trusted/native/live tests remain NOT_RUN/HOLD. Next bounded action is a NEW
+independent reviewer of the published exact HEAD; only that reviewer may determine
+F2 closure/source acceptance. This implementer does not start it or claim acceptance.

@@ -512,12 +512,25 @@ defmodule SymphonyControl.Auth.Store do
   defp accept(result, deadline, unavailable) do
     # Acceptance belongs to the caller, including queued on-time worker replies.
     accepted = accept_fresh(result, deadline)
-    if remaining(deadline) > 0, do: accepted, else: unavailable
+    now = System.monotonic_time()
+
+    # This is the single caller decision: retain private validity until BOTH
+    # the operation deadline and the sample-anchored lifetime still permit it.
+    case {now < deadline, accepted} do
+      {false, _} ->
+        unavailable
+
+      {true, {:guarded, value, {validity, fresh}}} ->
+        if valid_native?(validity, fresh, now), do: value, else: {:error, :forbidden}
+
+      {true, value} ->
+        value
+    end
   end
 
   defp accept_fresh({:guarded, result, validity}, deadline) do
     with {:ok, fresh} <- fresh_clock(deadline), true <- valid_at?(validity, fresh) do
-      result
+      {:guarded, result, {validity, fresh}}
     else
       {:error, _} = error -> error
       _ -> {:error, :forbidden}
@@ -534,6 +547,18 @@ defmodule SymphonyControl.Auth.Store do
   end
 
   defp accept_fresh(error, _deadline), do: error
+
+  defp valid_native?(validity, %{native_anchor: anchor, native_unit: unit, native_clock: producer} = fresh, now)
+       when is_integer(anchor) and is_integer(unit) and is_pid(producer) do
+    expiry = min(validity.expiry, validity.credential_expiry)
+    lifetime_ms = min(expiry - fresh.utc_ms, expiry - validity.issued - (fresh.monotonic_ms - validity.mono))
+    # Convert only the remaining delta; floor conversion is conservative even
+    # when the absolute native anchor is negative. Age includes reply delivery.
+    unit == System.convert_time_unit(1, :second, :native) and producer == Process.whereis(Clock) and
+      anchor <= now and now < anchor + System.convert_time_unit(lifetime_ms, :millisecond, :native)
+  end
+
+  defp valid_native?(_validity, _fresh, _now), do: false
 
   defp safe_operation(operation, unavailable) do
     operation.()

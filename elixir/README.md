@@ -575,3 +575,15 @@ Include `test/symphony_control/auth/clock_test.exs` in targeted auth checks. Lat
 reply controls use a VM-local OTP breakpoint on existing Task code, without
 replacing installed tools or adding dependencies. Production callbacks, auth
 activation, HTTP integration and independent acceptance remain outside this repair.
+
+PR97's remaining F2 repair keeps private validity through the final caller decision.
+Clock adds a floor-conservative native anchor, its unit and local producer identity;
+now/0, now(timeout) and start_link/1 remain compatible. Store accounts for the age
+of that measured sample until it checks the original deadline and remaining
+flow/session/credential lifetime together. Delayed delivery/queued processing
+cannot renew the lifetime. Real committed consumption/insertion remains, while
+expired results yield no plaintext/handle/Actor/rights and actor_current? is false.
+No schema or Store API signature changes, retry, epsilon or TTL extension. Tests
+freeze the last sample before a barrier and use an explicit native time mapping.
+See the new F2 section in the engineering report. Independent exact-HEAD review
+is pending; authdisabled/trusted/native/live/HOLD boundaries remain unchanged.

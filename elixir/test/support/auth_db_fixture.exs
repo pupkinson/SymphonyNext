@@ -15,14 +15,21 @@ defmodule SymphonyControl.AuthDbFixture do
     use GenServer
     def start_link(agent), do: GenServer.start_link(__MODULE__, agent, name: SymphonyControl.Auth.Clock)
     @impl true
-    def init(agent), do: {:ok, %{agent: agent, hold: nil}}
+    def init(agent), do: {:ok, %{agent: agent, hold: nil, sample_patch: %{}}}
     @impl true
     def handle_call({:hold, target, owner, ref}, _from, state), do: {:reply, :ok, %{state | hold: {target, owner, ref}}}
 
+    def handle_call({:sample_patch, patch}, _from, state), do: {:reply, :ok, %{state | sample_patch: patch}}
+
     def handle_call(:now, {caller, _tag} = from, state) do
+      # Freeze the actual measured response BEFORE either delivery barrier.
+      sample = state.agent |> SymphonyControl.AuthDbFixture.sample_clock() |> Map.put(:native_clock, self()) |> Map.merge(state.sample_patch)
+      measured = System.monotonic_time()
+
       case state.hold do
         {^caller, owner, ref} ->
           send(owner, {:clock_reply_held, ref, from, self()})
+          send(owner, {:clock_sample_measured, ref, from, self(), sample, measured})
 
           receive do
             {:release_clock, ^ref} -> :ok
@@ -34,7 +41,7 @@ defmodule SymphonyControl.AuthDbFixture do
           :ok
       end
 
-      {:reply, Agent.get(state.agent, & &1), state}
+      {:reply, sample, state}
     end
   end
 
@@ -89,7 +96,43 @@ defmodule SymphonyControl.AuthDbFixture do
   defp migration_file(CreateProjects), do: "20260925000000_create_projects.exs"
   defp migration_file(CreateControlAuth), do: "20261004000000_create_control_auth.exs"
 
-  def clock(f), do: Agent.get(f.clock_agent, & &1)
+  def clock(f), do: sample_clock(f.clock_agent)
+
+  # Static legacy clocks use a logical ms axis anchored at each measurement;
+  # the new delay controls use an explicit 1:1 native -> logical ms mapping.
+  # No arbitrary logical monotonic epoch is compared to the VM native axis.
+  def sample_clock(agent) do
+    Agent.get(agent, fn model ->
+      native = System.monotonic_time()
+      unit = System.convert_time_unit(1, :second, :native)
+
+      case model do
+        {:ticking, base, origin} ->
+          elapsed = System.convert_time_unit(native - origin, :native, :millisecond)
+          anchor = origin + System.convert_time_unit(elapsed, :millisecond, :native)
+
+          Map.merge(base, %{
+            utc_ms: base.utc_ms + elapsed,
+            monotonic_ms: base.monotonic_ms + elapsed,
+            native_anchor: anchor,
+            native_unit: unit,
+            native_clock: Process.whereis(SymphonyControl.Auth.Clock)
+          })
+
+        clock ->
+          Map.merge(clock, %{native_anchor: native, native_unit: unit, native_clock: Process.whereis(SymphonyControl.Auth.Clock)})
+      end
+    end)
+  end
+
+  def ticking_clock!(f) do
+    base = clock(f)
+    origin = System.monotonic_time()
+    Agent.update(f.clock_agent, fn _ -> {:ticking, base, origin} end)
+    {base, origin}
+  end
+
+  def patch_clock_sample!(patch), do: GenServer.call(SymphonyControl.Auth.Clock, {:sample_patch, patch})
   def set_clock!(f, clock), do: Agent.update(f.clock_agent, fn _ -> clock end)
 
   def hold_clock_reply!(target) do

@@ -773,6 +773,185 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     end
   end
 
+  for {family, basis} <-
+        [{:flow, :flow}, {:open, :credential}] ++
+          for(family <- [:actor, :current, :project, :platform], basis <- [:credential, :session], do: {family, basis}),
+      delivery <- [:send, :queue],
+      timing <- [:expired, :timely] do
+    @family family
+    @basis basis
+    @delivery delivery
+    @timing timing
+    @tag :f2_last_sample
+    test "F2 last measured sample #{@family}/#{@basis} #{@delivery} #{@timing}", %{f: f, cfg: cfg} do
+      family = @family
+      {operation, needle, expiry} = last_sample_operation(f, cfg, family, @basis)
+      {base, origin} = AuthDbFixture.ticking_clock!(f)
+      expires_native = origin + System.convert_time_unit(expiry - base.utc_ms, :millisecond, :native)
+      query_ref = AuthDbFixture.barrier!(needle)
+      started = System.monotonic_time()
+      caller = traced_caller(operation)
+      assert_receive {:query_result_held, ^query_ref, worker}, 500
+      task = yield_task(caller)
+      assert task.pid == worker
+      clock_ref = AuthDbFixture.hold_clock_reply!(caller.pid)
+      send(worker, {:release_query, query_ref})
+      assert_receive {:clock_sample_measured, ^clock_ref, {caller_pid, tag}, clock_pid, sample, measured}, 500
+      assert caller_pid == caller.pid
+      refute Process.alive?(worker)
+      assert sample.sample_valid
+      assert sample.utc_ms < expiry
+      assert measured < expires_native, "fixture failure: final sample already expired"
+      assert %{rows: [[^expiry]]} = last_sample_readback(family)
+      :erlang.trace(clock_pid, true, [:send, {:tracer, self()}])
+
+      try do
+        if @delivery == :queue do
+          :erlang.suspend_process(caller.pid)
+          send(clock_pid, {:release_clock, clock_ref})
+
+          AuthDbFixture.await!(
+            fn ->
+              {:messages, messages} = Process.info(caller.pid, :messages)
+              Enum.any?(messages, &(&1 == {tag, sample}))
+            end,
+            100
+          )
+        end
+
+        if @timing == :expired do
+          AuthDbFixture.await!(
+            fn ->
+              System.monotonic_time() >= expires_native + System.convert_time_unit(20, :millisecond, :native)
+            end,
+            400
+          )
+        end
+
+        send(clock_pid, {:release_clock, clock_ref})
+        if @delivery == :queue, do: :erlang.resume_process(caller.pid)
+        result = Task.await(caller, 1000)
+        finished = System.monotonic_time()
+        assert_receive {:trace, ^clock_pid, :send, {^tag, ^sample}, _destination}, 100
+        elapsed = System.convert_time_unit(finished - started, :native, :microsecond) / 1000
+        assert elapsed < 750, "fixture failure: F2 control exceeded the overall750ms deadline"
+
+        IO.puts(
+          Jason.encode!(%{
+            control: "F2_last_sample",
+            family: family,
+            basis: @basis,
+            delivery: @delivery,
+            timing: @timing,
+            expected: if(@timing == :expired, do: "lifetime_refusal", else: "success"),
+            actual: result_kind(result),
+            elapsed_ms: elapsed,
+            measurement_ms: System.convert_time_unit(measured - origin, :native, :microsecond) / 1000,
+            remaining_ms_at_sample: expiry - sample.utc_ms,
+            order: ["SQL/COMMIT", "worker_check", "caller_Clock_measurement", "same_reply", "caller_decision"]
+          })
+        )
+
+        if @timing == :expired do
+          assert finished >= expires_native
+          assert_last_sample_expired(family, result)
+        else
+          assert_timely(family, result)
+        end
+
+        # This is real committed readback, not a rollback inference from refusal.
+        assert %{rows: [[^expiry]]} = last_sample_readback(family)
+        assert_flow_retry(family, cfg, f)
+      after
+        :erlang.trace(clock_pid, false, [:send])
+        send(clock_pid, {:release_clock, clock_ref})
+        release_owned(caller, worker, query_ref)
+      end
+    end
+  end
+
+  for fault <- [:missing, :future, :domain, :units] do
+    @fault fault
+    @tag :f2_last_sample
+    test "F2 invalid native anchor #{@fault} denies the final caller decision", %{f: f, cfg: cfg} do
+      {_user, handle, _actor} = session!(f)
+      ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+      caller = traced_caller(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+      assert_receive {:query_result_held, ^ref, worker}, 500
+      task = yield_task(caller)
+      assert task.pid == worker
+      patch = native_sample_fault(@fault)
+      :ok = AuthDbFixture.patch_clock_sample!(patch)
+      send(worker, {:release_query, ref})
+      assert {:error, :forbidden} = Task.await(caller, 1000)
+    end
+  end
+
+  defp last_sample_operation(f, cfg, :flow, :flow) do
+    flow = AuthDbFixture.flow(f)
+    now = AuthDbFixture.clock(f)
+    assert {:ok, _} = Store.put_login(cfg, "browser", flow, now)
+    Process.put(:last_sample_flow, flow)
+    AuthDbFixture.advance!(f, 299_800)
+    {fn -> Store.consume_login(cfg, flow.state, "browser", AuthDbFixture.clock(f)) end, "COMMIT", now.utc_ms + 300_000}
+  end
+
+  defp last_sample_operation(f, cfg, :open, :credential) do
+    AuthDbFixture.seed_user!(f)
+    expiry = AuthDbFixture.clock(f).utc_ms + 200
+    identity = AuthDbFixture.identity(f, credential_expires_at_ms: expiry)
+    {fn -> Store.open_session(cfg, identity, nil, AuthDbFixture.clock(f)) end, "COMMIT", expiry}
+  end
+
+  defp last_sample_operation(f, cfg, family, basis) do
+    lifetime = if basis == :credential, do: 200, else: 7_200_000
+    {user, handle, actor} = session!(f, lifetime)
+    project = AuthDbFixture.seed_project!()
+    grant!(:project, f, user, project)
+    grant!(:platform, f, user, project)
+    expiry = AuthDbFixture.clock(f).utc_ms + min(lifetime, 3_600_000)
+    if basis == :session, do: AuthDbFixture.advance!(f, 3_599_800)
+
+    operation = fn ->
+      now = AuthDbFixture.clock(f)
+
+      case family do
+        :actor -> Store.local_actor(cfg, handle, now)
+        :current -> Store.actor_current?(cfg, actor, now)
+        :project -> Store.permissions(cfg, actor, project, now)
+        :platform -> Store.permissions(cfg, actor, :platform, now)
+      end
+    end
+
+    {operation, "FROM control_auth_sessions s", expiry}
+  end
+
+  defp last_sample_readback(:flow), do: Repo.query!("SELECT expires_at_ms FROM control_auth_pending_logins WHERE consumed_at_ms IS NOT NULL", [], log: false)
+  defp last_sample_readback(_family), do: Repo.query!("SELECT expires_at_ms FROM control_auth_sessions WHERE revoked_at_ms IS NULL", [], log: false)
+  defp result_kind({:ok, _}), do: "success"
+  defp result_kind(true), do: "success"
+  defp result_kind(false), do: "false"
+  defp result_kind({:error, reason}), do: Atom.to_string(reason)
+  defp assert_timely(:current, result), do: assert(result == true)
+  defp assert_timely(:flow, result), do: assert(match?({:ok, %{nonce: "synthetic-nonce", verifier: "synthetic-verifier"}}, result))
+  defp assert_timely(:open, result), do: assert(match?({:ok, handle} when is_binary(handle), result))
+  defp assert_timely(:actor, result), do: assert(match?({:ok, %SymphonyControl.Auth.Actor{}}, result))
+  defp assert_timely(:project, result), do: assert(result == {:ok, MapSet.new([:project_read])})
+  defp assert_timely(:platform, result), do: assert(result == {:ok, MapSet.new([:runtime_identity_read])})
+  defp native_sample_fault(:missing), do: %{native_anchor: nil}
+  defp native_sample_fault(:future), do: %{native_anchor: System.monotonic_time() + System.convert_time_unit(60, :second, :native)}
+  defp native_sample_fault(:domain), do: %{native_clock: self()}
+  defp native_sample_fault(:units), do: %{native_unit: :millisecond}
+  defp assert_last_sample_expired(:current, result), do: refute(result)
+  defp assert_last_sample_expired(_family, result), do: assert(result == {:error, :forbidden})
+
+  defp assert_flow_retry(:flow, cfg, f) do
+    flow = Process.get(:last_sample_flow)
+    assert {:error, :forbidden} = Store.consume_login(cfg, flow.state, "browser", AuthDbFixture.clock(f))
+  end
+
+  defp assert_flow_retry(_family, _cfg, _f), do: :ok
+
   defp session!(f, lifetime \\ 3_600_000) do
     user = AuthDbFixture.seed_user!(f)
     now = AuthDbFixture.clock(f)

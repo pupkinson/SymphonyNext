@@ -1,7 +1,16 @@
 defmodule SymphonyControl.Auth.Clock do
   @moduledoc "Control clock snapshots with bracketed native sampling and a continuity epoch."
   use GenServer
-  @type t :: %{utc_ms: integer(), monotonic_ms: integer(), epoch: binary(), sample_valid: boolean()}
+
+  @type t :: %{
+          utc_ms: integer(),
+          monotonic_ms: integer(),
+          epoch: binary(),
+          sample_valid: boolean(),
+          native_anchor: integer(),
+          native_unit: pos_integer(),
+          native_clock: pid()
+        }
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, :ok, Keyword.put(opts, :name, __MODULE__))
@@ -31,7 +40,22 @@ defmodule SymphonyControl.Auth.Clock do
     epoch = if valid, do: state.epoch, else: :crypto.strong_rand_bytes(32)
     utc_ms = System.convert_time_unit(utc, :native, :millisecond)
     mono_ms = System.convert_time_unit(mono, :native, :millisecond)
-    clock = %{utc_ms: utc_ms, monotonic_ms: mono_ms, epoch: epoch, sample_valid: valid}
+    # Anchor at the earlier ms bucket start, never after measurement. Adding
+    # either remaining ms lifetime to this point cannot extend its native end.
+    utc_bucket = System.convert_time_unit(utc_ms, :millisecond, :native) - offset
+    mono_bucket = System.convert_time_unit(mono_ms, :millisecond, :native)
+    anchor = min(utc_bucket, mono_bucket)
+
+    clock = %{
+      utc_ms: utc_ms,
+      monotonic_ms: mono_ms,
+      epoch: epoch,
+      sample_valid: valid,
+      native_anchor: anchor,
+      native_unit: System.convert_time_unit(1, :second, :native),
+      native_clock: self()
+    }
+
     next = %{epoch: epoch, offset: offset, last_utc: utc, last_mono: mono}
     {:reply, clock, next}
   end

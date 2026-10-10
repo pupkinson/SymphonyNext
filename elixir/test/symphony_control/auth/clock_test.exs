@@ -49,6 +49,27 @@ defmodule SymphonyControl.Auth.ClockTest do
     assert Clock.now().sample_valid
   end
 
+  @tag :f2_native_anchor
+  test "native lifetime anchor floors both sampled ms buckets in this VM domain" do
+    before = System.monotonic_time()
+    sample = Clock.now()
+    after_sample = System.monotonic_time()
+    unit = System.convert_time_unit(1, :second, :native)
+    quantum = System.convert_time_unit(1, :millisecond, :native)
+    assert sample.native_unit == unit
+    assert sample.native_clock == Process.whereis(Clock)
+    assert is_integer(sample.native_anchor)
+    assert sample.native_anchor <= after_sample
+    assert sample.native_anchor > before - quantum
+    assert sample.native_anchor <= System.convert_time_unit(sample.monotonic_ms, :millisecond, :native)
+    utc_bucket = System.convert_time_unit(sample.utc_ms, :millisecond, :native) - :erlang.time_offset(:native)
+    assert sample.native_anchor <= utc_bucket
+    # OTP conversion floors below zero as well; truncation toward zero would
+    # put a negative native anchor after the start of its ms bucket.
+    assert System.convert_time_unit(-1, :native, :millisecond) == -1
+    if after_sample < 0, do: assert(sample.native_anchor < 0)
+  end
+
   defp discontinue(state, :offset), do: %{state | offset: state.offset + 1}
   defp discontinue(state, :utc), do: %{state | last_utc: System.system_time() + System.convert_time_unit(60, :second, :native)}
   defp discontinue(state, :monotonic), do: %{state | last_mono: System.monotonic_time() + System.convert_time_unit(60, :second, :native)}

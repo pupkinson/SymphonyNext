@@ -126,3 +126,9 @@ publishing auth results, and one SQL snapshot for session and rights. Clock samp
 tracks UTC/monotonic continuity without requiring identical millisecond elapsed
 values. Timeout outcomes stay conservative; authentication remains disabled and
 the repaired candidate requires independent review.
+
+The remaining PR97 F2 repair anchors the last measured Clock sample to native
+monotonic time. The caller releases a result only while both its original750ms
+budget and object/credential lifetime still permit it, including delayed sample
+delivery or processing. Confirmed consumption remains durable. Independent review
+of this new candidate is pending; auth stays disabled and native HOLD remains.
