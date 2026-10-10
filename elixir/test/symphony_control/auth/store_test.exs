@@ -29,6 +29,7 @@ defmodule SymphonyControl.Auth.StoreTest do
       now = AuthDbFixture.clock(f)
       assert {:ok, _} = Store.put_login(cfg, "browser", flow, now)
       later = %{now | utc_ms: now.utc_ms + elapsed, monotonic_ms: now.monotonic_ms + elapsed}
+      AuthDbFixture.set_clock!(f, later)
       result = Store.consume_login(cfg, flow.state, "browser", later)
       if elapsed == 299_999, do: assert(match?({:ok, _}, result)), else: assert(result == {:error, :forbidden})
     end
@@ -95,9 +96,12 @@ defmodule SymphonyControl.Auth.StoreTest do
       assert {:ok, handle} = Store.open_session(cfg, id, nil, now)
       limit = min(lifetime, 3_600_000)
       before = %{now | utc_ms: now.utc_ms + limit - 1, monotonic_ms: now.monotonic_ms + limit - 1}
+      AuthDbFixture.set_clock!(f, before)
       assert {:ok, _} = Store.local_actor(cfg, handle, before)
       at = %{before | utc_ms: before.utc_ms + 1, monotonic_ms: before.monotonic_ms + 1}
+      AuthDbFixture.set_clock!(f, at)
       assert {:error, :forbidden} = Store.local_actor(cfg, handle, at)
+      AuthDbFixture.set_clock!(f, now)
     end
 
     assert {:ok, handle} = Store.open_session(cfg, AuthDbFixture.identity(f), nil, now)
@@ -108,7 +112,7 @@ defmodule SymphonyControl.Auth.StoreTest do
           {cfg, %{now | epoch: "stale"}},
           {cfg, %{now | utc_ms: now.utc_ms - 1}},
           {cfg, %{now | monotonic_ms: now.monotonic_ms - 1}},
-          {cfg, %{now | utc_ms: now.utc_ms + 1000, monotonic_ms: now.monotonic_ms + 2000}}
+          {cfg, %{now | utc_ms: now.utc_ms + 1000, monotonic_ms: now.monotonic_ms + 2000, sample_valid: false}}
         ] do
       assert {:error, :forbidden} = Store.local_actor(config, handle, clock)
       refute Store.actor_current?(config, actor, clock)
@@ -239,6 +243,8 @@ defmodule SymphonyControl.Auth.StoreTest do
     assert {:ok, handle} = Store.open_session(cfg, AuthDbFixture.identity(f), nil, now)
     assert {:ok, actor} = Store.local_actor(cfg, handle, now)
     assert {:error, :forbidden} = Store.permissions(cfg, %{actor | subject: "forged"}, :platform, now)
+    refute Store.actor_current?(cfg, %{actor | subject: "forged"}, now)
+    assert Store.actor_current?(cfg, actor, now)
     refute Store.actor_current?(cfg, %{actor | session_id: "invalid-uuid"}, now)
     Repo.query!("UPDATE control_auth_sessions SET tokens_ciphertext=set_byte(tokens_ciphertext,28,1-get_byte(tokens_ciphertext,28)%2)", [])
     assert {:error, :forbidden} = Store.local_actor(cfg, handle, now)
@@ -338,5 +344,511 @@ defmodule SymphonyControl.Auth.StoreTest do
         Process.sleep(1)
         checkout_pending?(pool, deadline)
     end
+  end
+end
+
+defmodule SymphonyControl.Auth.StoreRepairTest do
+  use ExUnit.Case, async: false
+  alias SymphonyControl.Auth.{Clock, Store, TokenVault}
+  alias SymphonyControl.{AuthDbFixture, Repo}
+  @moduletag :repair_regression
+
+  setup do
+    f = AuthDbFixture.start!()
+    %{f: f, cfg: f.config}
+  end
+
+  test "F1 late real worker reply after yield timeout is discarded", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    shutdown_ref = AuthDbFixture.hold_task_shutdown!(f)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = traced_caller(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert task.pid == worker
+    caller_pid = caller.pid
+    assert_receive {:trace, ^caller_pid, :return_from, {Task, :yield, 2}, nil}, 1000
+    assert_receive {:shutdown_held, ^shutdown_ref, ^caller_pid, debugger}, 500
+
+    try do
+      send(worker, {:release_query, ref})
+      await_reply!(caller, task)
+      send(debugger, {:continue_shutdown, shutdown_ref})
+      result = Task.await(caller, 1500)
+      assert result == {:error, :dependency_unavailable}
+    after
+      send(debugger, {:continue_shutdown, shutdown_ref})
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  test "F1 on-time committed reply queued until after absolute deadline is discarded", %{f: f, cfg: cfg} do
+    flow = AuthDbFixture.flow(f)
+    assert {:ok, _} = Store.put_login(cfg, "browser", flow, AuthDbFixture.clock(f))
+    ref = AuthDbFixture.barrier!("COMMIT")
+    caller = traced_caller(fn -> Store.consume_login(cfg, flow.state, "browser", AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert task.pid == worker
+    :erlang.suspend_process(caller.pid)
+
+    try do
+      send(worker, {:release_query, ref})
+      await_reply!(caller, task)
+      assert %{rows: [[_]]} = Repo.query!("SELECT consumed_at_ms FROM control_auth_pending_logins WHERE consumed_at_ms IS NOT NULL", [], log: false)
+      Process.sleep(820)
+      :erlang.resume_process(caller.pid)
+      assert {:error, :unknown_outcome} = Task.await(caller, 1500)
+    after
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  test "F1 immediate barrier release accepts real on-time results", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = Task.async(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    send(worker, {:release_query, ref})
+    assert {:ok, _} = Task.await(caller, 1500)
+  end
+
+  test "F2 row lock crosses flow expiry; committed consumption releases no plaintext", %{f: f, cfg: cfg} do
+    flow = AuthDbFixture.flow(f)
+    assert {:ok, id} = Store.put_login(cfg, "browser", flow, AuthDbFixture.clock(f))
+    AuthDbFixture.advance!(f, 299_999)
+    owner = self()
+    lock_ref = make_ref()
+
+    locker =
+      Task.async(fn ->
+        Repo.transaction(
+          fn ->
+            Repo.query!("SELECT id FROM control_auth_pending_logins WHERE id=$1 FOR UPDATE", [AuthDbFixture.uuid(id)], log: false)
+            send(owner, {:row_locked, lock_ref})
+
+            receive do
+              {:unlock, ^lock_ref} -> :ok
+            after
+              1500 -> :abandoned
+            end
+          end,
+          timeout: 2000,
+          log: false
+        )
+      end)
+
+    assert_receive {:row_locked, ^lock_ref}, 1000
+    caller = Task.async(fn -> Store.consume_login(cfg, flow.state, "browser", AuthDbFixture.clock(f)) end)
+
+    try do
+      AuthDbFixture.await!(
+        fn ->
+          Repo.query!("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE 'UPDATE control_auth_pending_logins%'", [], log: false).rows ==
+            [[1]]
+        end,
+        300
+      )
+
+      AuthDbFixture.advance!(f, 1)
+      send(locker.pid, {:unlock, lock_ref})
+      assert {:ok, :ok} = Task.await(locker, 1500)
+      result = Task.await(caller, 1500)
+      assert %{rows: [[_]]} = Repo.query!("SELECT consumed_at_ms FROM control_auth_pending_logins WHERE id=$1 AND consumed_at_ms IS NOT NULL", [AuthDbFixture.uuid(id)], log: false)
+      assert result == {:error, :forbidden}
+    after
+      send(locker.pid, {:unlock, lock_ref})
+      Task.shutdown(locker, :brutal_kill)
+      Task.shutdown(caller, :brutal_kill)
+    end
+  end
+
+  for operation <- [:actor, :current, :permissions] do
+    @operation operation
+    test "F2 credential expires after SELECT before #{operation} publication", %{f: f, cfg: cfg} do
+      {user, handle, actor} = session!(f, 50)
+      project = AuthDbFixture.seed_project!()
+      AuthDbFixture.seed_membership!(f, user, project, [:viewer])
+      ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+      operation = @operation
+
+      caller =
+        Task.async(fn ->
+          now = AuthDbFixture.clock(f)
+          read_operation(operation, cfg, handle, actor, project, now)
+        end)
+
+      assert_receive {:query_result_held, ^ref, worker}, 1000
+      AuthDbFixture.advance!(f, 50)
+      send(worker, {:release_query, ref})
+      result = Task.await(caller, 1500)
+      assert_expired(operation, result)
+    end
+  end
+
+  test "F2 handle is withheld when credential expires at confirmed COMMIT", %{f: f, cfg: cfg} do
+    AuthDbFixture.seed_user!(f)
+    identity = AuthDbFixture.identity(f, credential_expires_at_ms: AuthDbFixture.clock(f).utc_ms + 50)
+    ref = AuthDbFixture.barrier!("COMMIT")
+    caller = Task.async(fn -> Store.open_session(cfg, identity, nil, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    AuthDbFixture.advance!(f, 50)
+    send(worker, {:release_query, ref})
+    result = Task.await(caller, 1500)
+    assert %{rows: [[1]]} = Repo.query!("SELECT count(*) FROM control_auth_sessions", [], log: false)
+    assert result == {:error, :forbidden}
+  end
+
+  test "F2 queued valid actor is checked against fresh clock at caller acceptance", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f, 50)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = traced_caller(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert task.pid == worker
+    :erlang.suspend_process(caller.pid)
+
+    try do
+      send(worker, {:release_query, ref})
+      await_reply!(caller, task)
+      AuthDbFixture.advance!(f, 50)
+      :erlang.resume_process(caller.pid)
+      assert {:error, :forbidden} = Task.await(caller, 1500)
+    after
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  for scope <- [:project, :platform], change <- [:revoke, :inactive] do
+    @scope scope
+    @change change
+    test "F3 #{scope} rights cannot combine a session with atomic #{@change} plus grant", %{f: f, cfg: cfg} do
+      {user, _handle, actor} = session!(f)
+      project = AuthDbFixture.seed_project!()
+      scope = @scope
+      target = target(scope, project)
+      assert {:ok, empty} = Store.permissions(cfg, actor, target, AuthDbFixture.clock(f))
+      assert empty == MapSet.new()
+      ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+      caller = Task.async(fn -> Store.permissions(cfg, actor, target, AuthDbFixture.clock(f)) end)
+      assert_receive {:query_result_held, ^ref, worker}, 1000
+
+      assert {:ok, :ok} =
+               Repo.transaction(
+                 fn ->
+                   invalidate!(@change, user, actor)
+                   grant!(scope, f, user, project)
+                   :ok
+                 end,
+                 log: false
+               )
+
+      grant_table = grant_table(scope)
+
+      assert %{rows: [[false, true]]} =
+               Repo.query!(
+                 "SELECT u.active AND s.revoked_at_ms IS NULL, EXISTS(SELECT 1 FROM #{grant_table} g WHERE g.user_id=u.id) FROM control_auth_users u JOIN control_auth_sessions s ON s.user_id=u.id WHERE s.id=$1",
+                 [AuthDbFixture.uuid(actor.session_id)],
+                 log: false
+               )
+
+      send(worker, {:release_query, ref})
+      result = Task.await(caller, 1500)
+      assert result in [{:error, :forbidden}, {:ok, MapSet.new()}]
+    end
+  end
+
+  test "F4 ordinary independent millisecond sampling skew is usable", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    flow = AuthDbFixture.flow(f)
+    now = AuthDbFixture.clock(f)
+    assert {:ok, _} = Store.put_login(cfg, "browser", flow, now)
+    later = %{now | utc_ms: now.utc_ms + 100, monotonic_ms: now.monotonic_ms + 101}
+    AuthDbFixture.set_clock!(f, later)
+    assert {:ok, _} = Store.local_actor(cfg, handle, later)
+    assert {:ok, _} = Store.consume_login(cfg, flow.state, "browser", later)
+  end
+
+  test "F4 real production Clock snapshots allow a normal round trip", %{f: f, cfg: cfg} do
+    stop_supervised!(AuthDbFixture.SnapshotClock)
+    start_supervised!({Clock, []})
+    now = Clock.now()
+    flow = %{AuthDbFixture.flow(f) | issued_ms: now.utc_ms}
+    assert {:ok, _} = Store.put_login(cfg, "browser", flow, now)
+    Process.sleep(5)
+    assert {:ok, _} = Store.consume_login(cfg, flow.state, "browser", Clock.now())
+  end
+
+  test "F5 own stalled key resource cannot precede the operation deadline", %{f: f, cfg: cfg} do
+    path = cfg.session_key_ref <> "-fifo"
+    assert {_, 0} = System.cmd("mkfifo", ["-m", "600", path])
+    owner = self()
+    writer_ref = make_ref()
+
+    releaser =
+      Task.async(fn ->
+        # An external owned writer can release even a blocking BEAM file open.
+        # Nonblocking open and a finite end also clean up when Vault rejects FIFO.
+        script = """
+        import errno,os,pathlib,sys,time
+        time.sleep(0.85)
+        end=time.monotonic()+0.4
+        while time.monotonic()<end:
+            try:
+                fd=os.open(sys.argv[1],os.O_WRONLY|os.O_NONBLOCK)
+                os.write(fd,pathlib.Path(sys.argv[2]).read_bytes())
+                os.close(fd)
+                break
+            except OSError as e:
+                if e.errno!=errno.ENXIO: raise
+                time.sleep(0.005)
+        """
+
+        port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, args: ["-c", script, path, cfg.session_key_ref]])
+        send(owner, {:writer_started, writer_ref})
+
+        receive do
+          {^port, {:exit_status, 0}} -> :ok
+        after
+          1800 ->
+            Port.close(port)
+            :abandoned
+        end
+      end)
+
+    assert_receive {:writer_started, ^writer_ref}, 1000
+
+    try do
+      start = System.monotonic_time(:millisecond)
+      result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
+      elapsed = System.monotonic_time(:millisecond) - start
+      assert result in [{:error, :dependency_unavailable}, {:error, :unknown_outcome}]
+      assert elapsed < 800
+      assert {:error, :dependency_unavailable} = TokenVault.seal(%{cfg | session_key_ref: path}, "synthetic-fifo-canary", "AAD")
+      assert {:error, :dependency_unavailable} = TokenVault.open(%{cfg | session_key_ref: path}, "invalid", "AAD")
+    after
+      Task.await(releaser, 1500)
+      File.rm(path)
+    end
+  end
+
+  test "F2 independent session limit expires while credentials remain valid", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f, 7_200_000)
+    AuthDbFixture.advance!(f, 3_599_999)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = Task.async(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    AuthDbFixture.advance!(f, 1)
+    send(worker, {:release_query, ref})
+    assert {:error, :forbidden} = Task.await(caller, 1500)
+    assert %{rows: [[true]]} = Repo.query!("SELECT credential_expires_at_ms>expires_at_ms FROM control_auth_sessions", [], log: false)
+  end
+
+  test "F4 unsupported uncertain absent and suspended fresh clock all deny", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    now = AuthDbFixture.clock(f)
+    assert {:error, :forbidden} = Store.local_actor(cfg, handle, Map.delete(now, :sample_valid))
+    AuthDbFixture.set_clock!(f, %{now | sample_valid: false})
+    assert {:error, :forbidden} = Store.local_actor(cfg, handle, now)
+    AuthDbFixture.set_clock!(f, now)
+    :ok = :sys.suspend(Clock)
+
+    try do
+      assert {:error, :dependency_unavailable} = Store.local_actor(cfg, handle, now)
+    after
+      :sys.resume(Clock)
+    end
+
+    assert {:ok, _} = Store.local_actor(cfg, handle, now)
+    stop_supervised!(AuthDbFixture.SnapshotClock)
+    assert {:error, :dependency_unavailable} = Store.local_actor(cfg, handle, now)
+  end
+
+  test "F1 caller checks deadline after its last real clock reply", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = traced_caller(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert worker == task.pid
+    clock_ref = AuthDbFixture.hold_clock_reply!(caller.pid)
+    send(worker, {:release_query, ref})
+    assert_receive {:clock_reply_held, ^clock_ref, {caller_pid, tag}, clock_pid}, 1000
+    assert caller_pid == caller.pid
+    refute Process.alive?(worker)
+    :erlang.suspend_process(caller.pid)
+
+    try do
+      Process.sleep(820)
+      send(clock_pid, {:release_clock, clock_ref})
+
+      AuthDbFixture.await!(fn ->
+        {:messages, messages} = Process.info(caller.pid, :messages)
+        Enum.any?(messages, &match?({reply_tag, _} when reply_tag == tag, &1))
+      end)
+
+      :erlang.resume_process(caller.pid)
+      assert {:error, :dependency_unavailable} = Task.await(caller, 1500)
+    after
+      send(clock_pid, {:release_clock, clock_ref})
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  @tag capture_log: true
+  test "F1 next SQL inherits exhausted budget and cannot insert a session", %{f: f, cfg: cfg} do
+    AuthDbFixture.seed_user!(f)
+    ref = AuthDbFixture.barrier!("SELECT u.id FROM control_auth_identities")
+    caller = traced_caller(fn -> Store.open_session(cfg, AuthDbFixture.identity(f), nil, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert worker == task.pid
+    :erlang.suspend_process(caller.pid)
+
+    try do
+      Process.sleep(820)
+      send(worker, {:release_query, ref})
+      await_reply!(caller, task)
+      :erlang.resume_process(caller.pid)
+      assert {:error, :unknown_outcome} = Task.await(caller, 1500)
+      assert %{rows: [[0]]} = Repo.query!("SELECT count(*) FROM control_auth_sessions", [], log: false)
+    after
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  test "F2 clock loss after confirmed consumption releases no plaintext", %{f: f, cfg: cfg} do
+    flow = AuthDbFixture.flow(f)
+    assert {:ok, _} = Store.put_login(cfg, "browser", flow, AuthDbFixture.clock(f))
+    ref = AuthDbFixture.barrier!("COMMIT")
+    caller = Task.async(fn -> Store.consume_login(cfg, flow.state, "browser", AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    stop_supervised!(AuthDbFixture.SnapshotClock)
+    send(worker, {:release_query, ref})
+    assert {:error, :dependency_unavailable} = Task.await(caller, 1500)
+    assert %{rows: [[_]]} = Repo.query!("SELECT consumed_at_ms FROM control_auth_pending_logins WHERE consumed_at_ms IS NOT NULL", [], log: false)
+  end
+
+  for failure <- [:absent, :uncertain] do
+    @failure failure
+    test "F2 queued committed revoke checks #{@failure} clock at caller", %{f: f, cfg: cfg} do
+      {_user, _handle, actor} = session!(f)
+      ref = AuthDbFixture.barrier!("COMMIT")
+      caller = traced_caller(fn -> Store.revoke(cfg, {:session, actor.session_id}, AuthDbFixture.clock(f)) end)
+      assert_receive {:query_result_held, ^ref, worker}, 1000
+      task = yield_task(caller)
+      assert worker == task.pid
+      :erlang.suspend_process(caller.pid)
+
+      try do
+        send(worker, {:release_query, ref})
+        await_reply!(caller, task)
+        fail_clock!(@failure, f)
+        :erlang.resume_process(caller.pid)
+        assert Task.await(caller, 1500) == clock_error(@failure)
+        assert %{rows: [[_]]} = Repo.query!("SELECT revoked_at_ms FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false)
+      after
+        release_owned(caller, worker, ref)
+      end
+    end
+  end
+
+  test "F2 queued actor is withheld if fresh clock disappears", %{f: f, cfg: cfg} do
+    {_user, handle, _actor} = session!(f)
+    ref = AuthDbFixture.barrier!("FROM control_auth_sessions s")
+    caller = traced_caller(fn -> Store.local_actor(cfg, handle, AuthDbFixture.clock(f)) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1000
+    task = yield_task(caller)
+    assert worker == task.pid
+    :erlang.suspend_process(caller.pid)
+
+    try do
+      send(worker, {:release_query, ref})
+      await_reply!(caller, task)
+      stop_supervised!(AuthDbFixture.SnapshotClock)
+      :erlang.resume_process(caller.pid)
+      assert {:error, :dependency_unavailable} = Task.await(caller, 1500)
+    after
+      release_owned(caller, worker, ref)
+    end
+  end
+
+  defp session!(f, lifetime \\ 3_600_000) do
+    user = AuthDbFixture.seed_user!(f)
+    now = AuthDbFixture.clock(f)
+    identity = AuthDbFixture.identity(f, credential_expires_at_ms: now.utc_ms + lifetime)
+    {:ok, handle} = Store.open_session(f.config, identity, nil, now)
+    {:ok, actor} = Store.local_actor(f.config, handle, now)
+    {user, handle, actor}
+  end
+
+  defp read_operation(:actor, cfg, handle, _actor, _project, now), do: Store.local_actor(cfg, handle, now)
+  defp read_operation(:current, cfg, _handle, actor, _project, now), do: Store.actor_current?(cfg, actor, now)
+  defp read_operation(:permissions, cfg, _handle, actor, project, now), do: Store.permissions(cfg, actor, project, now)
+  defp assert_expired(:current, result), do: refute(result)
+  defp assert_expired(_operation, result), do: assert(result == {:error, :forbidden})
+  defp target(:platform, _project), do: :platform
+  defp target(:project, project), do: project
+  defp grant_table(:platform), do: "control_auth_platform_grants"
+  defp grant_table(:project), do: "control_auth_memberships"
+  defp fail_clock!(:absent, _f), do: stop_supervised!(AuthDbFixture.SnapshotClock)
+  defp fail_clock!(:uncertain, f), do: AuthDbFixture.set_clock!(f, %{AuthDbFixture.clock(f) | sample_valid: false})
+  defp clock_error(:absent), do: {:error, :dependency_unavailable}
+  defp clock_error(:uncertain), do: {:error, :forbidden}
+  defp invalidate!(:revoke, _user, actor), do: Repo.query!("UPDATE control_auth_sessions SET revoked_at_ms=issued_at_ms WHERE id=$1", [AuthDbFixture.uuid(actor.session_id)], log: false)
+  defp invalidate!(:inactive, user, _actor), do: Repo.query!("UPDATE control_auth_users SET active=false WHERE id=$1", [AuthDbFixture.uuid(user)], log: false)
+
+  defp grant!(:platform, _f, user, _project),
+    do: Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(user)], log: false)
+
+  defp grant!(:project, f, user, project), do: AuthDbFixture.seed_membership!(f, user, project, [:viewer])
+
+  defp traced_caller(operation) do
+    :erlang.trace_pattern({Task, :yield, 2}, [{:_, [], [{:return_trace}]}], [:local])
+
+    caller =
+      Task.async(fn ->
+        receive do
+          :run -> operation.()
+        end
+      end)
+
+    :erlang.trace(caller.pid, true, [:call, {:tracer, self()}])
+    on_exit(fn -> :erlang.trace_pattern({Task, :yield, 2}, false, [:local]) end)
+    send(caller.pid, :run)
+    caller
+  end
+
+  defp yield_task(caller) do
+    pid = caller.pid
+    assert_receive {:trace, ^pid, :call, {Task, :yield, [%Task{} = task, _timeout]}}, 1000
+    task
+  end
+
+  defp await_reply!(caller, task) do
+    AuthDbFixture.await!(fn ->
+      case Process.info(caller.pid, :messages) do
+        {:messages, messages} -> Enum.any?(messages, &match?({ref, _} when ref == task.ref, &1))
+        _ -> false
+      end
+    end)
+
+    refute Process.alive?(task.pid)
+  end
+
+  defp release_owned(caller, worker, ref) do
+    send(worker, {:release_query, ref})
+
+    if Process.alive?(caller.pid) do
+      try do
+        :erlang.resume_process(caller.pid)
+      rescue
+        ArgumentError -> :ok
+      end
+
+      Task.shutdown(caller, :brutal_kill)
+    end
+
+    if Process.alive?(worker), do: Process.exit(worker, :kill)
   end
 end

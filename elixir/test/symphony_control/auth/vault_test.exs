@@ -40,4 +40,38 @@ defmodule SymphonyControl.Auth.VaultTest do
     assert {:error, :invalid_request} = TokenVault.open(nil, nil, nil)
     assert {:error, :dependency_unavailable} = TokenVault.seal(%Config{}, "private", "AAD")
   end
+
+  @tag :repair_regression
+  test "F5 public Vault sanitizes an actual unavailable crypto module exception", %{cfg: cfg} do
+    assert {:ok, cipher} = TokenVault.seal(cfg, "synthetic-exception-canary", "AAD")
+    crypto_dir = :code.which(:crypto) |> List.to_string() |> Path.dirname() |> String.to_charlist()
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        # Only this owned VM's load path changes, for the duration of two calls.
+        # The installed module/binary is never changed or replaced by a mock.
+        true = :code.del_path(crypto_dir)
+        true = :code.delete(:crypto)
+        :code.purge(:crypto)
+
+        try do
+          assert projected(fn -> TokenVault.seal(cfg, "synthetic-exception-canary", "AAD") end) == {:error, :dependency_unavailable}
+          assert projected(fn -> TokenVault.open(cfg, cipher, "AAD") end) == {:error, :dependency_unavailable}
+        after
+          true = :code.add_patha(crypto_dir)
+          {:module, :crypto} = :code.load_file(:crypto)
+        end
+      end)
+
+    refute String.contains?(log, "synthetic-exception-canary")
+    assert {:ok, _} = TokenVault.open(cfg, cipher, "AAD")
+  end
+
+  defp projected(operation) do
+    operation.()
+  rescue
+    _ -> :escaped_exception
+  catch
+    _, _ -> :escaped_exit
+  end
 end

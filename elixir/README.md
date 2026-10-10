@@ -546,3 +546,32 @@ test/symphony_control/foundation_test.exs test/symphony_control/schema_contract_
 --trace`, then `make all`. Keep PostgreSQL alive through all dependent processes.
 Keys and test canaries are synthetic; no production credentials or shared database
 are used. See the root engineering report for time, transaction and recovery semantics.
+
+The PR97 repair starts a single 750ms monotonic budget before validation, key IO,
+serialization or SQL. Queries/transactions use at most min(500ms, remaining), with
+queueing and query logging disabled. A late cleanup reply cannot release a result;
+the caller also checks the budget after its final bounded `Clock.now(timeout)`.
+Possible-write timeouts return `unknown_outcome`; read timeouts return
+`dependency_unavailable`. Do not retry an unknown write outcome automatically.
+
+Use snapshots from the trusted `SymphonyControl.Auth.Clock`, including its new
+`sample_valid` field. The existing UTC/monotonic/epoch fields and `now/0` and
+`start_link/1` remain available. Stable native time-offset sampling brackets the UTC
+read; discontinuity or uncertainty invalidates that sample and rotates the epoch.
+Store rejects unsupported/stale-epoch snapshots and checks both strict expiry
+bounds again before releasing a handle, plaintext, Actor or rights. Reads never
+renew lifetimes. Permission decisions join the session, user, exact identity and
+requested grant in one statement snapshot; an ordinary later revocation is a
+separate event.
+
+Key references must name stable, owner-provisioned regular files with exactly32
+bytes. Vault checks the opened descriptor, uses raw caller-owned IO, and projects
+crypto/key exceptions to fixed errors. The path check does not prove safety against
+concurrent filesystem replacement or arbitrary stalled kernel IO; these tests do
+not establish a hard realtime OS guarantee. Controlled test resources are bounded
+and released, and no background file IO server is created for the key.
+
+Include `test/symphony_control/auth/clock_test.exs` in targeted auth checks. Late
+reply controls use a VM-local OTP breakpoint on existing Task code, without
+replacing installed tools or adding dependencies. Production callbacks, auth
+activation, HTTP integration and independent acceptance remain outside this repair.

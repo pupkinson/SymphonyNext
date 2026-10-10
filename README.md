@@ -120,3 +120,9 @@ readiness contract are tested only on disposable PostgreSQL, with legacy project
 schema compatibility preserved. Authentication remains disabled; browser integration,
 IdP eligibility, trusted/native checks and live acceptance are separate open gates.
 See [the engineering contract](docs/engineering/authentik-project-access.md).
+
+PR97 repair adds one absolute 750ms operation budget, a fresh time check before
+publishing auth results, and one SQL snapshot for session and rights. Clock sampling
+tracks UTC/monotonic continuity without requiring identical millisecond elapsed
+values. Timeout outcomes stay conservative; authentication remains disabled and
+the repaired candidate requires independent review.

@@ -10,6 +10,8 @@ defmodule SymphonyControl.Auth.TokenVault do
       {cipher, tag} = :crypto.crypto_one_time_aead(:aes_256_gcm, key, nonce, plaintext, aad, 16, true)
       {:ok, <<1, nonce::binary, tag::binary, cipher::binary>>}
     end
+  catch
+    _, _ -> {:error, :dependency_unavailable}
   end
 
   def seal(_cfg, _plain, _aad), do: {:error, :invalid_request}
@@ -24,6 +26,8 @@ defmodule SymphonyControl.Auth.TokenVault do
       {:error, :dependency_unavailable} = error -> error
       _ -> {:error, :forbidden}
     end
+  catch
+    _, _ -> {:error, :dependency_unavailable}
   end
 
   def open(_cfg, _cipher, _aad), do: {:error, :invalid_request}
@@ -33,19 +37,25 @@ defmodule SymphonyControl.Auth.TokenVault do
   end
 
   defp key(path) when is_binary(path) do
-    case File.open(path, [:read, :binary]) do
-      {:ok, file} ->
-        try do
-          case IO.binread(file, 33) do
-            value when is_binary(value) and byte_size(value) == 32 -> {:ok, value}
-            _ -> {:error, :dependency_unavailable}
-          end
-        after
-          File.close(file)
+    with {:ok, %File.Stat{type: :regular}} <- File.lstat(path),
+         {:ok, file} <- :file.open(path, [:read, :binary, :raw]) do
+      # Raw descriptors belong to the guarded caller, not a background IO
+      # server. Check the opened resource as well as the path. A trusted key
+      # path must not be concurrently replaced; lstat alone is not a TOCTOU
+      # guarantee and no arbitrary kernel IO realtime guarantee is claimed.
+      try do
+        with {:ok, info} <- :file.read_file_info(file),
+             true <- elem(info, 2) == :regular,
+             {:ok, value} when byte_size(value) == 32 <- :file.read(file, 33) do
+          {:ok, value}
+        else
+          _ -> {:error, :dependency_unavailable}
         end
-
-      _ ->
-        {:error, :dependency_unavailable}
+      after
+        :file.close(file)
+      end
+    else
+      _ -> {:error, :dependency_unavailable}
     end
   end
 
