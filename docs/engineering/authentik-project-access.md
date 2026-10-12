@@ -1,3 +1,413 @@
+# Task3 N1-only continuation — 2026-10-12
+
+IMPLEMENTED / AUTHOR GATES PASSED; new independent exact-HEAD review NOT_RUN.
+This is the remaining second additional repair cycle, not acceptance or Task4.
+All prior report text below is retained verbatim as historical evidence.
+
+Denis authorized only T3-N1/P2. [Admission6131938519](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6131938519)
+and [checkpoint6132126194](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6132126194)
+were published and read back exactly. Initial source HEAD76ef22196f4495dee4113a4ae2f56f25c08a3268,
+TREE39c1ab3d067d9c36e06da07833fdad0b050ca102, immediate parent6834f9875bfe88445924397890d694a1ae33139d,
+PRbase71bd5ff84d80327b83bbed50a494269fc254f478; same existing draft PR98/head/base.
+The [independent review](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6131491662)
+closed R1–R7 at source; its [verdict](https://github.com/pupkinson/SymphonyNext/pull/98#issuecomment-6131510247)
+identified only N1. Those seven findings are not reopened by this continuation.
+
+N1 T0 is the actual first tool action2026-10-12T20:17:31Z; prospective14400s
+deadline2026-10-13T00:17:31Z, final1800s reserve starts2026-10-12T23:47:31Z.
+Lineage admission6128357525: Task3 historical2/2 CLOSED + additional1/2 COMPLETE
+→ additional2/2 for N1. Old16:24Z/20:24Z window, spent hours/extensions/violations and
+packets remain immutable; this expressly authorized new window is not a retroactive extension.
+One implementer/agents0/profilechanges0; exact runtime model/effort/speed/session ID UNKNOWN.
+
+## Minimal contract correction and separate evidence
+
+The sole production change removes `path(cfg.post_logout_uri) == "/"` from Routes.
+Callback/backchannel canonical, distinct, non-root/non-reserved checks are unchanged.
+Config remains the exact HTTPS same-origin validator at every public admission boundary;
+Routes does not become a second full Config validator. No normalization, request-selected
+binding or replacement post-logout allowlist is added. The successful LOGIN callback still
+redirects to fixed "/"; post_logout_uri is a separate operator binding and registers no route.
+There is no logout endpoint, landing page, Eligibility or Task4/5 implementation.
+
+| N1 boundary | Immutable76ef counterexample | Repaired positive/negative |
+| --- | --- | --- |
+| Config→Routes | Config accepts exact /signed-out and /account/session-ended; Routes returns invalid_auth_routes. | Root and both non-root values accepted, original URI bytes retained. |
+| Runtime loader | The same otherwise-valid manifest returns invalid_auth_config. | load_auth_config/configure/runtime.exs retain exact value as UNVERIFIED; activation_allowed?false and control disabled. |
+| Healthy standalone | Real migrated PG is healthy; unverified non-root binding returns invalid_auth_options before listener. | Ready/live retain existing JSON/status shape; login/identity/project deny, public405+Allow preserved, no Access worker in production default. |
+| Explicit options | Valid non-root Router/HTTPS admission refuses. | Explicit supervisor/Router admit; default eligibility remains denied. |
+| Owned HTTPS | Non-root trusted Router cannot start. | Each non-root value retains real login→single exchange→session/cookie→Authenticate; callback Location "/", replay403 with no second exchange, confirmed rotation revokes old cookie, Secure/HttpOnly/Lax/Path=/ and no Domain. Post-logout path404, logout403. |
+| Invalid post-logout inputs | Existing Config denial is a passing control. | Foreign origin, HTTP, userinfo, query/fragment, nil and malformed URI denied by frozen Config through loaders/runtime/Router/supervisor. |
+| Existing R7 | Existing collision positives/negatives are controls. | Every old collision assertion and custom-route/health positive retained verbatim; no unconditional Routes success. |
+
+Initial RED was run before production edit:21tests/10semantic failures, exit2,
+20:25:47.525386Z–20:26:55.376348Z; stdoutSHA256
+c86edb66124a1764ae99041caa68835e21b4e0024e7ca9c3a48375e80d0ab9c9.
+Root/old controls passed, and Config.load passed before the specific admission failures.
+The final refined regression source on immutable76ef gives22tests/11failures, exit2,
+20:31:00.763193Z–20:31:05.999132Z; stdoutSHA256
+aa0b477d5fa217b13c0976966d38f7ae5ce0909abbeb0f9c95a0b884e0563ca0.
+Only authorized tests/support are copied into that worktree; product bytes stay immutable.
+
+First attempted GREEN22/2 exit2 is preserved: the new rotation test supplied the prior cookie
+on begin only, while the existing helper defaults callback to the flow cookie. The owning
+test now supplies both cookies on callback, following the unchanged rotation control.
+No extra production correction was required. Targeted GREEN22/0 exit0,
+20:30:21.587289Z–20:30:28.447611Z; stdoutSHA256
+4f44ebdd06bfee4cb09ce8fb191168c004ec11e9a734a94c1a2fa6c692a63da3.
+Related auth/F1–F5/foundation/schema/legacy HTTP/environment/boundary367/0 exit0,
+20:32:10.209665Z–20:34:08.875388Z; stdoutSHA256
+8ac9a038250b82f288f461ea5215d0eefa17bb60aba6a32dac81a24a34b42714.
+
+Fresh standard `make -C elixir all`20:34:28.593951Z–20:40:45.500898Z exit0:
+714tests/0failures/6unchanged live skips, configured coverage100%, build/format/specs/
+strictCredo passed; Dialyzer0errors/0skips/0unnecessary skips. stdoutSHA256
+e9943415f662f362c13ddafb9e48d6ddce3110c3768f4519d4fda12ae11afd56;
+stderrSHA2565b9cdb94879a01a3c84b57b28f5644111ec1de7ba4028b79a531d81f45fcdf31.
+Existing helper-file pattern warnings and pinned dependency advisories remain recorded.
+Fresh unchanged bootstrap12/0 and MCP11/0 exit0. Historical699/0/6 is not the new run.
+
+## Scope, resources and handoff
+
+Seven declared paths only; one production predicate deletion and one default-preserving
+fixture option. All235 other tracked files are byte-identical to76ef. Existing Config/Oidc/
+Clock/Store/Actor/Vault/Health/HttpBody/RequestContext/Login/Access/Authenticate/Controller/
+RuntimeConfig/Application/Router/RateLimiter, migrations/domain/policy/quality/lock and
+unrelated tests are frozen. All77 MANIFEST names/order retained, affected hashes refreshed.
+Approved design/plan and all8 composition hashes unchanged; previous2106-line report retained.
+Final full-gate product/test bytes remain exact. Actual PR body is checked before publication;
+its previous body is retained verbatim. New published tuple, readbacks and packet seal are
+recorded in the final owning workpad handoff; no amend/rebase/forcepush/base/draft change.
+
+Observed agent1000:1000 and prepared PG17.11. Own main18088/owner18082/socket55439 and
+legacy18089/owner18083/socket55474 stayed live through all dependent tests; socket-only.
+Both stopped and actually waitpid-reaped exit0 at20:42:05–20:42:06Z. Own DB/socket/key roots
+removed;665resource records/479HTTPS roots absent/648recorded loopback ports closed.
+New test descendants belong to the runner subreaper. Two core FIFO helpers24717/24722
+were stopped20:40:45Z and actually reaped by their live parent, with recorded starttimes.
+Cleanup was after enclosing make, not immediately after their individual coverage test.
+Two separate stop preflights failed before signaling (actual -lc vs expected -c, then gate
+already complete); both failures remain. No foreign or old process/zombie was signaled.
+Historical adopted-shell/core-cache/reaping/late-execution caveats are not reattested or erased.
+
+Own deps/build/Mix/Hex/core/project PLTs from the first Mix command; exact-lock deps.get
+exit0. All42 copied prepared public archive/cache/core-PLT source hashes stayed unchanged;
+no prepared writable cache mutation. mix.exs/mix.lock remain byte-identical.
+A clone-driver post-wait proc-file failure has driverexit1/childexitUNKNOWN; source tuple
+was reconciled without reclone/overwrite. Tool/read/preflight failures are not semantic RED.
+Receipts preserve command/cwd/UTC/PID/starttime/exit/source inventories/original stream hashes.
+
+New separate portable source/patch/bundle/ledger/redacted evidence packet is retained.
+Chat output remains unavailable to agent1000; read-only access check confirmed the unwritable
+ancestor, with no repeated mkdir, permission expansion or alternative upload. A VM archive
+is not a downloadable attachment. Source/evidence and all previous packets are preserved.
+
+Authdisabled/default eligibility deny/logout deny, native HOLD, trusted/native/live/real IdP/
+browser/production and broad Bandit advisory disposition remain separate gates. No Task4/5,
+Actions/merge/deploy/production/DF Assistant/PR75/97/main/release or authority changes.
+Author does not accept N1; the next stage is separately admitted independent exact-new-HEAD
+review of N1 and the whole Task3 candidate.
+
+---
+
+# Task3 R1–R7 additional repair — 2026-10-12
+
+IMPLEMENTED / AUTHOR GATES PASSED; independent review NOT_RUN. This section is
+prospective repair evidence, not acceptance, Task4 admission or release approval.
+The prior report below remains unchanged as history.
+
+Owner Denis authorized the complete [coordinator contract](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6128126404).
+[Admission6128357525](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6128357525)
+was published/read back before edits. Source HEAD6834f9875bfe88445924397890d694a1ae33139d,
+tree92d04013b9910efeda8366c18b8ca39c1556a9e2, parent/PRbase71bd5ff84d80327b83bbed50a494269fc254f478.
+The same existing draft PR98 branch is retained; no new PR/rebase/amend/forcepush/merge.
+Exact published repair tuple and sealed packet hashes are recorded in the final workpad handoff.
+
+One implementer, agents0/profilechanges0. Conservative T02026-10-12T16:24:00Z includes
+initial discovery overhead; first retained exact clock16:27:44Z. Hard deadline20:24:00Z,
+final1800s reserve19:54:00Z. Task3 historical2/2 CLOSED + R1–R7 additional1/2 used.
+Historical T0/deadlines/extensions, both late execution violations, Task2/setup histories
+and old sealed packets are not renewed, overwritten or relabeled green. Runtime exact
+model/effort/speed/session identifiers are UNKNOWN.
+
+## Separate causal evidence
+
+All REDs execute the immutable6834 product sources in a separate worktree; only owning
+regression tests/support were copied there. Fixture/compiler failures are not semantic RED.
+The broad regression positives and final full suite use the repaired source bytes.
+
+| Unit | Immutable source counterexample | Repair and GREEN evidence |
+| --- | --- | --- |
+| R1 | TLS chunked32768/32769/multichunk returned303; unfinished upload waited; oversized CL headers and slow partial body did not close promptly. H2 reset0 after entering its body path. | HTTP1 no-body/single CL<=32768 only; actual byte count, <=1KiB matching length/read_length recv and remaining deadline. TE/ambiguous/oversized framing closes before reader/drain/Store/provider; actual H2 ALPN/reset7 before work. Boundary positive passes. |
+| R6 | Split headers/body then serial/pipelined health returned second400; Login refusal lost the updated Conn. | Every read/refusal retains latest Conn; real400/403/429/Clock/Login failures allow next health200 on the same TLS connection. Partial/unsupported reads close. Fault adapter also proves state survives partial read then failure. |
+| R3 | Initial Clock4500ms + provider gave late303; initial Clock + real eligibility gave late200. | Deadline starts at auth handler entry and reaches body/limiter/Clock/Login/Access/provider/caller/response. Frozen Store750ms only starts with sufficient outer budget. Initial4500ms refuses before consume; later successful consume exchanges once, replay denies. |
+| R2 | Controlled1ms floor-bucket difference with a stable0.5ms coordinate offset: public begin/finish released a result despite exhausted stored-monotonic lifetime while UTC remained E-1. | Both issue axes retained; no epsilon/equality rule. Final session is reread through frozen Store in the actual Login caller, with no later dependency wait. Committed consume/insertion/rotation remain on refusal; HTTP cookie absent. Production Clock positive, delayed same sample, paused caller, Repo loss and inactive identity are covered. |
+| R4 | First cookieless +four returned-binding logins allowed; sixth wrongly303. | Allocate/validate32random-byte B before atomic charge; exact B is committed/returned. Sixth429 with exactly5flows. Concurrency gives4further303/6x429; global60/shared120, fixed expiry,1000cap, no expired-RPC charge preserved. |
+| R5 | Malformed manifest configure succeeded; invalid status started a listener despite a healthy migrated DB. | Real loader/runtime.exs refuse explicit invalid config, clear previous binding, and factory refuses before Repo/listener. Actual prior HTTPS cookie loses Actor after later invalid load. Absent/unverified/default-deny and healthy DB/health positives remain. |
+| R7 | Missing/root/equal/reserved paths admitted and could overwrite/shadow routes. | Loader/Router.init/explicit supervisor validate exact distinct canonical callback/backchannel paths and root return. Health/login/logout/protected/encoded/noncanonical collisions refuse before startup. Distinct custom HTTPS paths preserve exact redirect, health200/405+Allow and fixed cookie behavior. |
+
+The R2 fixture controls logical bucket coordinates and captures real native anchors,
+producer/unit/epoch; this is a controlled composition counterexample, not a claim that
+an installed production Clock was observed failing in a sub-ms race. Ordinary production
+Clock has a separate positive wire path. Witness refinement captures the actual returned
+issue sample, rather than only its initial logical model; the final native issue phase is
+900us and the final boundary is half a millisecond plus one native unit. The final RED
+still returns :ok for both public results, without publishing handle values.
+
+Exact pinned Bandit Adapter/Pipeline/HTTP1/HTTP2 contracts were read. HTTP1 send_headers
+with response Connection:close sets keepalive:false; ensure_completed skips draining;
+the handler closes the owned connection. Wire tests assert actual closure, not a header
+assumption. H2 uses the existing StreamError/refused_stream pipeline, avoiding body and
+response-window waits; no replacement parser or dependency upgrade is introduced.
+Mitigation is local to admitted auth/protected routes. Known Bandit advisories, including
+GHSA-9q9q-324x-93r2, still require separate release disposition for other applications/routes.
+
+## Commands, failures and final source gates
+
+Each own runner receipt retains command/cwd/UTC/PID/starttime/exit and original stream
+SHA256. Later commands also capture full source-file inventories. Per-command full streams,
+redacted export copies and classifications are in the standalone reviewer packet.
+
+- Baseline login/environment40/0, exit0.
+- Initial group1 immutable RED6/5; expanded10/9, exit2. Original positive HTTPS cookie/Authenticate passed.
+- R2 safe RED3/2 and final witness-only2/2, exit2; last stdoutSHA256d01eb29a4a30ef5dc6b70173fbf8b96be9f711c0674eb551455d256f4b821bbe.
+- R4 corrected owning test1/1, exit2; global expected loop54->55 deliberately preserves exactly60 successes.
+- R5/R7 RED4/3, exit2, with absent/unverified/healthy-DB positive.
+- Initial combined63/0, legacy HTTP/environment/boundary46/0, exit0; later refusal/standalone43/0, exit0.
+- Bootstrap12/0 and MCP11/0, exit0; all8 spec-index composition source/schema hashes match.
+- First standard make17:07:29.091481Z–17:08:42.510977Z exit2 at Credo; coverage/Dialyzer not run there. stdoutc872a7d9ee6ce3d0cd44c1dc545656c1448ca4cbd92a4e750ec359cbf7efa16c.
+- Additional cycle1 corrects helper/fixture complexity and presentation. Targeted lint failures remain separately retained. First full coverage run693tests/11fixture failures/6existing skips,99.19%,exit3. New registry encoded a keyword tuple list into JSON; corrected to a map, without changing product gates or frozen tests. The earlier brief chat statement that this full suite had no errors was incorrect and was corrected after full-log inspection.
+- New refusal tests cover actual latest transport state, expired body deadline, protected Actor clearing, final caller Repo/identity loss and invalid reload. No ignore/threshold/skip change.
+- Standard make17:30:37.099295Z–17:36:01.635751Z exit0:699/0/6,100%,Dialyzer0/0/0. Witness-only metadata/anchor refinement then received a new RED and a fresh complete gate.
+- Final standard make17:45:54.261791Z–17:48:45.266879Z exit0:699tests/0failures/6unchanged skips,configured coverage100%,format/specs/strictCredo pass,Dialyzer0errors/0skips/0unnecessary skips. stdoutSHA25676b8255f991751cca219da9912ae64ed27e169b9e0b6fd9af6ff4bdc2168a076; stderrSHA2565b9cdb94879a01a3c84b57b28f5644111ec1de7ba4028b79a531d81f45fcdf31 contains unchanged package-advisory notices.
+
+All final product/test bytes match that final gate inventory; only documentation/MANIFEST
+are updated afterward. Accepted F1–F5 and auth/foundation/schema cases run in the full suite.
+Six skips remain the existing live/SSH environment gates, not new repair skips.
+
+An early private RED assertion printed own synthetic handles. Original raw receipt/hash
+is preserved privately; exported command evidence redacts those values. Safe tag-only
+assertions reproduced the same failure. Tooling/read/patch-preflight failures are classified
+separately; they are not semantic RED or successful test results.
+
+## Scope, runtime, cleanup and handoff limits
+
+Prepared Cloud only, verified agent1000:1000, PostgreSQL17.11. Own deps/build/Mix/Hex and
+core/project PLTs from the first Mix invocation; permitted public archives/cache/PLTs copied
+with provenance and prepared pre/post hashes unchanged. deps.get --check-locked exit0;
+standard make uses its unchanged tasks/aliases and unchanged lock. mix.exsSHA256
+954f31a47abaf52d742d7e24e6b199b14bf8302e341c208765dbabcc426fc59c; mix.lockSHA256
+13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073.
+
+Only contract paths and the three declared helpers/direct tests are changed. All71 prior
+MANIFEST names remain and six authorized helper/test names are added. Frozen Config/Oidc/
+Clock/Store/Actor/Vault/Health, migrations/domain APIs/Projects/RuntimeIdentity/ProjectReadController,
+quality policy/skips/pins/bootstrap/spec and PR75/97 refs remain unchanged. Old report text below
+is preserved byte-for-byte. SPECv0.5/PR79/82/84 and autonomy inside this contract are retained.
+
+Own main PG755/parent752/socket55438 and legacy PG4417/parent4413/socket55474 stayed live
+through every dependent gate. Both fast-stopped17:58:16Z, exited0 and were actually waitpid
+reaped by their live Python owners. PID/pidfile/sockets absent; own DB/socket/key roots removed.
+1448 resource records,881 unique HTTPS roots and1353 own loopback ports: roots absent/ports
+closed at final readback. Later fixture records include VM PID/starttime/beam owner; earlier
+root/port-only granularity is preserved as a limitation.
+
+The unchanged core restart test left six own FIFO hook shells adopted by PID1 after completed
+runs. They were discovered during final audit and stopped individually17:57:37Z after exact
+argv/cwd/starttime/own-gate-window matching; roots were already absent. Their resulting zombies
+cannot be reaped here, as with adopted runtime helpers. This is delayed cleanup/reaping
+limitation, not a claim that every child was reaped at its dependent test's end. No PID1,
+foreign process or historical zombie was signaled. Prior old-VM6950/Hex-prehash/reaping limits
+are unchanged and are not re-attested from this new namespace.
+
+Production activation_allowed?false, Access default-deny and logout denial remain. No real
+Authentik/production/browser/Task4/5/native/trusted/CI activation or deployment was run.
+The HTTPS login scenario is a real owned wire fixture, not real SSO acceptance. Native/time
+bounds begin at handler entry; arbitrary pre-request network/VM suspension is not promised.
+Source rollback predecessor is6834; no runtime/schema restore occurred.
+
+A new standalone source/diff/bundle/ledger/redacted-evidence packet is sealed after publication;
+its actual path/hash and export capability are stated in the final workpad. A VM path is not
+a chat attachment. Next bounded action is a separately admitted independent exact-new-HEAD
+reviewer. The author does not accept its repair or start Task4.
+
+---
+
+# Task3: browser login and server-only HTTP authentication — 2026-10-11
+
+This implementation starts from independently accepted Task2 PR97 HEAD
+`71bd5ff84d80327b83bbed50a494269fc254f478`, tree
+`77cd0e766955241b820b33ad3f7714e870c3c8cf`, immediate parent
+`6d6e026cadc8689f1207c242ee430a10a396323e`. Accepted PR97/PR75 and their
+base refs remain unchanged. Task3 uses its own dependent branch
+`feat/sn005-browser-login-20261011`, with PR base `feat/sn005-auth-state-20261009`.
+[Admission](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6106920595)
+preceded source/fixture writes. This is one IMPLEMENTER, zero additional agents and
+zero profile changes; no reviewer or Task4/5 is launched.
+
+Original T0 is `2026-10-11T06:20:54Z`; the original deadline expired. The late
+14:41 test was incorrectly started before checking the fresh clock and is retained
+as POST_DEADLINE/BUDGET_VIOLATION, not an in-budget success. The terminal unfinished
+packet and comments remain preserved. The owner then explicitly extended the same
+deadline by one day. [Continuation](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6110234864)
+retains the attempt/history: deadline `2026-10-12T10:20:54Z`, last-1800s reserve
+starts `2026-10-12T09:50:54Z`. No old Task2/repair/setup allowance is reopened.
+
+
+The latest owner clarification supersedes intermediate extension dates: deadline
+`2026-10-13T20:59:59Z` (13October23:59:59MSK), reserve `2026-10-13T20:29:59Z`.
+[Record6124148318](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6124148318)
+retains original T0 and the same writer/source scope. The queued10:24:49Z–10:25:00Z
+focused-test/lint command actually started after the previous deadline; its own output-cache
+link changes and results remain a second POST_DEADLINE/BUDGET_VIOLATION, not retroactive GREEN.
+A separate continuation packet SHA25699c3d60633597778e38ee6cd5a0c964784de8ef0587039b2e4f72f051d7c945b
+was sealed at stop and remains unchanged alongside the earlier packet41399262….
+
+First full make09:02:40Z–09:05:09Z exited2:666tests/2failures/6existing skips, coverage99.14%.
+The two unchanged LiveView failures were a stale consolidated Enumerable protocol lacking
+LazyHTML, whose own dependency beam was present. A single mixed dev/test MIX_BUILD_PATH
+allowed development consolidation to survive into tests. Own paths now separate
+build-env/dev and build-env/test through a small own Mix launcher selecting the ordinary
+Mix task environment. No toolchain/dependency versions or analysis/coverage flags change.
+Only our own public compiled outputs were copied; their relative dependency-output links
+were relocated to the same owned dependency paths, with provenance recorded. Standard
+own test app-output cleanup removed the stale protocol. The previously failing pair then
+passed2/0; that late result stays marked late. No native dependency installation was replayed.
+
+Quality cycle1 is the initial failed full gate. Unfinished repair cycle2 adds real negatives
+for transport/Clock loss, Repo loss after wire confirmation and bounded slow confirmation;
+remaining presentation corrections stay in that same cycle. Initial development/TDD and
+all compiler/fixture/lint failures are retained separately. Maximum2 is not reset by any
+extension. The fresh current disposable cluster was initialized only after the stopped
+owned fixture had been cleaned; this does not reinstall or republish the environment.
+
+## Reproducible owned scenario
+
+The fresh non-root PostgreSQL17.11 cluster is socket-only, with own data/socket/key
+paths under `/workspace/work/task3-20261011T062054Z`. Transactional readiness precedes
+implementation. The original stopped cluster is not reused. Own pinned dependencies,
+build, Mix/Hex caches and copied nonsecret core PLTs are isolated from prepared caches.
+The accepted lock/exs, eight spec-index pins, Store/Oidc/Clock/Vault/Actor/Health,
+migrations and Domain APIs remain frozen. Prepared cache pre/post hashes are recorded;
+the earlier Hex info preflight had no predecessor cache hash and is not attested unchanged.
+
+`AuthHttpFixture` starts actual loopback HTTPS ingress and a disposable HTTPS provider
+with test CA and 0600 keys. Browser cookie jars stay in memory. Begin commits a random
+32-byte state/browser binding/nonce and S256 verifier before redirect. The provider
+accepts the exact redirect and PKCE binding. Callback validates local flow, consumes
+before one library-verified token POST, then confirms session insertion/rotation before
+303 to fixed `/`. Issuer/sub must already exist locally. Encrypted tokens stay server-side.
+
+Two simultaneous real callbacks yield exactly one exchange/session/303 and consumed-state
+readback. A foreign browser first refuses without consumption; the legitimate browser
+still succeeds. The provider's lost-response fault deletes an accepted code and records
+validated POST acceptance before closing the real TLS connection: no cookie/session is
+issued and replay causes no second exchange. A stopped provider yields zero accepted
+codes/exchanges and leaves its test code present, while the local consumed flow still
+refuses replay. Unknown deferred COMMIT yields refusal; only actual fixture DB readback
+supports any rollback observation. The product performs no compensation or retry.
+
+A later login rotates the handle and makes the old handle unusable. Tests cover exact
+operator redirect, ignored Host/forwarded/client actor claims, cookie attributes, bounded
+input/body/rates, methods/no-store, library nonce/issuer/audience/signature/expiry checks,
+unknown local identity and canary redaction. Counters remain bounded; cleanup does not
+extend flow TTL. One shared native five-second begin/finish deadline is passed in ms to
+Oidc, while Store retains its own stricter bound. Final successful release checks the
+native measured lifetime again. A committed handle queued beyond credential expiry is
+withheld; its DB insertion remains. After a wire-confirmed candidate waits in a caller
+queue, Access rereads the current session in that caller before exposing Actor. No hard
+realtime promise is made for a caller/VM suspended after the final synchronous decision.
+
+Authenticate clears prior assignments before checking cookies. Default Access denies;
+test-only positive confirmation performs actual HTTPS I/O and accepts exactly :ok.
+Raise/throw/exit/unknown replies deny. Protected reads then use current local grants in
+the separate test Domain authorizer. There is no TrustedActorFixture assignment bypass.
+Normalized UUID/schema_version1 whitelist and fixed 400/403/404/503/read-only contracts
+remain. Missing Actor denies identity even through a permissive test Domain seam.
+Public health survives absent/invalid auth config.
+
+## Runtime and adjacent boundaries
+
+The nonsecret `SYMPHONY_CONTROL_AUTH_CONFIG` JSON file uses only closed Config string
+keys. No new atoms, module/callback selectors, inline credentials or TLS bytes are accepted.
+Valid config is unverified and production activation remains false. Production Access
+has no permit callback; normal loopback listener binding remains127.0.0.1. Explicit server
+supervisor options are the sole fixture composition. Logout/backchannel handlers deny.
+No eligibility adapter, cache freshness algorithm or signed logout implementation is added.
+
+Synthetic real children prove removal of config/secret-reference variables and control/auth
+false after shell initialization. Combined control/auth/loaded-reference configurations
+reject agent launch before child creation or secret reads. No actual model engine is used.
+Task5 still owns production UID file/proc isolation and real ingress/application proofs.
+
+## Evidence and separate acceptance
+
+Accepted-byte baseline:237 tests/0 failures. Initial real HTTPS behavioral REDs, early
+compile errors, a wrong-cwd command, a fixture SQL-constraint failure, the misplaced JWKS
+barrier and every first lint failure are retained with argv/cwd/UTC/exit/output hashes and
+source identities. Dependency/socket/setup failures are not semantic RED. Specific new
+REDs prove missing HTTP behavior, queued expired Actor release, invalid-config health500
+and missing-Actor identity200. Corrections remain inside the exact Task3 allowlist.
+Final targeted/full-gate results, repair-cycle accounting, exact published HEAD/tree/parent,
+remote/body readback, cleanup and export seals are reported in #33, the dependent draft PR
+and a short #95 checkpoint after those operations actually complete. An unrun gate remains
+NOT_RUN. The prior sealed unfinished packet is retained separately from continuation receipts.
+
+Task4 current eligibility/logout, Task5 real Authentik/HTTPS/browser and production isolation,
+independent new exact-HEAD review and trusted/native/live gates remain separate and unrun.
+Historical native HOLD and closed root/dependency refusals are not replayed. No merge,
+deploy, Actions, production/foreign DB, trusted status, policy/CI/spec change or release occurs.
+The source rollback reference is accepted71bd; no runtime/schema deployment is performed.
+The next action after publication is a separately admitted independent exact-HEAD reviewer.
+
+## Final author gates and cleanup — 2026-10-12
+
+The final standard `make -C elixir all` ran at 13:38:15.107861Z–13:43:16.630601Z,
+exit0:670tests/0failures/6unchanged skips, configured coverage100%, format/specs/Credo
+passed, Dialyzer0errors/0skips/0unnecessary skips. Full stdout SHA256
+`0904f38db133ad9dc815a805a3579160001aace57eb80fd0ba0a1b698ac3e103`;
+stderr is empty. Standard Dialyxir performed its PLT checking before analysis. The
+own core Elixir PLT was updated and the own project PLT built; both prepared core
+PLTs retain their recorded predecessor hashes. No links write back into prepared caches.
+
+Mandatory login/environment40/0, existing HTTP/boundary46/0 and all auth/foundation/schema
+277/0 completed with exit0 before the final loader correction. The correction removed
+only a redundant rescue around supported tagged IO/JSON/config errors and added
+real directory/non-UTF input assertions; loader/runtime12/0 and the final full suite
+then verified those bytes. Bootstrap12/0 and MCP11/0 exit0. The earlier second full
+make670/0/6 still exited2 at coverage99.94% and did not run Dialyzer; it is retained
+alongside the first666/2/6/99.14% gate and every earlier failure. The final100% result
+closes the same unfinished quality repair cycle2; max2 is used, with no third cycle.
+
+All product/test bytes matched the successful full-make receipt before documentation
+and digest updates; final source/manifest/body/remote comparisons are separate receipts.
+All53 prior manifest names remain,71total. Every byte outside the owner's exact Task3
+allowlist, including lock/exs, accepted modules, tests, policies and spec-index pins,
+remains identical to accepted71bd. Independent review and trusted status are not supplied
+by these author gates.
+
+After all dependent tests and synthetic children finished, own PG6139 stopped at
+13:45:15Z, pg_ctl0; its own Python owner waitpid-reaped exit0. PID, pidfile and socket
+are absent; private PGdata/socket/key roots were removed. All1006 registered HTTPS roots
+are absent and all1366 exact registered loopback ports refused connection on readback.
+Five live synthetic FIFO hook shells from the unchanged core restart test were matched
+to exact own full-make windows/argv and stopped individually. They were already adopted
+by PID1, so their resulting zombies cannot be waitpid-reaped by this process; no PID1,
+foreign process or old zombie was signaled. Their test roots are absent and no active hook
+remains. Old-VM6950 final exit remains UNKNOWN. This is a recorded reaping limitation,
+not a claim that every historical process namespace was cleaned or re-attested.
+
+The prior sealed incomplete packets remain byte-identical. A separate final packet
+contains the actual Task3 commit bundle, patch/full delta files, command ledger, all
+failed attempts and a new independent exact-HEAD reviewer index. It excludes DB data,
+keys, credentials, dependency/build/cache outputs and raw cookie/token values. No
+callable native local-file export was found; a private VM path is not a chat attachment.
+Final publication/packet seals are recorded in the owning workpad and the Task3 draft PR.
+
+The historical reports below retain their original stage-specific claims and limitations.
+
+---
+
 # Authentik project access: Task1 dependency preflight
 
 ## Queued credential expiry repair — 2026-10-06

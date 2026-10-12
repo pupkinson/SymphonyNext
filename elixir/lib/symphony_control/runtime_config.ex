@@ -9,10 +9,14 @@ defmodule SymphonyControl.RuntimeConfig do
   opt-in through SYMPHONY_CONTROL_ENABLED being exactly "true".
   """
 
+  alias SymphonyControl.Auth.{Config, Routes}
   alias SymphonyControl.Repo
+  @auth_keys Map.new(Map.keys(Map.from_struct(%Config{})) -- [:tls_cacerts], &{Atom.to_string(&1), &1})
 
   @spec configure() :: :ok | {:error, :missing_database_url}
   def configure do
+    configure_auth()
+
     case System.get_env("SYMPHONY_CONTROL_ENABLED") do
       "true" ->
         case System.get_env("SYMPHONY_CONTROL_DATABASE_URL") do
@@ -33,6 +37,45 @@ defmodule SymphonyControl.RuntimeConfig do
       _disabled ->
         Application.put_env(:symphony_elixir, :control_enabled, false)
         configure_identity()
+    end
+  end
+
+  @spec load_auth_config(term()) :: {:ok, Config.t()} | {:error, :invalid_auth_config}
+  def load_auth_config(path) when is_binary(path) and byte_size(path) in 1..4096 do
+    with {:ok, json} <- File.open(path, [:read, :binary], &IO.binread(&1, 32_769)),
+         true <- is_binary(json) and byte_size(json) <= 32_768,
+         {:ok, input} when is_map(input) <- Jason.decode(json),
+         true <- Enum.all?(Map.keys(input), &Map.has_key?(@auth_keys, &1)),
+         bindings = Map.new(input, fn {key, value} -> {Map.fetch!(@auth_keys, key), value} end),
+         {:ok, config} <- Config.load(bindings),
+         :ok <- Routes.validate(config) do
+      {:ok, config}
+    else
+      _ -> {:error, :invalid_auth_config}
+    end
+  end
+
+  def load_auth_config(_), do: {:error, :invalid_auth_config}
+
+  defp configure_auth do
+    {config, status} =
+      case System.get_env("SYMPHONY_CONTROL_AUTH_CONFIG") do
+        nil ->
+          {nil, :absent}
+
+        path ->
+          case load_auth_config(path) do
+            {:ok, cfg} -> {cfg, :unverified}
+            _ -> {nil, :invalid}
+          end
+      end
+
+    Application.put_env(:symphony_elixir, :control_auth_config, config)
+    Application.put_env(:symphony_elixir, :control_auth_status, status)
+
+    if status == :invalid do
+      Application.put_env(:symphony_elixir, :control_enabled, false)
+      raise "invalid_control_auth_config"
     end
   end
 

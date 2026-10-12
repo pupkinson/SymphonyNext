@@ -178,7 +178,7 @@ defmodule SymphonyElixir.ControlEnvironmentTest do
     assert Enum.count(env, &(elem(&1, 0) == ~c"SYMPHONY_CONTROL_ENABLED")) == 1
 
     assert SubprocessEnv.unset_command(["TRACKER_SECRET"]) ==
-             "unset TRACKER_SECRET SYMPHONY_CONTROL_DATABASE_URL && export SYMPHONY_CONTROL_ENABLED=false"
+             "unset TRACKER_SECRET SYMPHONY_CONTROL_DATABASE_URL SYMPHONY_CONTROL_AUTH_CONFIG SYMPHONY_CONTROL_CLIENT_SECRET_REF SYMPHONY_CONTROL_SESSION_KEY_REF && export SYMPHONY_CONTROL_ENABLED=false SYMPHONY_CONTROL_AUTH_ENABLED=false"
   end
 
   defp assert_credential_free_parent do

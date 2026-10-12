@@ -132,3 +132,32 @@ monotonic time. The caller releases a result only while both its original750ms
 budget and object/credential lifetime still permit it, including delayed sample
 delivery or processing. Confirmed consumption remains durable. Independent review
 of this new candidate is pending; auth stays disabled and native HOLD remains.
+
+
+## Task3: browser login в собственной HTTPS fixture
+
+На принятом Task2 (`71bd5ff84d80327b83bbed50a494269fc254f478`) добавлен путь
+begin → OIDC redirect → callback → один настоящий HTTPS token exchange →
+подтверждённая локальная session → защищённая cookie → Authenticate.
+Положительное HTTP-чтение проверяется только собственной fixture: server callback
+обращается к её HTTPS provider, затем отдельный authorizer читает текущий локальный grant.
+Session, email, группы и IdP admin claims сами по себе прав не дают.
+
+Production auth остаётся выключенной: Config.activation_allowed? возвращает false,
+Access по умолчанию отказывает, logout handlers пока denied. JSON по несекретному
+пути SYMPHONY_CONTROL_AUTH_CONFIG не выбирает callbacks и не обходит activation gate.
+Ремонт R1–R7 ограничивает auth ingress HTTP/1.0/1.1 с единственным Content-Length
+до 32KiB или без body; transfer framing закрывается до чтения, HTTP/2 auth stream
+отклоняется reset. Общие 5s включают первый Clock, чтение body и limiter;
+ошибки сохраняют Conn. Первый login учитывается в выданном binding, а session
+проверяется Store в вызывающем Login перед выдачей. Явный invalid manifest
+останавливает startup; callback/backchannel paths проверяются до listener admission.
+После LOGIN callback redirect остаётся фиксированным `/`. Отдельный операторский
+`post_logout_uri` сохраняется точно: допустимый HTTPS same-origin URI может иметь
+non-root path. Это не добавляет logout endpoint или landing-page в Task3.
+Это локальное закрытие auth framing, не обновление Bandit и не устранение его
+advisories для других routes/applications; перед release нужно отдельное disposition.
+Task4 eligibility/logout и Task5 реальный Authentik/HTTPS/browser, production isolation,
+independent exact-HEAD review и trusted/native/live acceptance остаются отдельными gates.
+Это не полный SN005 и не выпуск. Предыдущие отчёты выше сохранены как история.
+Сценарий, команды и ограничения: [Task3 engineering report](docs/engineering/authentik-project-access.md).

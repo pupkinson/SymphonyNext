@@ -2,7 +2,8 @@ defmodule SymphonyControl.StandaloneHttpTest do
   use ExUnit.Case, async: false
 
   alias __MODULE__.OperatorAuthorizer
-  alias SymphonyControl.{Health, Repo}
+  alias SymphonyControl.Auth.{Access, Clock, Config, OidcFixture, RateLimiter}
+  alias SymphonyControl.{AuthHttpFixture, Health, Repo}
 
   setup_all do
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
@@ -52,6 +53,61 @@ defmodule SymphonyControl.StandaloneHttpTest do
     start_control(http: nil)
     assert Health.live?()
     assert [{Repo, _, :supervisor, _}] = Supervisor.which_children(SymphonyControl.Application)
+  end
+
+  test "only explicit server auth opts start auth workers after Repo; env config cannot activate" do
+    provider = OidcFixture.start!()
+    cfg = OidcFixture.config(provider)
+    previous = Application.fetch_env(:symphony_elixir, :control_auth_config)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:symphony_elixir, :control_auth_config, value)
+        :error -> Application.delete_env(:symphony_elixir, :control_auth_config)
+      end
+    end)
+
+    Application.put_env(:symphony_elixir, :control_auth_config, cfg)
+    start_control()
+    assert length(Supervisor.which_children(SymphonyControl.Application)) == 2
+    assert request(port(), "/auth/login").status == 403
+    stop_supervised!(SymphonyControl.Application)
+
+    confirm = fn _, _, _, deadline ->
+      result =
+        Req.get!(provider.origin <> "/eligibility",
+          retry: false,
+          receive_timeout: max(deadline - System.monotonic_time(:millisecond), 1),
+          connect_options: [transport_opts: [cacerts: [provider.ca]]]
+        )
+
+      if result.status == 200, do: {:error, :forbidden}, else: {:error, :dependency_unavailable}
+    end
+
+    start_control(auth: [config: cfg, eligibility_confirm: confirm])
+    assert length(Supervisor.which_children(SymphonyControl.Application)) == 5
+    assert is_pid(Process.whereis(Clock))
+    assert is_pid(Process.whereis(Access))
+    assert is_pid(Process.whereis(RateLimiter))
+    assert request(port(), "/auth/login").status == 403
+  end
+
+  test "invalid auth opts reject before Repo or listener creation" do
+    invalid = [
+      true,
+      "callback",
+      %{},
+      [config: %Config{}],
+      [config: nil],
+      [config: nil, eligibility_confirm: "module"],
+      [eligibility_confirm: fn _, _, _, _ -> :ok end]
+    ]
+
+    for auth <- invalid do
+      result = SymphonyControl.Application.start_link(enabled: true, http: [port: 0], auth: auth)
+      assert result == {:error, :invalid_auth_options}
+      assert Process.whereis(Repo) == nil
+    end
   end
 
   test "disabled control ignores HTTP and starts no repository" do
@@ -147,23 +203,16 @@ defmodule SymphonyControl.StandaloneHttpTest do
     assert %{status: 403, body: %{"error" => "forbidden"}} = response
   end
 
-  test "identity disclosure requires a trusted server-side actor assignment" do
-    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, OperatorAuthorizer)
+  test "identity disclosure requires cookie, wire confirmation and current local platform grant" do
+    f = AuthHttpFixture.start!(runtime_identity_authorizer: AuthHttpFixture.Authorizer)
     Application.put_env(:symphony_elixir, :runtime_identity, commit_sha: String.duplicate("a", 40))
-
-    response =
-      Plug.Test.conn(:get, "/api/v1/control/identity")
-      |> Plug.Conn.assign(:current_actor, :operator)
-      |> SymphonyControl.Router.call(SymphonyControl.Router.init([]))
-
+    session = AuthHttpFixture.login!(f)
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: session.cookie).status == 403
+    Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), Ecto.UUID.dump!(f.user)], log: false)
+    response = AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: session.cookie)
     assert response.status == 200
-
-    assert Jason.decode!(response.resp_body) == %{
-             "schema_version" => 1,
-             "commit_sha" => String.duplicate("a", 40),
-             "image_digest" => "UNKNOWN",
-             "config_sha256" => "UNKNOWN"
-           }
+    assert response.body == %{"schema_version" => 1, "commit_sha" => String.duplicate("a", 40), "image_digest" => "UNKNOWN", "config_sha256" => "UNKNOWN"}
+    assert OidcFixture.calls(f.provider, :eligibility) == 2
   end
 
   test "identity remains forbidden when no server authorizer is installed" do
@@ -212,7 +261,14 @@ defmodule SymphonyControl.StandaloneHttpTest do
     schema = "sn004_http_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
     options = [enabled: true, repo: repo_opts(schema), http: Keyword.get(opts, :http, port: 0)]
-    start_supervised!({SymphonyControl.Application, options})
+    options = if Keyword.has_key?(opts, :auth), do: Keyword.put(options, :auth, opts[:auth]), else: options
+    supervisor = start_supervised!({SymphonyControl.Application, options})
+
+    if http = Keyword.get(options, :http) do
+      {:ok, {_, port}} = ThousandIsland.listener_info(listener())
+      AuthHttpFixture.record(%{kind: "legacy_http", port: port, beam_pid: inspect(supervisor), options: Map.new(http)})
+    end
+
     Repo.query!("CREATE SCHEMA #{schema}", [])
     schema
   end
