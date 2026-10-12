@@ -123,7 +123,7 @@ defmodule SymphonyControl.AuthHttpFixture do
         public_https_origin: origin,
         callback_uri: origin <> Keyword.get(opts, :callback_path, "/auth/callback"),
         backchannel_uri: origin <> Keyword.get(opts, :backchannel_path, "/auth/backchannel-logout"),
-        post_logout_uri: origin <> "/"
+        post_logout_uri: origin <> Keyword.get(opts, :post_logout_path, "/")
     }
   end
 

@@ -8,7 +8,7 @@ defmodule SymphonyControl.Auth.Routes do
     callback = path(cfg.callback_uri)
     backchannel = path(cfg.backchannel_uri)
 
-    if admitted?(callback) and admitted?(backchannel) and callback != backchannel and path(cfg.post_logout_uri) == "/",
+    if admitted?(callback) and admitted?(backchannel) and callback != backchannel,
       do: :ok,
       else: {:error, :invalid_auth_routes}
   end

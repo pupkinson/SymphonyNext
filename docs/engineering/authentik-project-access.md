@@ -1,3 +1,115 @@
+# Task3 N1-only continuation — 2026-10-12
+
+IMPLEMENTED / AUTHOR GATES PASSED; new independent exact-HEAD review NOT_RUN.
+This is the remaining second additional repair cycle, not acceptance or Task4.
+All prior report text below is retained verbatim as historical evidence.
+
+Denis authorized only T3-N1/P2. [Admission6131938519](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6131938519)
+and [checkpoint6132126194](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6132126194)
+were published and read back exactly. Initial source HEAD76ef22196f4495dee4113a4ae2f56f25c08a3268,
+TREE39c1ab3d067d9c36e06da07833fdad0b050ca102, immediate parent6834f9875bfe88445924397890d694a1ae33139d,
+PRbase71bd5ff84d80327b83bbed50a494269fc254f478; same existing draft PR98/head/base.
+The [independent review](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6131491662)
+closed R1–R7 at source; its [verdict](https://github.com/pupkinson/SymphonyNext/pull/98#issuecomment-6131510247)
+identified only N1. Those seven findings are not reopened by this continuation.
+
+N1 T0 is the actual first tool action2026-10-12T20:17:31Z; prospective14400s
+deadline2026-10-13T00:17:31Z, final1800s reserve starts2026-10-12T23:47:31Z.
+Lineage admission6128357525: Task3 historical2/2 CLOSED + additional1/2 COMPLETE
+→ additional2/2 for N1. Old16:24Z/20:24Z window, spent hours/extensions/violations and
+packets remain immutable; this expressly authorized new window is not a retroactive extension.
+One implementer/agents0/profilechanges0; exact runtime model/effort/speed/session ID UNKNOWN.
+
+## Minimal contract correction and separate evidence
+
+The sole production change removes `path(cfg.post_logout_uri) == "/"` from Routes.
+Callback/backchannel canonical, distinct, non-root/non-reserved checks are unchanged.
+Config remains the exact HTTPS same-origin validator at every public admission boundary;
+Routes does not become a second full Config validator. No normalization, request-selected
+binding or replacement post-logout allowlist is added. The successful LOGIN callback still
+redirects to fixed "/"; post_logout_uri is a separate operator binding and registers no route.
+There is no logout endpoint, landing page, Eligibility or Task4/5 implementation.
+
+| N1 boundary | Immutable76ef counterexample | Repaired positive/negative |
+| --- | --- | --- |
+| Config→Routes | Config accepts exact /signed-out and /account/session-ended; Routes returns invalid_auth_routes. | Root and both non-root values accepted, original URI bytes retained. |
+| Runtime loader | The same otherwise-valid manifest returns invalid_auth_config. | load_auth_config/configure/runtime.exs retain exact value as UNVERIFIED; activation_allowed?false and control disabled. |
+| Healthy standalone | Real migrated PG is healthy; unverified non-root binding returns invalid_auth_options before listener. | Ready/live retain existing JSON/status shape; login/identity/project deny, public405+Allow preserved, no Access worker in production default. |
+| Explicit options | Valid non-root Router/HTTPS admission refuses. | Explicit supervisor/Router admit; default eligibility remains denied. |
+| Owned HTTPS | Non-root trusted Router cannot start. | Each non-root value retains real login→single exchange→session/cookie→Authenticate; callback Location "/", replay403 with no second exchange, confirmed rotation revokes old cookie, Secure/HttpOnly/Lax/Path=/ and no Domain. Post-logout path404, logout403. |
+| Invalid post-logout inputs | Existing Config denial is a passing control. | Foreign origin, HTTP, userinfo, query/fragment, nil and malformed URI denied by frozen Config through loaders/runtime/Router/supervisor. |
+| Existing R7 | Existing collision positives/negatives are controls. | Every old collision assertion and custom-route/health positive retained verbatim; no unconditional Routes success. |
+
+Initial RED was run before production edit:21tests/10semantic failures, exit2,
+20:25:47.525386Z–20:26:55.376348Z; stdoutSHA256
+c86edb66124a1764ae99041caa68835e21b4e0024e7ca9c3a48375e80d0ab9c9.
+Root/old controls passed, and Config.load passed before the specific admission failures.
+The final refined regression source on immutable76ef gives22tests/11failures, exit2,
+20:31:00.763193Z–20:31:05.999132Z; stdoutSHA256
+aa0b477d5fa217b13c0976966d38f7ae5ce0909abbeb0f9c95a0b884e0563ca0.
+Only authorized tests/support are copied into that worktree; product bytes stay immutable.
+
+First attempted GREEN22/2 exit2 is preserved: the new rotation test supplied the prior cookie
+on begin only, while the existing helper defaults callback to the flow cookie. The owning
+test now supplies both cookies on callback, following the unchanged rotation control.
+No extra production correction was required. Targeted GREEN22/0 exit0,
+20:30:21.587289Z–20:30:28.447611Z; stdoutSHA256
+4f44ebdd06bfee4cb09ce8fb191168c004ec11e9a734a94c1a2fa6c692a63da3.
+Related auth/F1–F5/foundation/schema/legacy HTTP/environment/boundary367/0 exit0,
+20:32:10.209665Z–20:34:08.875388Z; stdoutSHA256
+8ac9a038250b82f288f461ea5215d0eefa17bb60aba6a32dac81a24a34b42714.
+
+Fresh standard `make -C elixir all`20:34:28.593951Z–20:40:45.500898Z exit0:
+714tests/0failures/6unchanged live skips, configured coverage100%, build/format/specs/
+strictCredo passed; Dialyzer0errors/0skips/0unnecessary skips. stdoutSHA256
+e9943415f662f362c13ddafb9e48d6ddce3110c3768f4519d4fda12ae11afd56;
+stderrSHA2565b9cdb94879a01a3c84b57b28f5644111ec1de7ba4028b79a531d81f45fcdf31.
+Existing helper-file pattern warnings and pinned dependency advisories remain recorded.
+Fresh unchanged bootstrap12/0 and MCP11/0 exit0. Historical699/0/6 is not the new run.
+
+## Scope, resources and handoff
+
+Seven declared paths only; one production predicate deletion and one default-preserving
+fixture option. All235 other tracked files are byte-identical to76ef. Existing Config/Oidc/
+Clock/Store/Actor/Vault/Health/HttpBody/RequestContext/Login/Access/Authenticate/Controller/
+RuntimeConfig/Application/Router/RateLimiter, migrations/domain/policy/quality/lock and
+unrelated tests are frozen. All77 MANIFEST names/order retained, affected hashes refreshed.
+Approved design/plan and all8 composition hashes unchanged; previous2106-line report retained.
+Final full-gate product/test bytes remain exact. Actual PR body is checked before publication;
+its previous body is retained verbatim. New published tuple, readbacks and packet seal are
+recorded in the final owning workpad handoff; no amend/rebase/forcepush/base/draft change.
+
+Observed agent1000:1000 and prepared PG17.11. Own main18088/owner18082/socket55439 and
+legacy18089/owner18083/socket55474 stayed live through all dependent tests; socket-only.
+Both stopped and actually waitpid-reaped exit0 at20:42:05–20:42:06Z. Own DB/socket/key roots
+removed;665resource records/479HTTPS roots absent/648recorded loopback ports closed.
+New test descendants belong to the runner subreaper. Two core FIFO helpers24717/24722
+were stopped20:40:45Z and actually reaped by their live parent, with recorded starttimes.
+Cleanup was after enclosing make, not immediately after their individual coverage test.
+Two separate stop preflights failed before signaling (actual -lc vs expected -c, then gate
+already complete); both failures remain. No foreign or old process/zombie was signaled.
+Historical adopted-shell/core-cache/reaping/late-execution caveats are not reattested or erased.
+
+Own deps/build/Mix/Hex/core/project PLTs from the first Mix command; exact-lock deps.get
+exit0. All42 copied prepared public archive/cache/core-PLT source hashes stayed unchanged;
+no prepared writable cache mutation. mix.exs/mix.lock remain byte-identical.
+A clone-driver post-wait proc-file failure has driverexit1/childexitUNKNOWN; source tuple
+was reconciled without reclone/overwrite. Tool/read/preflight failures are not semantic RED.
+Receipts preserve command/cwd/UTC/PID/starttime/exit/source inventories/original stream hashes.
+
+New separate portable source/patch/bundle/ledger/redacted evidence packet is retained.
+Chat output remains unavailable to agent1000; read-only access check confirmed the unwritable
+ancestor, with no repeated mkdir, permission expansion or alternative upload. A VM archive
+is not a downloadable attachment. Source/evidence and all previous packets are preserved.
+
+Authdisabled/default eligibility deny/logout deny, native HOLD, trusted/native/live/real IdP/
+browser/production and broad Bandit advisory disposition remain separate gates. No Task4/5,
+Actions/merge/deploy/production/DF Assistant/PR75/97/main/release or authority changes.
+Author does not accept N1; the next stage is separately admitted independent exact-new-HEAD
+review of N1 and the whole Task3 candidate.
+
+---
+
 # Task3 R1–R7 additional repair — 2026-10-12
 
 IMPLEMENTED / AUTHOR GATES PASSED; independent review NOT_RUN. This section is

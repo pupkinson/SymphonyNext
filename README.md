@@ -152,6 +152,9 @@ Access по умолчанию отказывает, logout handlers пока de
 ошибки сохраняют Conn. Первый login учитывается в выданном binding, а session
 проверяется Store в вызывающем Login перед выдачей. Явный invalid manifest
 останавливает startup; callback/backchannel paths проверяются до listener admission.
+После LOGIN callback redirect остаётся фиксированным `/`. Отдельный операторский
+`post_logout_uri` сохраняется точно: допустимый HTTPS same-origin URI может иметь
+non-root path. Это не добавляет logout endpoint или landing-page в Task3.
 Это локальное закрытие auth framing, не обновление Bandit и не устранение его
 advisories для других routes/applications; перед release нужно отдельное disposition.
 Task4 eligibility/logout и Task5 реальный Authentik/HTTPS/browser, production isolation,

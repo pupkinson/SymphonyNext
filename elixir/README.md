@@ -625,7 +625,10 @@ startup. Explicit unreadable/malformed config raises fixed `invalid_control_auth
 clears stale configuration and refuses standalone admission; an existing Router cannot
 use the prior binding after that invalid load. Missing env is intentionally absent.
 Exact callback/backchannel paths must be canonical, distinct, non-root and outside fixed
-login/logout, public health and protected project/identity routes; post-logout return is `/`.
+login/logout, public health and protected project/identity routes. The successful LOGIN
+callback returns to the fixed `/`. The separate operator-bound `post_logout_uri` retains
+its exact Config-valid HTTPS same-origin value, including non-root paths; it is not an
+additional callback/backchannel route or a Task3 landing-page implementation.
 Valid distinct custom paths keep their exact redirect URI. Valid config is stored as unverified;
 Config.activation_allowed? remains false, so environment configuration cannot activate
 production auth. Explicit trusted `auth: [config: cfg]` supervisor opts start Clock, Access
