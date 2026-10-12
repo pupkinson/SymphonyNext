@@ -262,7 +262,13 @@ defmodule SymphonyControl.StandaloneHttpTest do
 
     options = [enabled: true, repo: repo_opts(schema), http: Keyword.get(opts, :http, port: 0)]
     options = if Keyword.has_key?(opts, :auth), do: Keyword.put(options, :auth, opts[:auth]), else: options
-    start_supervised!({SymphonyControl.Application, options})
+    supervisor = start_supervised!({SymphonyControl.Application, options})
+
+    if http = Keyword.get(options, :http) do
+      {:ok, {_, port}} = ThousandIsland.listener_info(listener())
+      AuthHttpFixture.record(%{kind: "legacy_http", port: port, beam_pid: inspect(supervisor), options: Map.new(http)})
+    end
+
     Repo.query!("CREATE SCHEMA #{schema}", [])
     schema
   end

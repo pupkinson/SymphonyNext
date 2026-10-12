@@ -1,3 +1,126 @@
+# Task3 R1–R7 additional repair — 2026-10-12
+
+IMPLEMENTED / AUTHOR GATES PASSED; independent review NOT_RUN. This section is
+prospective repair evidence, not acceptance, Task4 admission or release approval.
+The prior report below remains unchanged as history.
+
+Owner Denis authorized the complete [coordinator contract](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6128126404).
+[Admission6128357525](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6128357525)
+was published/read back before edits. Source HEAD6834f9875bfe88445924397890d694a1ae33139d,
+tree92d04013b9910efeda8366c18b8ca39c1556a9e2, parent/PRbase71bd5ff84d80327b83bbed50a494269fc254f478.
+The same existing draft PR98 branch is retained; no new PR/rebase/amend/forcepush/merge.
+Exact published repair tuple and sealed packet hashes are recorded in the final workpad handoff.
+
+One implementer, agents0/profilechanges0. Conservative T02026-10-12T16:24:00Z includes
+initial discovery overhead; first retained exact clock16:27:44Z. Hard deadline20:24:00Z,
+final1800s reserve19:54:00Z. Task3 historical2/2 CLOSED + R1–R7 additional1/2 used.
+Historical T0/deadlines/extensions, both late execution violations, Task2/setup histories
+and old sealed packets are not renewed, overwritten or relabeled green. Runtime exact
+model/effort/speed/session identifiers are UNKNOWN.
+
+## Separate causal evidence
+
+All REDs execute the immutable6834 product sources in a separate worktree; only owning
+regression tests/support were copied there. Fixture/compiler failures are not semantic RED.
+The broad regression positives and final full suite use the repaired source bytes.
+
+| Unit | Immutable source counterexample | Repair and GREEN evidence |
+| --- | --- | --- |
+| R1 | TLS chunked32768/32769/multichunk returned303; unfinished upload waited; oversized CL headers and slow partial body did not close promptly. H2 reset0 after entering its body path. | HTTP1 no-body/single CL<=32768 only; actual byte count, <=1KiB matching length/read_length recv and remaining deadline. TE/ambiguous/oversized framing closes before reader/drain/Store/provider; actual H2 ALPN/reset7 before work. Boundary positive passes. |
+| R6 | Split headers/body then serial/pipelined health returned second400; Login refusal lost the updated Conn. | Every read/refusal retains latest Conn; real400/403/429/Clock/Login failures allow next health200 on the same TLS connection. Partial/unsupported reads close. Fault adapter also proves state survives partial read then failure. |
+| R3 | Initial Clock4500ms + provider gave late303; initial Clock + real eligibility gave late200. | Deadline starts at auth handler entry and reaches body/limiter/Clock/Login/Access/provider/caller/response. Frozen Store750ms only starts with sufficient outer budget. Initial4500ms refuses before consume; later successful consume exchanges once, replay denies. |
+| R2 | Controlled1ms floor-bucket difference with a stable0.5ms coordinate offset: public begin/finish released a result despite exhausted stored-monotonic lifetime while UTC remained E-1. | Both issue axes retained; no epsilon/equality rule. Final session is reread through frozen Store in the actual Login caller, with no later dependency wait. Committed consume/insertion/rotation remain on refusal; HTTP cookie absent. Production Clock positive, delayed same sample, paused caller, Repo loss and inactive identity are covered. |
+| R4 | First cookieless +four returned-binding logins allowed; sixth wrongly303. | Allocate/validate32random-byte B before atomic charge; exact B is committed/returned. Sixth429 with exactly5flows. Concurrency gives4further303/6x429; global60/shared120, fixed expiry,1000cap, no expired-RPC charge preserved. |
+| R5 | Malformed manifest configure succeeded; invalid status started a listener despite a healthy migrated DB. | Real loader/runtime.exs refuse explicit invalid config, clear previous binding, and factory refuses before Repo/listener. Actual prior HTTPS cookie loses Actor after later invalid load. Absent/unverified/default-deny and healthy DB/health positives remain. |
+| R7 | Missing/root/equal/reserved paths admitted and could overwrite/shadow routes. | Loader/Router.init/explicit supervisor validate exact distinct canonical callback/backchannel paths and root return. Health/login/logout/protected/encoded/noncanonical collisions refuse before startup. Distinct custom HTTPS paths preserve exact redirect, health200/405+Allow and fixed cookie behavior. |
+
+The R2 fixture controls logical bucket coordinates and captures real native anchors,
+producer/unit/epoch; this is a controlled composition counterexample, not a claim that
+an installed production Clock was observed failing in a sub-ms race. Ordinary production
+Clock has a separate positive wire path. Witness refinement captures the actual returned
+issue sample, rather than only its initial logical model; the final native issue phase is
+900us and the final boundary is half a millisecond plus one native unit. The final RED
+still returns :ok for both public results, without publishing handle values.
+
+Exact pinned Bandit Adapter/Pipeline/HTTP1/HTTP2 contracts were read. HTTP1 send_headers
+with response Connection:close sets keepalive:false; ensure_completed skips draining;
+the handler closes the owned connection. Wire tests assert actual closure, not a header
+assumption. H2 uses the existing StreamError/refused_stream pipeline, avoiding body and
+response-window waits; no replacement parser or dependency upgrade is introduced.
+Mitigation is local to admitted auth/protected routes. Known Bandit advisories, including
+GHSA-9q9q-324x-93r2, still require separate release disposition for other applications/routes.
+
+## Commands, failures and final source gates
+
+Each own runner receipt retains command/cwd/UTC/PID/starttime/exit and original stream
+SHA256. Later commands also capture full source-file inventories. Per-command full streams,
+redacted export copies and classifications are in the standalone reviewer packet.
+
+- Baseline login/environment40/0, exit0.
+- Initial group1 immutable RED6/5; expanded10/9, exit2. Original positive HTTPS cookie/Authenticate passed.
+- R2 safe RED3/2 and final witness-only2/2, exit2; last stdoutSHA256d01eb29a4a30ef5dc6b70173fbf8b96be9f711c0674eb551455d256f4b821bbe.
+- R4 corrected owning test1/1, exit2; global expected loop54->55 deliberately preserves exactly60 successes.
+- R5/R7 RED4/3, exit2, with absent/unverified/healthy-DB positive.
+- Initial combined63/0, legacy HTTP/environment/boundary46/0, exit0; later refusal/standalone43/0, exit0.
+- Bootstrap12/0 and MCP11/0, exit0; all8 spec-index composition source/schema hashes match.
+- First standard make17:07:29.091481Z–17:08:42.510977Z exit2 at Credo; coverage/Dialyzer not run there. stdoutc872a7d9ee6ce3d0cd44c1dc545656c1448ca4cbd92a4e750ec359cbf7efa16c.
+- Additional cycle1 corrects helper/fixture complexity and presentation. Targeted lint failures remain separately retained. First full coverage run693tests/11fixture failures/6existing skips,99.19%,exit3. New registry encoded a keyword tuple list into JSON; corrected to a map, without changing product gates or frozen tests. The earlier brief chat statement that this full suite had no errors was incorrect and was corrected after full-log inspection.
+- New refusal tests cover actual latest transport state, expired body deadline, protected Actor clearing, final caller Repo/identity loss and invalid reload. No ignore/threshold/skip change.
+- Standard make17:30:37.099295Z–17:36:01.635751Z exit0:699/0/6,100%,Dialyzer0/0/0. Witness-only metadata/anchor refinement then received a new RED and a fresh complete gate.
+- Final standard make17:45:54.261791Z–17:48:45.266879Z exit0:699tests/0failures/6unchanged skips,configured coverage100%,format/specs/strictCredo pass,Dialyzer0errors/0skips/0unnecessary skips. stdoutSHA25676b8255f991751cca219da9912ae64ed27e169b9e0b6fd9af6ff4bdc2168a076; stderrSHA2565b9cdb94879a01a3c84b57b28f5644111ec1de7ba4028b79a531d81f45fcdf31 contains unchanged package-advisory notices.
+
+All final product/test bytes match that final gate inventory; only documentation/MANIFEST
+are updated afterward. Accepted F1–F5 and auth/foundation/schema cases run in the full suite.
+Six skips remain the existing live/SSH environment gates, not new repair skips.
+
+An early private RED assertion printed own synthetic handles. Original raw receipt/hash
+is preserved privately; exported command evidence redacts those values. Safe tag-only
+assertions reproduced the same failure. Tooling/read/patch-preflight failures are classified
+separately; they are not semantic RED or successful test results.
+
+## Scope, runtime, cleanup and handoff limits
+
+Prepared Cloud only, verified agent1000:1000, PostgreSQL17.11. Own deps/build/Mix/Hex and
+core/project PLTs from the first Mix invocation; permitted public archives/cache/PLTs copied
+with provenance and prepared pre/post hashes unchanged. deps.get --check-locked exit0;
+standard make uses its unchanged tasks/aliases and unchanged lock. mix.exsSHA256
+954f31a47abaf52d742d7e24e6b199b14bf8302e341c208765dbabcc426fc59c; mix.lockSHA256
+13489fc8ae1bd909063bcfbc56e2bc7c3d080ef9154dc25a0f4f132521d23073.
+
+Only contract paths and the three declared helpers/direct tests are changed. All71 prior
+MANIFEST names remain and six authorized helper/test names are added. Frozen Config/Oidc/
+Clock/Store/Actor/Vault/Health, migrations/domain APIs/Projects/RuntimeIdentity/ProjectReadController,
+quality policy/skips/pins/bootstrap/spec and PR75/97 refs remain unchanged. Old report text below
+is preserved byte-for-byte. SPECv0.5/PR79/82/84 and autonomy inside this contract are retained.
+
+Own main PG755/parent752/socket55438 and legacy PG4417/parent4413/socket55474 stayed live
+through every dependent gate. Both fast-stopped17:58:16Z, exited0 and were actually waitpid
+reaped by their live Python owners. PID/pidfile/sockets absent; own DB/socket/key roots removed.
+1448 resource records,881 unique HTTPS roots and1353 own loopback ports: roots absent/ports
+closed at final readback. Later fixture records include VM PID/starttime/beam owner; earlier
+root/port-only granularity is preserved as a limitation.
+
+The unchanged core restart test left six own FIFO hook shells adopted by PID1 after completed
+runs. They were discovered during final audit and stopped individually17:57:37Z after exact
+argv/cwd/starttime/own-gate-window matching; roots were already absent. Their resulting zombies
+cannot be reaped here, as with adopted runtime helpers. This is delayed cleanup/reaping
+limitation, not a claim that every child was reaped at its dependent test's end. No PID1,
+foreign process or historical zombie was signaled. Prior old-VM6950/Hex-prehash/reaping limits
+are unchanged and are not re-attested from this new namespace.
+
+Production activation_allowed?false, Access default-deny and logout denial remain. No real
+Authentik/production/browser/Task4/5/native/trusted/CI activation or deployment was run.
+The HTTPS login scenario is a real owned wire fixture, not real SSO acceptance. Native/time
+bounds begin at handler entry; arbitrary pre-request network/VM suspension is not promised.
+Source rollback predecessor is6834; no runtime/schema restore occurred.
+
+A new standalone source/diff/bundle/ledger/redacted-evidence packet is sealed after publication;
+its actual path/hash and export capability are stated in the final workpad. A VM path is not
+a chat attachment. Next bounded action is a separately admitted independent exact-new-HEAD
+reviewer. The author does not accept its repair or start Task4.
+
+---
+
 # Task3: browser login and server-only HTTP authentication — 2026-10-11
 
 This implementation starts from independently accepted Task2 PR97 HEAD

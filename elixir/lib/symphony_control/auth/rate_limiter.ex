@@ -1,6 +1,7 @@
 defmodule SymphonyControl.Auth.RateLimiter do
   @moduledoc "Bounded local auth counters. Missing limiter fails closed."
   use GenServer
+  alias SymphonyControl.Auth.RequestContext
   @type reason :: :rate_limited | :dependency_unavailable
 
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -11,13 +12,22 @@ defmodule SymphonyControl.Auth.RateLimiter do
 
   @spec check(:login | :callback | :backchannel, binary() | nil) :: :ok | {:error, reason()}
   def check(kind, browser) do
-    GenServer.call(__MODULE__, {kind, browser}, 500)
+    check(kind, browser, RequestContext.deadline())
+  end
+
+  @spec check(:login | :callback | :backchannel, binary() | nil, integer()) :: :ok | {:error, reason()}
+  def check(kind, browser, deadline) do
+    GenServer.call(__MODULE__, {kind, browser, deadline}, min(500, RequestContext.remaining(deadline)))
   catch
     _, _ -> {:error, :dependency_unavailable}
   end
 
   @impl true
-  def handle_call({kind, browser}, _from, counters) do
+  def handle_call({kind, browser, deadline}, _from, counters) do
+    if RequestContext.timely?(deadline), do: charge(kind, browser, counters), else: {:reply, {:error, :dependency_unavailable}, counters}
+  end
+
+  defp charge(kind, browser, counters) do
     now = System.monotonic_time(:millisecond)
     counters = Map.reject(counters, fn {_, {until, _}} -> until <= now end)
     limits = limits(kind, browser)

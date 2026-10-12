@@ -146,6 +146,14 @@ Session, email, группы и IdP admin claims сами по себе прав
 Production auth остаётся выключенной: Config.activation_allowed? возвращает false,
 Access по умолчанию отказывает, logout handlers пока denied. JSON по несекретному
 пути SYMPHONY_CONTROL_AUTH_CONFIG не выбирает callbacks и не обходит activation gate.
+Ремонт R1–R7 ограничивает auth ingress HTTP/1.0/1.1 с единственным Content-Length
+до 32KiB или без body; transfer framing закрывается до чтения, HTTP/2 auth stream
+отклоняется reset. Общие 5s включают первый Clock, чтение body и limiter;
+ошибки сохраняют Conn. Первый login учитывается в выданном binding, а session
+проверяется Store в вызывающем Login перед выдачей. Явный invalid manifest
+останавливает startup; callback/backchannel paths проверяются до listener admission.
+Это локальное закрытие auth framing, не обновление Bandit и не устранение его
+advisories для других routes/applications; перед release нужно отдельное disposition.
 Task4 eligibility/logout и Task5 реальный Authentik/HTTPS/browser, production isolation,
 independent exact-HEAD review и trusted/native/live acceptance остаются отдельными gates.
 Это не полный SN005 и не выпуск. Предыдущие отчёты выше сохранены как история.

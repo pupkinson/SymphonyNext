@@ -67,7 +67,21 @@ defmodule SymphonyControl.Auth.OidcFixture do
     server = ExUnit.Callbacks.start_supervised!({Bandit, server_opts}, id: server_id)
     {:ok, {_, port}} = ThousandIsland.listener_info(server)
     origin = "https://localhost:#{port}"
-    if path = System.get_env("SN005_TEST_RESOURCE_LEDGER"), do: File.write!(path, Jason.encode!(%{kind: "provider", port: port, root: root}) <> "\n", [:append])
+
+    if path = System.get_env("SN005_TEST_RESOURCE_LEDGER") do
+      metadata = %{
+        kind: "provider",
+        port: port,
+        root: root,
+        vm_pid: System.pid(),
+        vm_starttime: File.read!("/proc/#{System.pid()}/stat") |> String.split() |> Enum.at(21),
+        beam_pid: inspect(server),
+        owner: inspect(self())
+      }
+
+      File.write!(path, Jason.encode!(metadata) <> "\n", [:append])
+    end
+
     Agent.update(state, &Map.put(&1, :origin, origin))
     [pem] = :public_key.pem_decode(File.read!(ca_cert))
     {:Certificate, ca, _} = pem

@@ -594,7 +594,10 @@ is pending; authdisabled/trusted/native/live/HOLD boundaries remain unchanged.
 Task3 composes the accepted Oidc, Store and native Clock APIs without changing them.
 `Login.begin/3` commits a browser-bound random state/nonce/PKCE flow before redirect;
 `Login.finish/6` consumes it before its single real exchange and confirms session insertion
-or rotation before returning an opaque handle. Both use one absolute five-second budget;
+or rotation before returning an opaque handle. HTTP handlers start one absolute
+five-second budget before the first body/limiter/Clock wait and pass it through compatible
+internal arities. Login retains both issue axes and validates a session through Store in
+its actual caller, with no further dependency wait after that acceptance. Both use that budget;
 the stricter Store bounds remain 750ms. Late/expired results and unknown COMMIT outcomes
 produce refusal, with no retry or compensation. Arbitrary caller/VM suspension after the
 last synchronous acceptance decision is not a hard realtime guarantee.
@@ -604,13 +607,26 @@ SameSite=Lax, Path=/, with no Domain. The fixture has an actual loopback TLS ing
 private test CA; the product never substitutes insecure cookies for loopback HTTP.
 GET login/callback, POST denied logout/backchannel, 405+Allow, 404 and no-store are tested.
 Callback code/state and auth bodies are bounded at 4096/256 bytes and 32KiB. Local counters
+are charged to the exact opaque binding allocated before the first login. Auth ingress
+supports HTTP/1.0/1.1 no-body or a single decimal Content-Length at most32768; actual bytes
+are checked during reads of at most1KiB with the remaining absolute timeout. Transfer-Encoding,
+ambiguous/oversized/unfinished framing closes safely before body drain or expensive work.
+Unsupported HTTP/2 auth streams reset before reading or response-window waits; public health
+remains independent. Fully consumed valid bodies preserve keep-alive even on400/403/429.
+Pinned Bandit advisories remain a separate release dependency disposition for broader scope.
+Local counters
 limit login to 5/min per binding and 60/min globally, callback/backchannel to a shared
 120/min global budget, with at most 1000 entries and lazy expiry cleanup.
 
 `SYMPHONY_CONTROL_AUTH_CONFIG` names a nonsecret JSON file (at most 32KiB). Its string keys
 must exactly match the closed Auth.Config bindings; unknown keys, TLS material, callback
 or module selectors are rejected. Load happens in runtime configuration before control
-startup. Invalid/absent config yields no auth actor. Valid config is stored as unverified;
+startup. Explicit unreadable/malformed config raises fixed `invalid_control_auth_config`,
+clears stale configuration and refuses standalone admission; an existing Router cannot
+use the prior binding after that invalid load. Missing env is intentionally absent.
+Exact callback/backchannel paths must be canonical, distinct, non-root and outside fixed
+login/logout, public health and protected project/identity routes; post-logout return is `/`.
+Valid distinct custom paths keep their exact redirect URI. Valid config is stored as unverified;
 Config.activation_allowed? remains false, so environment configuration cannot activate
 production auth. Explicit trusted `auth: [config: cfg]` supervisor opts start Clock, Access
 and the limiter after Repo; the default eligibility callback still denies. Only owned
@@ -618,10 +634,12 @@ tests provide an explicit callback that actually calls their HTTPS provider. Exi
 project/platform Domain authorization remains separate and defaults to deny.
 
 Run with own disposable PostgreSQL, the SN005 fixture bindings documented above, and
-isolated MIX_DEPS_PATH/MIX_BUILD_PATH/MIX_HOME/HEX_HOME (including own core/project PLTs):
+own dependencies and separate per-environment build directories plus MIX_HOME/HEX_HOME
+(including own core/project PLTs). Do not share one MIX_BUILD_PATH between dev and test:
 
 ```sh
 mix test test/symphony_control/auth/login_http_test.exs test/symphony_control/auth/environment_test.exs --trace
+mix test test/symphony_control/auth/http_body_test.exs test/symphony_control/auth/request_context_test.exs test/symphony_control/auth/routes_test.exs --trace
 mix test test/symphony_control/project_read_http_test.exs test/symphony_control/standalone_http_test.exs test/symphony_elixir/control_boundary_test.exs test/symphony_elixir/control_environment_test.exs --trace
 mix test test/symphony_control/auth test/symphony_control/foundation_test.exs test/symphony_control/schema_contract_test.exs --trace
 # from the repository root, in the same prepared own Mix environment:

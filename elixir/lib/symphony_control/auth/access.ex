@@ -1,7 +1,7 @@
 defmodule SymphonyControl.Auth.Access do
   @moduledoc "Server-only session confirmation. Production eligibility remains denied in Task3."
   use GenServer
-  alias SymphonyControl.Auth.{Actor, Clock, Config, Store}
+  alias SymphonyControl.Auth.{Actor, Clock, Config, RequestContext, Store}
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -16,8 +16,11 @@ defmodule SymphonyControl.Auth.Access do
   def handle_call(:binding, _from, state), do: {:reply, state, state}
 
   @spec authenticate(Config.t(), binary(), Clock.t()) :: {:ok, Actor.t()} | {:error, Config.reason()}
-  def authenticate(cfg, handle, clock) do
-    deadline = System.monotonic_time(:millisecond) + 5_000
+  def authenticate(cfg, handle, clock), do: authenticate(cfg, handle, clock, RequestContext.deadline())
+
+  @spec authenticate(Config.t(), binary(), Clock.t(), integer()) :: {:ok, Actor.t()} | {:error, Config.reason()}
+  def authenticate(cfg, handle, clock, native_deadline) do
+    deadline = RequestContext.milliseconds(native_deadline)
     task = Task.async(fn -> confirm(cfg, handle, clock, deadline) end)
 
     # Reserve the accepted Clock and Store bounds for the caller's final read.
@@ -39,6 +42,7 @@ defmodule SymphonyControl.Auth.Access do
 
   defp confirm(%Config{} = cfg, handle, clock, deadline) do
     with {^cfg, callback} <- GenServer.call(__MODULE__, :binding, remaining(deadline)),
+         true <- remaining(deadline) >= 750,
          {:ok, actor} <- Store.local_actor(cfg, handle, clock),
          true <- remaining(deadline) > 0,
          :ok <- callback.(cfg, actor, clock, deadline),

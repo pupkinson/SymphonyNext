@@ -44,7 +44,7 @@ defmodule SymphonyControl.Auth.EnvironmentTest do
       File.write!(path, Jason.encode!(invalid))
       assert {:error, :invalid_auth_config} = RuntimeConfig.load_auth_config(path)
       System.put_env("SYMPHONY_CONTROL_AUTH_CONFIG", path)
-      assert :ok = RuntimeConfig.configure()
+      assert_raise RuntimeError, "invalid_control_auth_config", fn -> RuntimeConfig.configure() end
       assert Application.get_env(:symphony_elixir, :control_auth_config) == nil
     end
 

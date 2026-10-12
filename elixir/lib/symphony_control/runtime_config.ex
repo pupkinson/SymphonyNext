@@ -9,7 +9,7 @@ defmodule SymphonyControl.RuntimeConfig do
   opt-in through SYMPHONY_CONTROL_ENABLED being exactly "true".
   """
 
-  alias SymphonyControl.Auth.Config
+  alias SymphonyControl.Auth.{Config, Routes}
   alias SymphonyControl.Repo
   @auth_keys Map.new(Map.keys(Map.from_struct(%Config{})) -- [:tls_cacerts], &{Atom.to_string(&1), &1})
 
@@ -47,7 +47,8 @@ defmodule SymphonyControl.RuntimeConfig do
          {:ok, input} when is_map(input) <- Jason.decode(json),
          true <- Enum.all?(Map.keys(input), &Map.has_key?(@auth_keys, &1)),
          bindings = Map.new(input, fn {key, value} -> {Map.fetch!(@auth_keys, key), value} end),
-         {:ok, config} <- Config.load(bindings) do
+         {:ok, config} <- Config.load(bindings),
+         :ok <- Routes.validate(config) do
       {:ok, config}
     else
       _ -> {:error, :invalid_auth_config}
@@ -71,6 +72,11 @@ defmodule SymphonyControl.RuntimeConfig do
 
     Application.put_env(:symphony_elixir, :control_auth_config, config)
     Application.put_env(:symphony_elixir, :control_auth_status, status)
+
+    if status == :invalid do
+      Application.put_env(:symphony_elixir, :control_enabled, false)
+      raise "invalid_control_auth_config"
+    end
   end
 
   defp configure_identity do

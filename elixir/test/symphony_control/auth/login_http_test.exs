@@ -70,12 +70,8 @@ defmodule SymphonyControl.Auth.LoginHttpTest do
   end
 
   @tag capture_log: true
-  test "invalid server config preserves public health and denies auth and protected reads" do
-    f = AuthHttpFixture.start!(router_config: %SymphonyControl.Auth.Config{})
-    assert AuthHttpFixture.get(f, "/health/live").status == 200
-    assert AuthHttpFixture.get(f, "/auth/login").status == 403
-    assert AuthHttpFixture.get(f, "/api/v1/control/identity").status == 403
-    assert AuthHttpFixture.counts(f) == %{exchanges: 0, sessions: 0}
+  test "invalid explicit Router config refuses admission before serving any routes" do
+    assert_raise ArgumentError, "invalid_control_auth_options", fn -> SymphonyControl.Router.init(auth: %SymphonyControl.Auth.Config{}) end
   end
 
   test "a real committed handle queued beyond credential expiry is never released" do
@@ -207,12 +203,13 @@ defmodule SymphonyControl.Auth.LoginHttpTest do
   test "bounded login and callback counters refuse before expensive calls and cleanup preserves flow TTL" do
     f = AuthHttpFixture.start!()
     flow = AuthHttpFixture.login!(f, phase: :begin)
-    for _ <- 1..5, do: assert(AuthHttpFixture.get(f, "/auth/login", cookie: flow.cookie).status == 303)
+    for _ <- 1..4, do: assert(AuthHttpFixture.get(f, "/auth/login", cookie: flow.cookie).status == 303)
     limited = AuthHttpFixture.get(f, "/auth/login", cookie: flow.cookie)
     assert limited.status == 429
     assert Req.Response.get_header(limited, "cache-control") == ["no-store"]
+    assert Repo.query!("SELECT count(*) FROM control_auth_pending_logins", [], log: false).rows == [[5]]
 
-    for _ <- 1..54 do
+    for _ <- 1..55 do
       cookie = "__Host-symphony-browser=" <> Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
       assert AuthHttpFixture.get(f, "/auth/login", cookie: cookie).status == 303
     end
@@ -500,5 +497,35 @@ defmodule SymphonyControl.Auth.LoginHttpTest do
   defp advance_clock(f, ms) do
     clock = Clock.now()
     AuthDbFixture.set_clock!(f.db, %{clock | utc_ms: clock.utc_ms + ms, monotonic_ms: clock.monotonic_ms + ms})
+  end
+
+  test "R4 concurrent first binding saturation commits exactly five total flows" do
+    f = AuthHttpFixture.start!()
+    flow = AuthHttpFixture.login!(f, phase: :begin)
+    responses = 1..10 |> Enum.map(fn _ -> Task.async(fn -> AuthHttpFixture.get(f, "/auth/login", cookie: flow.cookie) end) end) |> Enum.map(&Task.await(&1, 6000))
+    assert Enum.count(responses, &(&1.status == 303)) == 4
+    assert Enum.count(responses, &(&1.status == 429)) == 6
+    assert Repo.query!("SELECT count(*) FROM control_auth_pending_logins", [], log: false).rows == [[5]]
+    assert AuthHttpFixture.counts(f) == %{exchanges: 0, sessions: 0}
+  end
+
+  test "R4 limiter preserves fixed expiry cap and does not charge an expired RPC" do
+    alias SymphonyControl.Auth.{RateLimiter, RequestContext}
+    start_supervised!({RateLimiter, []})
+    browser = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+    assert :ok = RateLimiter.check(:login, browser)
+    first = :sys.get_state(RateLimiter)
+    assert :ok = RateLimiter.check(:login, browser)
+    second = :sys.get_state(RateLimiter)
+    assert Map.keys(first) |> Enum.sort() == Map.keys(second) |> Enum.sort()
+    assert Enum.all?(first, fn {key, {until, _}} -> elem(second[key], 0) == until end)
+    assert :ok = RateLimiter.check(:login, nil)
+    second = :sys.get_state(RateLimiter)
+    past = System.monotonic_time() - System.convert_time_unit(1, :millisecond, :native)
+    assert {:error, :dependency_unavailable} = RateLimiter.check(:callback, nil, past)
+    assert :sys.get_state(RateLimiter) == second
+    :sys.replace_state(RateLimiter, fn _ -> Map.new(1..1000, &{{:owned_cap, &1}, {System.monotonic_time(:millisecond) + 60_000, 1}}) end)
+    assert {:error, :rate_limited} = RateLimiter.check(:login, browser, RequestContext.deadline())
+    assert map_size(:sys.get_state(RateLimiter)) == 1000
   end
 end

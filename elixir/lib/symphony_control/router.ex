@@ -8,11 +8,25 @@ defmodule SymphonyControl.Router do
 
   use Plug.Router
 
-  alias SymphonyControl.Auth.{Authenticate, Config, Controller}
+  alias SymphonyControl.Auth.{Authenticate, Config, Controller, HttpBody, Routes}
   alias SymphonyControl.ProjectReadController
   alias SymphonyElixirWeb.ControlHealthController
 
   @known_paths [["health", "live"], ["health", "ready"], ["api", "v1", "control", "identity"]]
+
+  @impl true
+  def init(opts) do
+    case Keyword.get(opts, :auth) do
+      nil ->
+        super(opts)
+
+      %Config{} = cfg ->
+        if trusted_config(cfg), do: super(opts), else: raise(ArgumentError, "invalid_control_auth_options")
+
+      _ ->
+        raise ArgumentError, "invalid_control_auth_options"
+    end
+  end
 
   @impl true
   def call(conn, opts) do
@@ -28,8 +42,11 @@ defmodule SymphonyControl.Router do
   end
 
   defp trusted_config(%Config{} = cfg) do
-    case cfg |> Map.from_struct() |> Map.delete(:tls_cacerts) |> Config.load() do
-      {:ok, _} -> cfg
+    with false <- Application.get_env(:symphony_elixir, :control_auth_status) == :invalid,
+         {:ok, _} <- cfg |> Map.from_struct() |> Map.delete(:tls_cacerts) |> Config.load(),
+         :ok <- Routes.validate(cfg) do
+      cfg
+    else
       _ -> nil
     end
   end
@@ -43,10 +60,17 @@ defmodule SymphonyControl.Router do
   end
 
   defp auth_route(conn, {method, handler}) do
+    HttpBody.require_http1!(conn)
+
     if conn.method == method do
       apply(Controller, handler, [conn, %{}])
     else
-      conn |> put_resp_header("allow", method) |> put_resp_header("cache-control", "no-store") |> put_status(:method_not_allowed) |> Phoenix.Controller.json(%{error: "method_not_allowed"})
+      conn
+      |> HttpBody.close()
+      |> put_resp_header("allow", method)
+      |> put_resp_header("cache-control", "no-store")
+      |> put_status(:method_not_allowed)
+      |> Phoenix.Controller.json(%{error: "method_not_allowed"})
     end
   end
 

@@ -7,7 +7,7 @@ case System.get_env("SYMPHONY_CONTROL_AUTH_CONFIG") do
   path ->
     case SymphonyControl.RuntimeConfig.load_auth_config(path) do
       {:ok, cfg} -> config :symphony_elixir, control_auth_config: cfg, control_auth_status: :unverified
-      _ -> config :symphony_elixir, control_auth_config: nil, control_auth_status: :invalid
+      _ -> raise "invalid_control_auth_config"
     end
 end
 

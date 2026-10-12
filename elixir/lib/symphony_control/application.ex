@@ -9,7 +9,7 @@ defmodule SymphonyControl.Application do
 
   use Supervisor
 
-  alias SymphonyControl.Auth.{Access, Clock, Config, RateLimiter}
+  alias SymphonyControl.Auth.{Access, Clock, Config, RateLimiter, Routes}
   alias SymphonyControl.{Repo, Router}
 
   @spec start_link(keyword()) :: Supervisor.on_start() | :ignore
@@ -35,6 +35,12 @@ defmodule SymphonyControl.Application do
   end
 
   defp auth_options(opts) do
+    if Application.get_env(:symphony_elixir, :control_auth_status) == :invalid,
+      do: {:error, :invalid_auth_config},
+      else: selected_auth(opts)
+  end
+
+  defp selected_auth(opts) do
     auth = Keyword.get(opts, :auth)
 
     case auth do
@@ -47,14 +53,25 @@ defmodule SymphonyControl.Application do
 
   defp production_auth do
     case Application.get_env(:symphony_elixir, :control_auth_config) do
-      %Config{} = cfg -> if Config.activation_allowed?(cfg), do: {:ok, [config: cfg]}, else: {:ok, nil}
-      _ -> {:ok, nil}
+      %Config{} = cfg ->
+        production_binding(cfg)
+
+      _ ->
+        {:ok, nil}
+    end
+  end
+
+  defp production_binding(cfg) do
+    with {:ok, auth} <- validate_auth(cfg, config: cfg) do
+      if Config.activation_allowed?(cfg), do: {:ok, auth}, else: {:ok, nil}
     end
   end
 
   defp validate_auth(cfg, auth) do
-    case cfg |> Map.from_struct() |> Map.delete(:tls_cacerts) |> Config.load() do
-      {:ok, _} -> {:ok, auth}
+    with {:ok, _} <- cfg |> Map.from_struct() |> Map.delete(:tls_cacerts) |> Config.load(),
+         :ok <- Routes.validate(cfg) do
+      {:ok, auth}
+    else
       _ -> {:error, :invalid_auth_options}
     end
   end
