@@ -44,6 +44,8 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
     {_, 0} = System.cmd("openssl", ["req", "-new", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256", "-nodes", "-keyout", key, "-out", csr, "-subj", "/CN=localhost"], stderr_to_stdout: true)
     {_, 0} = System.cmd("openssl", ["x509", "-req", "-in", csr, "-CA", ca_cert, "-CAkey", ca_key, "-CAcreateserial", "-out", cert, "-days", "1", "-extfile", extensions], stderr_to_stdout: true)
+    File.chmod!(key, 0o600)
+    File.chmod!(ca_key, 0o600)
     secret = Path.join(root, "client-secret")
     File.write!(secret, "synthetic-client-secret-canary")
     File.chmod!(secret, 0o600)
@@ -65,6 +67,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
     server = ExUnit.Callbacks.start_supervised!({Bandit, server_opts}, id: server_id)
     {:ok, {_, port}} = ThousandIsland.listener_info(server)
     origin = "https://localhost:#{port}"
+    if path = System.get_env("SN005_TEST_RESOURCE_LEDGER"), do: File.write!(path, Jason.encode!(%{kind: "provider", port: port, root: root}) <> "\n", [:append])
     Agent.update(state, &Map.put(&1, :origin, origin))
     [pem] = :public_key.pem_decode(File.read!(ca_cert))
     {:Certificate, ca, _} = pem
@@ -233,6 +236,8 @@ defmodule SymphonyControl.Auth.OidcFixture do
         "/discovery" -> :discovery
         "/jwks" -> :jwks
         "/token" -> :token
+        "/authorize" -> :authorize
+        "/eligibility" -> :eligibility
         _ -> :other
       end
 
@@ -296,17 +301,39 @@ defmodule SymphonyControl.Auth.OidcFixture do
       not is_map(expectations) ->
         json(conn, 400, %{"error" => "invalid_grant"})
 
-      params["grant_type"] != "authorization_code" or params["redirect_uri"] != "https://control.example/auth/callback" or params["code_verifier"] != expectations.verifier ->
+      params["grant_type"] != "authorization_code" or params["redirect_uri"] != Map.get(expectations, :redirect_uri, "https://control.example/auth/callback") or
+          not verifier_matches?(params["code_verifier"], expectations) ->
         json(conn, 400, %{"error" => "invalid_grant"})
 
       true ->
+        Agent.update(state, &Map.update(&1, :accepted_codes, 1, fn n -> n + 1 end))
         # read_body returned :ok and every code/client/PKCE binding passed.
         # A connection accept or the earlier request counter is not this barrier.
         barrier_response(conn, data, :token, fn -> token_response(conn, state, data, expectations, params) end)
     end
   end
 
+  defp respond(conn, :authorize, state, _data) do
+    conn = fetch_query_params(conn)
+    params = conn.query_params
+    code = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+    expected = %{nonce: params["nonce"], challenge: params["code_challenge"], redirect_uri: params["redirect_uri"]}
+    Agent.update(state, &put_in(&1, [:codes, code], expected))
+    location = params["redirect_uri"] <> "?" <> URI.encode_query(%{code: code, state: params["state"]})
+    conn |> put_resp_header("location", location) |> send_resp(303, "")
+  end
+
+  defp respond(conn, :eligibility, _state, data) do
+    json(conn, 200, %{"eligible" => Keyword.get(data.opts, :eligible, true)})
+  end
+
   defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+
+  defp verifier_matches?(verifier, %{challenge: challenge}) when is_binary(verifier),
+    do: Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false) == challenge
+
+  defp verifier_matches?(verifier, %{verifier: expected}), do: verifier == expected
+  defp verifier_matches?(_, _), do: false
 
   defp barrier_response(conn, data, stage, respond) do
     case Map.get(Keyword.get(data.opts, :barriers, %{}), stage) do
@@ -373,6 +400,11 @@ defmodule SymphonyControl.Auth.OidcFixture do
     case Keyword.get(data.opts, :fault) do
       :dpop_nonce ->
         conn |> put_resp_header("dpop-nonce", "synthetic-nonce") |> json(400, %{"error" => "use_dpop_nonce"})
+
+      :disconnect_after_accept ->
+        # The exact POST bindings were accepted and the code already removed.
+        # Close this real TLS connection before any HTTP response, never echo code.
+        exit(:normal)
 
       :lost_response ->
         Process.sleep(1_000)

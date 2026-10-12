@@ -10,13 +10,18 @@ defmodule SymphonyElixir.ControlBoundaryTest do
 
   setup do
     env = System.get_env(@database_url)
-    config = Map.new([Repo, :control_enabled], &{&1, Application.fetch_env(:symphony_elixir, &1)})
+    auth_names = ~w(SYMPHONY_CONTROL_AUTH_CONFIG SYMPHONY_CONTROL_CLIENT_SECRET_REF SYMPHONY_CONTROL_SESSION_KEY_REF SYMPHONY_CONTROL_AUTH_ENABLED)
+    auth_env = Map.new(auth_names, &{&1, System.get_env(&1)})
+    Enum.each(auth_names, &System.delete_env/1)
+    config = Map.new([Repo, :control_enabled, :control_auth_config], &{&1, Application.fetch_env(:symphony_elixir, &1)})
     System.delete_env(@database_url)
     Application.delete_env(:symphony_elixir, Repo)
     Application.put_env(:symphony_elixir, :control_enabled, false)
+    Application.delete_env(:symphony_elixir, :control_auth_config)
 
     on_exit(fn ->
       restore_env(@database_url, env)
+      Enum.each(auth_env, fn {name, value} -> restore_env(name, value) end)
 
       Enum.each(config, fn
         {key, {:ok, value}} -> Application.put_env(:symphony_elixir, key, value)
@@ -25,6 +30,35 @@ defmodule SymphonyElixir.ControlBoundaryTest do
     end)
 
     :ok
+  end
+
+  test "auth config and secret references block synthetic engine before any child or secret read" do
+    root = Path.dirname(Workflow.workflow_file_path())
+    marker = Path.join(root, "auth-child-executed")
+    workspace = Path.join(root, "auth-workspace")
+    File.mkdir_p!(workspace)
+    command = "printf executed > '#{marker}'"
+    write_workflow_file!(Workflow.workflow_file_path(), codex_command: command)
+
+    for {name, value} <- [
+          {"SYMPHONY_CONTROL_AUTH_CONFIG", "/nonexistent/no-read"},
+          {"SYMPHONY_CONTROL_CLIENT_SECRET_REF", "/nonexistent/no-read"},
+          {"SYMPHONY_CONTROL_SESSION_KEY_REF", "/nonexistent/no-read"},
+          {"SYMPHONY_CONTROL_AUTH_ENABLED", "true"}
+        ] do
+      System.put_env(name, value)
+      assert @blocked == AppServer.start_session(workspace)
+      assert @blocked == SSH.run("fixture.invalid", command)
+      assert @blocked == AgentRuntimeSupervisor.start_link(name: :blocked_auth_runtime)
+      refute Process.whereis(:blocked_auth_runtime)
+      refute File.exists?(marker)
+      assert @blocked == ControlBoundary.validate_startup_environment({:ok, name <> "=" <> value <> <<0>>})
+      System.delete_env(name)
+    end
+
+    Application.put_env(:symphony_elixir, :control_auth_config, %{session_key_ref: "/nonexistent/already-loaded"})
+    assert @blocked == AppServer.start_session(workspace)
+    refute File.exists?(marker)
   end
 
   test "credential-free legacy runtime remains admissible" do
