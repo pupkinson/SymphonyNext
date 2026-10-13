@@ -1,3 +1,183 @@
+# Task4 current permissions, observation lifecycle and logout — 2026-10-13
+
+IMPLEMENTED / AUTHOR GATES PASSED (publication pending) / NOT SOURCE ACCEPTANCE / NOT RELEASE APPROVAL.
+Production Config.activation_allowed? remains false. Independent review NOT_RUN.
+All report text below this new section is retained verbatim as dated history.
+
+## Source and admission
+
+Accepted parent HEAD097d64ada3138d49c6797001d02ab113c15ccb6e,
+TREE56a9dd3b0f533232c490482c200087584728945a, parent76ef22196f4495dee4113a4ae2f56f25c08a3268.
+Own branch feat/sn005-current-access-logout-20261013; dependent PR base is
+feat/sn005-browser-login-20261011. No synthetic merge or accepted-ref modification.
+[Admission6140268810](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140268810)
+and [A6140436236](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140436236),
+[B6140832646](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140832646)
+were published with full-body readback. Current publication tuples are recorded
+outside this tracked report after the final source commit; no future SHA is invented.
+
+Conservative attempt T0 bound06:59:24Z13October is the observed Codex process start;
+exact first-tool UTC is unavailable. Hard deadline10:59:24Z, final1800s reserve10:29:24Z.
+One IMPLEMENTER, agents0/profilechanges0; historical Task3 counters/windows unchanged.
+Actual runtime model/effort/speed/session ID UNKNOWN.
+
+## Working source lifecycle and permission matrix
+
+Owned HTTPS code/PKCE/signature login commits a local PG session. Each protected
+operation rereads the active user, exact identity/session/generation/epoch/key and
+both expiry axes. Actor is a candidate, never a permission cache. Authorizer invokes
+current eligibility and the coherent Store.permissions statement before returning
+exactly :ok. Router checks the receipt and original deadline before private bytes
+are sent, including time spent in the project query.
+
+| Current local right | Own member project | Other project | Runtime identity |
+| --- | --- | --- | --- |
+| viewer/contributor/operator/approver/project_admin | Read | Deny | Separate grant only |
+| runtime_identity_read without membership | Deny | Deny | Read only |
+| absent/revoked/inactive/malformed/service/agent | Deny | Deny | Deny |
+
+No role enables mutation, enqueue, protocol approval or task-result acceptance.
+Old project schema_version1/whitelist/error/no-store contracts remain.
+
+## Observation, delivery and invalidation
+
+Eligibility cache key is exact issuer/sub/sid/config generation/boot epoch/local
+session ID. A success is strictly younger than50000ms on independent UTC and
+monotonic axes and a sample-anchored native delivery bound. Reads/hits/failures do
+not renew its timestamp. Bound resources:1000 cache entries,32 in-flight refreshes,
+32 joined callers per refresh. A monitored/linked asynchronous worker keeps the
+GenServer free of synchronous network work and dies on timeout/owner termination.
+Unique refresh refs prevent invalidated replies resurrecting a success. Replies
+queued past their original deadline are discarded before publication.
+
+The observer must match all configured client/application/provider/resource/generation
+bindings plus an explicit version/evidence binding from the trusted supervisor.
+Production observer/binding are unproved and closed; live_evidence=true, endpoint
+names and old JWT claims do not confer freshness. The owned fixture reports an
+actual HTTPS response for three separately mutable app-group/user-active/session
+states. Its synthetic version/evidence are not installed Authentik proof.
+
+## Additive inherited seams
+
+Store.session_material is one server-internal database(:read)/750ms operation,
+consumed only by Eligibility and Logout. It reuses candidate current-row/key/AAD,
+fresh-clock, two lifetime axes and final-caller acceptance. The material query caps
+ciphertext in PostgreSQL before transport/decryption (32768 plaintext plus29-byte
+vault envelope). Safe external-term decoding refuses compression, arbitrary/open
+structures, invalid field types and oversize tokens. Material never enters Actor,
+HTTP, audit, logs or cache. Old public shapes/write/COMMIT semantics are unchanged.
+
+HttpBody.read_payload returns at most32KiB and latest Conn through the same framing
+and <=1KiB chunks/deadline reader; read/2 remains compatible. No second transport
+read/unbounded parser. HTTP1 close-no-drain and uncaught unsupported-H2 reset remain.
+RequestContext is native; Eligibility/Oidc deadlines are absolute monotonic ms.
+
+## Logout and standard interpretation
+
+Task4 callback legitimately issues a separate browser-readable anti-CSRF cookie
+signed by Plug MessageVerifier/PBKDF2 and bound to every exact Actor field with an
+Access-process random secret. It contains only a random nonce, no session handle
+or IdP token. Secure/HttpOnly/Lax/__Host session cookie stays unchanged. Exact Origin,
+current local session and one valid X-CSRF-Token are required for POST logout;
+rotation invalidates old CSRF. Missing/bad/foreign/GET requests do not revoke.
+
+Store.revoke confirms local effect before RP handoff; live eligibility/IdP
+availability are not required. Unknown COMMIT returns unavailable, clears browser
+auth cookies and is reconciled without blind repetition. Standard token-free RP
+handoff uses client_id and the exact end_session_url/post_logout_uri. A backend GET
+is not browser logout: the real HTTPS fixture requires its OP session cookie and
+explicit user confirmation before its separate provider effect. Non-root returns
+are preserved and the LOGIN callback remains fixed to root. Real compatibility is
+Task5; no admin API/hint-token workaround exists.
+
+Signed back-channel uses bounded form/JWT and pinned oidcc3.9.0/jose1.11.12 signature
+functions. A separate read-only transport purpose admits discovery/JWKS only; unknown
+kid refreshes at most once under the same deadline. Signature/allowed alg/exact
+issuer+aud/events object/nonempty jti/sid-or-sub/no nonce are checked. Current final
+backchannel errata requires exp; new verified results retain expires_ms for caller
+rechecks. iat age<=300s and future skew<=30s use JWT seconds, expiry is strict at ms.
+Selectors: sid+sub intersection, sub-only exact identity, sid-only exact issuer/sid.
+Raw selectors never reach the effect; Store.accept_logout performs unique issuer+jti
+and revoke in its existing transaction. Retention exceeds3600s with a5s commit-bound
+margin; replay persists after process/control restart and does not repeat effects.
+
+Primary standards fetched13October:
+https://openid.net/specs/openid-connect-backchannel-1_0.html
+https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+Pinned library APIs inspected from the exact locked dependency sources.
+
+## Evidence and final author gates
+
+A RED0039/9 after real login/current candidate positive; body RED0051/1; GREEN00622/0.
+B RED007 cache-repeat and three wire revoke leaks; GREEN01322/0. Delivery RED0101/1
+held an actual completed project query then advanced clock50000ms; GREEN01121/0.
+Queued refresh RED0241/1 demonstrated a late success reappearing after request timeout;
+original-deadline publication fence added. Ciphertext RED0231/1 measured1048605 bytes
+returned by PG before the material cap. C RED0148/7 with local/signed positive targets;
+GREEN02014/0, including RP confirmation, selectors, restart/replay and unknown COMMIT.
+Binding/C GREEN02220/0. Latest broader026392/1 is one expected supervisor-count
+assertion needing the newly required Eligibility child, not a source permission leak.
+
+All first failures are retained: selector004 selected0; fixture008 nil-or; concurrent
+harness012 demanded8 admitted callers from frozen queue:false/pool4 (corrected to2
+joined actual requests); compilation015/016/019; time-loop017 and corrected stable
+wire negatives with separate exact300/301 and30/31 arithmetic. Selector021 mistakenly
+selected the preceding clock test; it is not claimed as the version mismatch RED.
+Receipts001–021 preserve command/UTC/exit/redacted stream hashes; full per-command dirty
+input snapshots were not captured then. Mandatory fresh gates022+ capture complete
+tracked/allowlist source hashes and diff before execution. No older results certify
+new bytes. Final standard make045 passed after the scoped two-cycle validation/refinement.
+Fresh full suite counts, coverage and zero-warning Dialyzer are recorded below;
+no previous714-test result is reused. Final static/body/publication receipts are
+retained in the owning exact-HEAD handoff.
+
+Task5 exact installed IdP/browser/two tabs/<=60s/UID/ingress, trusted/native checks and
+historical native HOLD remain open. Wider Bandit advisory remains a separate release
+gate; the lock/dependency was not patched. No production enablement, merge, deploy,
+Actions, reviewer launch, old-packet overwrite or foreign-resource mutation.
+
+Final standard `make -C elixir all`045 ran09:24:43.747814Z–09:28:51.264923Z,
+exit0. Build/escript build only, format/specs/strict Credo pass; full suite
+770tests/0failures/6unchanged live skips, configured coverage100%; Dialyzer
+0errors/0skips/0unnecessary skips. stdoutSHA256
+a27bf05ddf7fd5643338a98adf6396d8396fee1ff3371c6a08d52a9df8bb5c03;
+stderr emptySHA256e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+Complete input-hashes digest7038d3e22a236e3437ebc5c6c251b208dd406b8b1d59fb2afe7dbbd196383c44.
+Every runtime/test byte was reread against that input before publication.
+Own core/project PLTs were built from scratch; separate Dialyzer036 also passed.
+Bootstrap03112/0 and MCP03211/0 passed with exact frozen composition checks.
+
+Full034758/0/6 stopped at97.47%coverage;039auth-only352/0 exited3 with unchanged
+100%threshold because unrelated modules were not run. Subsequent meaningful fault,
+capacity, dependency-loss and measured queued-caller tests closed the new paths.
+Final targeted/related046404tests/0failures exit0 (09:30:29.713435Z–09:33:35.504148Z),
+stdoutSHA256df740ea5565e9f7d1b21cb347ba05b1efeb4b087b63083d3632eeb1dbc9e944c.
+This includes all auth/seam/project/identity/standalone/environment/agent boundaries
+and inherited F1–F5/R1–R7/N1. Final manifest04786/86, PR-body048 and diff049 exit0.
+Original77 manifest names/order and225 other tracked bytes preserved.
+Cycle1/2 covered initial broader/style refinements; cycle2/2 covered fault/lifecycle
+and coverage checks. No extra agent/profile/flag/exclusion or locked-suite weakening.
+Driver038 invalid guard and040 wrong process resumer were retained and corrected.
+Access now traps supervisor shutdown so its owned authorizer settings are restored;
+new tests check previous nil/missing settings. Source Config/Clock/Actor/Vault/schema,
+lock/mix.exs, CI/policy/planning and original77 MANIFEST names stay frozen/preserved.
+
+Owned PG is kept alive for the final dependent checks. Final045subreaper actually
+stopped and reaped current FIFO helpers21596/21601; their deferred cleanup is
+acknowledged. Earlier034helpers12121/12126 were adopted by PID1, TERM-stopped by
+matching ownership/starttime and remain unreapable zombies; no PID1/foreign signal.
+This current limitation and all historical caveats are retained. HTTPS fixture roots
+are removed on exit; terminal recorded ports/root checks follow all dependent tests.
+
+Output destination probe failed EACCES once. No rights expansion/repeated mkdir or
+alternative upload. A new independently sealed source/diff/bundle/ledger/redacted
+review packet stays at its private VM path with SHA/CRC in the GitHub handoff;
+it is not a downloadable chat attachment.
+
+---
+
+# Historical reports — retained verbatim
+
 # Task3 N1-only continuation — 2026-10-12
 
 IMPLEMENTED / AUTHOR GATES PASSED; new independent exact-HEAD review NOT_RUN.

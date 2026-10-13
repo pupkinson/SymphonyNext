@@ -50,7 +50,19 @@ defmodule SymphonyControl.Auth.OidcFixture do
     File.write!(secret, "synthetic-client-secret-canary")
     File.chmod!(secret, 0o600)
     signing = JOSE.JWK.generate_key({:rsa, 2048})
-    initial = %{opts: opts, root: root, signing: signing, counts: %{}, codes: %{}}
+    evidence = "owned-https/" <> Base.encode16(:crypto.strong_rand_bytes(32), case: :lower)
+
+    initial = %{
+      opts: opts,
+      root: root,
+      signing: signing,
+      counts: %{},
+      codes: %{},
+      op_session: Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+      op_active: true,
+      observation_evidence: evidence
+    }
+
     state = ExUnit.Callbacks.start_supervised!({Agent, fn -> initial end}, id: make_ref())
 
     server_opts = [
@@ -90,12 +102,32 @@ defmodule SymphonyControl.Auth.OidcFixture do
       File.rm_rf!(root)
     end)
 
-    %{state: state, server: server, server_id: server_id, origin: origin, secret_ref: secret, ca: ca}
+    fixture = %{state: state, server: server, server_id: server_id, origin: origin, secret_ref: secret, ca: ca}
+    Map.put(fixture, :observation_evidence, evidence)
   end
 
   def config(fixture) do
     {:ok, config} = Config.load(bindings(fixture))
     Map.put(config, :tls_cacerts, [fixture.ca])
+  end
+
+  def logout_token(fixture, claims \\ %{}, opts \\ []) do
+    data = Agent.get(fixture.state, & &1)
+    now = System.system_time(:second)
+
+    base = %{
+      "iss" => data.origin <> "/issuer",
+      "aud" => "control-client",
+      "iat" => now,
+      "exp" => now + 300,
+      "jti" => Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+      "sid" => "session-1",
+      "sub" => "human-1",
+      "events" => %{"http://schemas.openid.net/event/backchannel-logout" => %{}}
+    }
+
+    merged = base |> Map.merge(claims) |> Map.drop(Keyword.get(opts, :drop, []))
+    encode_token(data, merged, Keyword.get(opts, :fault))
   end
 
   def bindings(f) do
@@ -252,6 +284,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
         "/token" -> :token
         "/authorize" -> :authorize
         "/eligibility" -> :eligibility
+        "/logout" -> :logout
         _ -> :other
       end
 
@@ -287,6 +320,12 @@ defmodule SymphonyControl.Auth.OidcFixture do
     wait_for_keys(data)
     {_, public} = data.signing |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
     kid = if Keyword.get(data.opts, :fault) == :unknown_kid and Map.get(data.counts, :jwks, 0) == 0, do: "old", else: "current"
+
+    kid =
+      case Keyword.get(data.opts, :logout_key_rotation) do
+        count when is_integer(count) -> if Map.get(data.counts, :jwks, 0) < count, do: "old", else: "current"
+        _ -> kid
+      end
 
     barrier_response(conn, data, :jwks, fn ->
       if Keyword.get(data.opts, :fault) == :malformed_jwks do
@@ -327,21 +366,87 @@ defmodule SymphonyControl.Auth.OidcFixture do
     end
   end
 
-  defp respond(conn, :authorize, state, _data) do
+  defp respond(conn, :authorize, state, data) do
     conn = fetch_query_params(conn)
     params = conn.query_params
     code = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
     expected = %{nonce: params["nonce"], challenge: params["code_challenge"], redirect_uri: params["redirect_uri"]}
     Agent.update(state, &put_in(&1, [:codes, code], expected))
     location = params["redirect_uri"] <> "?" <> URI.encode_query(%{code: code, state: params["state"]})
-    conn |> put_resp_header("location", location) |> send_resp(303, "")
+    cookie = [secure: true, http_only: true, same_site: "Lax", path: "/"]
+    conn |> put_resp_cookie("__Host-fixture-op", data.op_session, cookie) |> put_resp_header("location", location) |> send_resp(303, "")
+  end
+
+  defp respond(conn, :logout, state, data) do
+    conn = conn |> fetch_cookies() |> fetch_query_params()
+
+    {params, conn} =
+      if conn.method == "POST" do
+        {:ok, body, latest} = read_body(conn)
+        {URI.decode_query(body), latest}
+      else
+        {conn.query_params, conn}
+      end
+
+    valid = rp_request?(conn, params, data)
+
+    cond do
+      not valid ->
+        json(conn, 400, %{"error" => "invalid_logout"})
+
+      conn.method == "GET" ->
+        json(conn, 200, %{"confirmation_required" => true})
+
+      conn.method == "POST" and params["confirm"] == "yes" ->
+        Agent.update(state, fn current -> %{current | op_active: false, opts: Keyword.put(current.opts, :idp_session, false)} end)
+        conn |> put_resp_header("location", params["post_logout_redirect_uri"]) |> send_resp(303, "")
+
+      true ->
+        json(conn, 400, %{"error" => "invalid_logout"})
+    end
   end
 
   defp respond(conn, :eligibility, _state, data) do
-    json(conn, 200, %{"eligible" => Keyword.get(data.opts, :eligible, true)})
+    if get_req_header(conn, "authorization") == ["Bearer synthetic-access-canary"] do
+      if barrier = Keyword.get(data.opts, :eligibility_barrier) do
+        {owner, ref} = barrier
+        send(owner, {:eligibility_accepted, ref, self()})
+
+        receive do
+          {^ref, :release} -> :ok
+        after
+          2000 -> :ok
+        end
+      end
+
+      observation = %{
+        "issuer" => data.origin <> "/issuer",
+        "subject" => hd(get_req_header(conn, "x-fixture-subject")),
+        "sid" => get_req_header(conn, "x-fixture-sid") |> hd() |> Jason.decode!(),
+        "client_id" => "control-client",
+        "application_id" => "own-app",
+        "provider_id" => "own-provider",
+        "resource_id" => hd(get_req_header(conn, "x-fixture-resource")),
+        "generation" => "fixture-v1",
+        "version" => "synthetic-wire-v1",
+        "evidence" => data.observation_evidence,
+        "app_group" => Keyword.get(data.opts, :app_group, true) and Keyword.get(data.opts, :eligible, true),
+        "user_active" => Keyword.get(data.opts, :user_active, true),
+        "idp_session" => Keyword.get(data.opts, :idp_session, true)
+      }
+
+      json(conn, 200, Map.merge(observation, Keyword.get(data.opts, :observation_patch, %{})))
+    else
+      json(conn, 200, %{"eligible" => Keyword.get(data.opts, :eligible, true)})
+    end
   end
 
   defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+
+  defp rp_request?(conn, params, data) do
+    conn.req_cookies["__Host-fixture-op"] == data.op_session and data.op_active and
+      params["client_id"] == "control-client" and params["post_logout_redirect_uri"] == Keyword.get(data.opts, :rp_post_logout_uri)
+  end
 
   defp verifier_matches?(verifier, %{challenge: challenge}) when is_binary(verifier),
     do: Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false) == challenge

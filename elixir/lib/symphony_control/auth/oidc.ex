@@ -40,6 +40,86 @@ defmodule SymphonyControl.Auth.Oidc do
     end)
   end
 
+  @spec verify_logout(Config.t(), term(), integer()) :: {:ok, map()} | {:error, Config.reason()}
+  def verify_logout(%Config{} = cfg, jwt, deadline) do
+    bounded(deadline, :get, fn deadline ->
+      with :ok <- logout_header(cfg, jwt),
+           {:ok, context, transport} <- context(cfg, deadline, :logout),
+           {:ok, {token, _signature, _key}} <- logout_signature(cfg, jwt, context.jwks, transport) do
+        logout_claims(cfg, JOSE.JWT.from_record(token).fields)
+      end
+    end)
+  end
+
+  def verify_logout(_, _, _), do: {:error, :forbidden}
+
+  @spec logout_current?(term(), integer()) :: boolean()
+  def logout_current?(%{issued_ms: issued, expires_ms: expiry}, utc_ms)
+      when is_integer(issued) and is_integer(expiry) and is_integer(utc_ms) do
+    now = div(utc_ms, 1_000)
+    div(issued, 1_000) >= now - 300 and div(issued, 1_000) <= now + 30 and expiry > utc_ms
+  end
+
+  def logout_current?(_, _), do: false
+
+  defp logout_header(cfg, jwt) when is_binary(jwt) and byte_size(jwt) in 1..16_384 do
+    with [header, _payload, _signature] <- String.split(jwt, "."),
+         {:ok, decoded} <- Base.url_decode64(header, padding: false),
+         {:ok, %{"alg" => alg} = fields} <- Jason.decode(decoded),
+         true <- alg in cfg.allowed_algorithms,
+         true <- Enum.all?(~w(jku x5u jwk x5c), &(not Map.has_key?(fields, &1))),
+         true <- not Map.has_key?(fields, "kid") or (is_binary(fields["kid"]) and byte_size(fields["kid"]) in 1..256) do
+      :ok
+    else
+      _ -> {:error, :forbidden}
+    end
+  end
+
+  defp logout_header(_, _), do: {:error, :forbidden}
+
+  defp logout_signature(cfg, jwt, keys, transport) do
+    case :oidcc_jwt_util.verify_signature(jwt, cfg.allowed_algorithms, JOSE.JWK.to_record(keys)) do
+      {:error, {:no_matching_key_with_kid, _kid}} ->
+        with {:ok, refreshed} <- refresh_keys(cfg, transport),
+             do: :oidcc_jwt_util.verify_signature(jwt, cfg.allowed_algorithms, refreshed)
+
+      result ->
+        result
+    end
+  end
+
+  defp logout_claims(cfg, claims) do
+    now = System.system_time(:millisecond)
+    sid = claims["sid"]
+    sub = claims["sub"]
+
+    with true <- claims["iss"] == cfg.issuer and claims["aud"] in [cfg.client_id, [cfg.client_id]],
+         true <- is_integer(claims["iat"]) and is_integer(claims["exp"]),
+         verified = logout_result(claims, sid, sub),
+         true <- logout_current?(verified, now),
+         true <- not Map.has_key?(claims, "nbf") or (is_integer(claims["nbf"]) and claims["nbf"] <= div(now, 1_000)),
+         true <- is_binary(verified.jti) and byte_size(verified.jti) in 1..4096,
+         true <- selector_claims?(sid, sub),
+         true <- event_claims?(claims) do
+      {:ok, verified}
+    else
+      _ -> {:error, :forbidden}
+    end
+  end
+
+  defp selector_claim?(nil), do: true
+  defp selector_claim?(value), do: is_binary(value) and byte_size(value) in 1..4096
+  defp selector_claims?(sid, sub), do: selector_claim?(sid) and selector_claim?(sub) and (not is_nil(sid) or not is_nil(sub))
+
+  defp event_claims?(claims),
+    do: is_map(claims["events"]) and is_map(claims["events"]["http://schemas.openid.net/event/backchannel-logout"]) and not Map.has_key?(claims, "nonce")
+
+  defp logout_result(claims, sid, sub) do
+    issued = claims["iat"] * 1_000
+    expiry = claims["exp"] * 1_000
+    %{jti: claims["jti"], sid: sid, sub: sub, issued_ms: issued, expires_ms: expiry}
+  end
+
   defp bounded(deadline, method, fun) do
     deadline = min(deadline, now() + 5_000)
 
@@ -64,6 +144,9 @@ defmodule SymphonyControl.Auth.Oidc do
 
   defp accept_credential({:ok, %{credential_expires_at_ms: expiry}} = result),
     do: if(expiry > System.system_time(:millisecond), do: result, else: {:error, :forbidden})
+
+  defp accept_credential({:ok, %{issued_ms: _, expires_ms: _} = verified} = result),
+    do: if(logout_current?(verified, System.system_time(:millisecond)), do: result, else: {:error, :forbidden})
 
   defp accept_credential(result), do: result
 
@@ -96,8 +179,8 @@ defmodule SymphonyControl.Auth.Oidc do
     _, _ -> {:error, :forbidden}
   end
 
-  defp context(cfg, deadline) do
-    transport = %{config: cfg, deadline: deadline, posts: :atomics.new(1, []), received_at: :atomics.new(1, [])}
+  defp context(cfg, deadline, purpose \\ :login) do
+    transport = %{config: cfg, deadline: deadline, posts: :atomics.new(1, []), received_at: :atomics.new(1, []), purpose: purpose}
 
     with {:ok, document} <- get_json(cfg.discovery_url, transport),
          :ok <- validate_document(cfg, document),
@@ -206,7 +289,7 @@ defmodule SymphonyControl.Auth.Oidc do
   defp dispatch(method, request, transport) do
     url = request |> elem(0) |> to_string()
     cfg = transport.config
-    allowed = allowed_request?(method, url, cfg)
+    allowed = allowed_request?(method, url, cfg) and (Map.get(transport, :purpose) != :logout or method == :get)
 
     cond do
       not allowed -> {:error, :forbidden}

@@ -174,6 +174,26 @@ defmodule SymphonyControl.Auth.Store do
     match?({:ok, _}, current(cfg, actor, clock, deadline))
   end
 
+  @doc "Server-internal session material for Eligibility and Logout only; never an Actor or HTTP payload."
+  @spec session_material(Config.t(), term(), Clock.t()) :: result(map())
+  def session_material(cfg, actor, clock) do
+    deadline = deadline()
+
+    database(:read, deadline, fn ->
+      with :ok <- context(cfg, clock),
+           :ok <- actor_input(actor),
+           {:ok, _fresh} <- operational_clock(clock),
+           result = candidate(cfg, :id, uuid(actor.session_id), clock, :material),
+           {:guarded, {:ok, {actual, material}}, validity} <- result,
+           true <- actual == actor do
+        {:guarded, {:ok, Map.put(material, :actor, actual)}, validity}
+      else
+        {:error, _} = error -> error
+        _ -> {:error, :forbidden}
+      end
+    end)
+  end
+
   @spec permissions(Config.t(), term(), Ecto.UUID.t() | :platform, Clock.t()) :: result(MapSet.t())
   def permissions(cfg, actor, scope, clock) do
     deadline = deadline()
@@ -280,12 +300,13 @@ defmodule SymphonyControl.Auth.Store do
 
   defp candidate(cfg, field, value, clock, target \\ :actor) do
     column = if field == :handle, do: "s.handle_hash", else: "s.id"
+    cipher_column = if target == :material, do: "CASE WHEN octet_length(s.tokens_ciphertext)<=32797 THEN s.tokens_ciphertext ELSE NULL END", else: "s.tokens_ciphertext"
     {join, grant_column, grant_params} = grant_sql(target)
 
     rows =
       query!(
         """
-        SELECT s.id,s.user_id,s.issuer,s.subject,s.tokens_ciphertext,
+        SELECT s.id,s.user_id,s.issuer,s.subject,#{cipher_column},
           s.issued_at_ms,s.monotonic_issued_ms,s.expires_at_ms,s.credential_expires_at_ms,#{grant_column}
         FROM control_auth_sessions s JOIN control_auth_users u ON u.id=s.user_id
           JOIN control_auth_identities i ON i.issuer=s.issuer AND i.subject=s.subject AND i.user_id=s.user_id
@@ -301,10 +322,15 @@ defmodule SymphonyControl.Auth.Store do
     case rows do
       [[id, user, issuer, subject, cipher, issued, mono, expiry, credential_expiry, grant]] ->
         session = Ecto.UUID.load!(id)
+        actor = %Actor{session_id: session, local_user_id: Ecto.UUID.load!(user), issuer: issuer, subject: subject, config_generation: cfg.generation, boot_epoch: clock.epoch}
 
-        with {:ok, _plain} <- TokenVault.open(cfg, cipher, aad(:session, session, cfg)) do
-          actor = %Actor{session_id: session, local_user_id: Ecto.UUID.load!(user), issuer: issuer, subject: subject, config_generation: cfg.generation, boot_epoch: clock.epoch}
-          checked({:ok, {actor, permissions_for(target, grant)}}, %{issued: issued, mono: mono, expiry: expiry, credential_expiry: credential_expiry, epoch: clock.epoch})
+        with true <- target != :material or is_binary(cipher),
+             {:ok, plain} <- TokenVault.open(cfg, cipher, aad(:session, session, cfg)),
+             {:ok, value} <- candidate_value(target, actor, grant, plain) do
+          checked({:ok, value}, %{issued: issued, mono: mono, expiry: expiry, credential_expiry: credential_expiry, epoch: clock.epoch})
+        else
+          false -> {:error, :forbidden}
+          error -> error
         end
 
       [] ->
@@ -342,11 +368,48 @@ defmodule SymphonyControl.Auth.Store do
   end
 
   defp grant_sql(:actor), do: {"", "NULL::text", []}
+  defp grant_sql(:material), do: {"", "s.sid", []}
   defp grant_sql(:platform), do: {"LEFT JOIN control_auth_platform_grants g ON g.user_id=s.user_id AND g.revoked_at_ms IS NULL AND g.revision>0", "g.permission", []}
   defp grant_sql(project), do: {"LEFT JOIN control_auth_memberships g ON g.user_id=s.user_id AND g.project_id=$7 AND g.revoked_at_ms IS NULL AND g.revision>0", "g.roles", [project]}
   defp permissions_for(:platform, "runtime_identity_read"), do: MapSet.new([:runtime_identity_read])
   defp permissions_for(project, roles) when is_binary(project) and is_list(roles) and roles != [], do: project_read_permissions(roles)
   defp permissions_for(_target, _grant), do: MapSet.new()
+
+  defp candidate_value(:material, actor, sid, plain) do
+    with true <- is_nil(sid) or (is_binary(sid) and byte_size(sid) in 1..4096),
+         {:ok, tokens} <- private_tokens(plain) do
+      {:ok, {actor, %{sid: sid, tokens: tokens}}}
+    else
+      _ -> {:error, :forbidden}
+    end
+  end
+
+  defp candidate_value(target, actor, grant, _plain), do: {:ok, {actor, permissions_for(target, grant)}}
+
+  # Safe external-term decoding never evaluates terms. Compressed terms are
+  # refused before decoding so a small encrypted input cannot inflate memory.
+  defp private_tokens(<<131, tag, _::binary>> = plain) when tag != 80 and byte_size(plain) <= 32_768 do
+    case :erlang.binary_to_term(plain, [:safe]) do
+      %{id: _, access: %Oidcc.Token.Access{}} = tokens ->
+        if token_material?(tokens), do: {:ok, tokens}, else: {:error, :forbidden}
+
+      _ ->
+        {:error, :forbidden}
+    end
+  catch
+    _, _ -> {:error, :forbidden}
+  end
+
+  defp private_tokens(_), do: {:error, :forbidden}
+
+  defp token_material?(%{id: id, access: access} = tokens) do
+    map_size(tokens) == 2 and map_size(access) == 4 and token_binary?(id, 16_384) and
+      token_binary?(access.token, 16_384) and token_binary?(access.type, 32) and token_expiry?(access.expires)
+  end
+
+  defp token_binary?(value, limit), do: is_binary(value) and byte_size(value) in 1..limit
+  defp token_expiry?(:undefined), do: true
+  defp token_expiry?(value), do: is_integer(value) and value > 0
 
   defp actor_result({:guarded, {:ok, {actor, _rights}}, validity}), do: {:guarded, {:ok, actor}, validity}
   defp actor_result(error), do: error

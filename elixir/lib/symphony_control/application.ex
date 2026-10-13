@@ -9,7 +9,7 @@ defmodule SymphonyControl.Application do
 
   use Supervisor
 
-  alias SymphonyControl.Auth.{Access, Clock, Config, RateLimiter, Routes}
+  alias SymphonyControl.Auth.{Access, Clock, Config, Eligibility, RateLimiter, Routes}
   alias SymphonyControl.{Repo, Router}
 
   @spec start_link(keyword()) :: Supervisor.on_start() | :ignore
@@ -77,7 +77,7 @@ defmodule SymphonyControl.Application do
   end
 
   defp auth_children(nil), do: []
-  defp auth_children(auth), do: [{Clock, []}, {Access, auth}, {RateLimiter, []}]
+  defp auth_children(auth), do: [{Clock, []}, {Eligibility, config: Keyword.fetch!(auth, :config)}, {Access, auth}, {RateLimiter, []}]
 
   defp http_children(nil, _auth), do: {:ok, []}
 

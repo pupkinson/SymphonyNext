@@ -6,6 +6,8 @@ defmodule SymphonyControl.Auth.HttpBodyTest do
   defmodule FramingFailure do
     alias Plug.Adapters.Test.Conn, as: TestAdapter
     def get_http_protocol(_), do: :"HTTP/1.1"
+    def read_req_body(%{mode: :payload} = state, _), do: {:more, "ab", %{state | phase: :read, mode: :last}}
+    def read_req_body(%{mode: :last} = state, _), do: {:ok, "cd", %{state | phase: :complete}}
     def read_req_body(%{mode: :more_empty} = state, _), do: {:more, "", %{state | phase: :read}}
     def read_req_body(%{mode: :oversized} = state, _), do: {:ok, "xx", %{state | phase: :read}}
     def read_req_body(%{mode: :error}, _), do: {:error, :closed}
@@ -234,6 +236,15 @@ defmodule SymphonyControl.Auth.HttpBodyTest do
       assert Plug.Conn.get_resp_header(latest, "connection") == ["close"]
       if mode in [:more_empty, :oversized, :partial], do: assert(elem(latest.adapter, 1).phase == :read)
     end
+  end
+
+  test "payload seam retains exactly bounded bytes and the final transport without rereading" do
+    conn = failure_conn(:payload, "4")
+    assert {:ok, "abcd", latest} = HttpBody.read_payload(conn, RequestContext.deadline())
+    assert elem(latest.adapter, 1).phase == :complete
+    oversized = failure_conn(:oversized, "1")
+    assert {:error, :invalid_request, closed} = HttpBody.read_payload(oversized, RequestContext.deadline())
+    assert Plug.Conn.get_resp_header(closed, "connection") == ["close"]
   end
 
   test "expired body deadline closes without reading and protected refusals clear forged actor" do

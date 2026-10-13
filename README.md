@@ -2,6 +2,15 @@
 
 Цель: самостоятельно размещённый на Coolify многопроектный оркестратор автономной разработки, с Authentik, собственным трекером, несколькими агентами/моделями, мобильным управлением и ChatGPT/MCP. Существующий DF Assistant не меняется.
 
+## Task4: current access and logout — source only
+
+Task4 adds current local project/platform permissions, a bounded IdP-observation
+cache, session-bound CSRF and local/RP/signed back-channel logout. Owned real HTTPS
+and PostgreSQL fixtures exercise login, permitted reads and revocation. Production
+activation remains false; installed Authentik semantics, browser/two-tab revocation,
+UID/ingress isolation and trusted/native release gates belong to Task5.
+See [the engineering report](docs/engineering/authentik-project-access.md).
+
 ## Состав
 - SPECIFICATION.md — полная согласованная редакция требований, включая голосовые решения об автономном release и диагностике.
 - TASKS.md — 44 задачи с зависимостями, fixtures, assertions, evidence и границами.

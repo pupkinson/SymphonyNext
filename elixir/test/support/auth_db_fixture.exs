@@ -10,6 +10,24 @@ defmodule SymphonyControl.AuthDbFixture do
   alias SymphonyControl.Repo
   alias SymphonyControl.Repo.Migrations.{CreateControlAuth, CreateProjects}
 
+  defmodule OperationFaultClock do
+    use GenServer
+    def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: SymphonyControl.Auth.Clock)
+    @impl true
+    def init(opts), do: {:ok, opts}
+    @impl true
+    def handle_call(:now, {caller, _}, opts) do
+      {:current_stacktrace, stack} = Process.info(caller, :current_stacktrace)
+      frames = Enum.reject(stack, fn {module, _, _, _} -> module in [:gen, GenServer, SymphonyControl.Auth.Clock] end)
+      target = Keyword.fetch!(opts, :module)
+
+      case frames do
+        [{^target, _, _, _} | _] -> {:stop, :normal, opts}
+        _ -> {:reply, SymphonyControl.AuthDbFixture.sample_clock(opts[:agent]), opts}
+      end
+    end
+  end
+
   # The fresh-clock source belongs to this fixture/VM, never to runtime config.
   defmodule SnapshotClock do
     use GenServer

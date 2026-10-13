@@ -35,6 +35,34 @@ issue claimed and exposes it as blocked in the runtime state, JSON API, and dash
 entries are in memory only; restarting the orchestrator clears that blocked map, so any still-active
 tracker issue can become a dispatch candidate again after restart.
 
+## Control auth Task4 (source only)
+
+Protected project reads use the current server session and local membership.
+Runtime identity needs its own `runtime_identity_read` grant. IdP claims grant
+neither permission. Production auth stays disabled pending Task5 evidence.
+
+A complete explicit control configuration supervises Eligibility before Access.
+The production observation adapter is closed. An admitted adapter must return an
+actual client-scoped observation matching exact issuer, subject, sid, client,
+application, provider, resource, generation, version and evidence reference.
+Fixture observers are injected only by test supervisor options, never env strings.
+Freshness is strictly below 50 seconds; failed reads never renew success. All auth
+work carries the original handler-entry deadline of at most five seconds.
+
+On successful Task4 login the browser receives a separate Secure/SameSite=Strict
+`__Host-symphony-csrf` cookie. Send its value as `X-CSRF-Token` with the normal
+HttpOnly session cookie to `POST /auth/logout`; the exact Origin is required.
+Session rotation invalidates the old CSRF token. Local revocation commits before
+redirecting the user agent to the configured OP logout endpoint. The redirect uses
+client_id and the exact post_logout_redirect_uri, including non-root paths; no IdP
+token appears in the URL. Without id_token_hint, the standard OP confirmation step
+and provider compatibility must be verified by Task5.
+
+The configured back-channel POST accepts one bounded form logout_token, verifies
+its signature/claims using pinned Oidcc/JOSE, and commits durable jti plus revocation
+atomically through Store. Replay remains a denial and does not repeat an effect.
+Unknown COMMIT is reported as unavailable and reconciled by readback.
+
 ## How to use it
 
 1. Make sure your codebase is set up to work well with agents: see

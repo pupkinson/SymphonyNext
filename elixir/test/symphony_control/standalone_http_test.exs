@@ -85,7 +85,8 @@ defmodule SymphonyControl.StandaloneHttpTest do
     end
 
     start_control(auth: [config: cfg, eligibility_confirm: confirm])
-    assert length(Supervisor.which_children(SymphonyControl.Application)) == 5
+    assert length(Supervisor.which_children(SymphonyControl.Application)) == 6
+    assert is_pid(Process.whereis(SymphonyControl.Auth.Eligibility))
     assert is_pid(Process.whereis(Clock))
     assert is_pid(Process.whereis(Access))
     assert is_pid(Process.whereis(RateLimiter))
