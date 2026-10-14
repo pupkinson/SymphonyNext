@@ -335,6 +335,73 @@ defmodule SymphonyControl.StandaloneHttpTest do
     assert {:error, :econnrefused} = :gen_tcp.connect({127, 0, 0, 1}, bound_port, [], 500)
   end
 
+  @tag :n1_lifecycle
+  test "production supervisor binding lifetime preserves raw missing nil and explicit defaults" do
+    alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+    keys = [:project_authorizer, :runtime_identity_authorizer]
+    saved = for key <- keys, do: {key, Application.fetch_env(:symphony_elixir, key)}
+
+    on_exit(fn ->
+      Enum.each(saved, fn
+        {key, :error} -> Application.delete_env(:symphony_elixir, key)
+        {key, {:ok, value}} -> Application.put_env(:symphony_elixir, key, value)
+      end)
+    end)
+
+    provider = OidcFixture.start!()
+    cfg = OidcFixture.config(provider)
+
+    for base <- [:error, {:ok, nil}, {:ok, OperatorAuthorizer}] do
+      Enum.each(keys, fn key ->
+        case base do
+          :error -> Application.delete_env(:symphony_elixir, key)
+          {:ok, value} -> Application.put_env(:symphony_elixir, key, value)
+        end
+      end)
+
+      start_control(auth: [config: cfg])
+      binding = :sys.get_state(AuthorizerBindings)
+      assert binding.owner == Process.whereis(SymphonyControl.Application)
+
+      Enum.each(keys, fn key ->
+        assert Application.fetch_env(:symphony_elixir, key) == base
+        assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+      end)
+
+      for _ <- 1..2 do
+        old = Process.whereis(Access)
+        Process.exit(old, :kill)
+        AuthDbFixture.await!(fn -> is_pid(Process.whereis(Access)) and Process.whereis(Access) != old end)
+        assert Access.configuration(RequestContext.deadline()) == {:ok, cfg}
+        current = :sys.get_state(AuthorizerBindings)
+        assert current.owner == binding.owner
+        assert current.generation == binding.generation
+
+        Enum.each(keys, fn key ->
+          assert Application.fetch_env(:symphony_elixir, key) == base
+          assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+        end)
+
+        assert request(port(), "/api/v1/control/identity").status == 403
+      end
+
+      stop_supervised!(SymphonyControl.Application)
+
+      Enum.each(keys, fn key ->
+        assert Application.fetch_env(:symphony_elixir, key) == base
+
+        assert AuthorizerBindings.resolve(key) ==
+                 {:ok,
+                  case(base,
+                    do: (
+                      :error -> nil
+                      {:ok, value} -> value
+                    )
+                  )}
+      end)
+    end
+  end
+
   defp start_control(opts \\ []) do
     schema = "sn004_http_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 

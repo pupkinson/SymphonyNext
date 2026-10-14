@@ -196,3 +196,28 @@ Task4 eligibility/logout и Task5 реальный Authentik/HTTPS/browser, prod
 independent exact-HEAD review и trusted/native/live acceptance остаются отдельными gates.
 Это не полный SN005 и не выпуск. Предыдущие отчёты выше сохранены как история.
 Сценарий, команды и ограничения: [Task3 engineering report](docs/engineering/authentik-project-access.md).
+
+
+## Task4 R6/N1: non-destructive effective authorizer (2026-10-14)
+
+The two Application environment authorizer values remain operator/default
+configuration. Managed authentication keeps its active generation and writer
+inside AuthorizerBindings; Projects and RuntimeIdentity select their effective
+authorizer through its bounded resolver. Install, Access restart, release and
+component shutdown do not overwrite either base value. Direct trusted put/delete
+changes the base value, which becomes effective after confirmed managed release;
+it does not grant new managed authority while the binding is active.
+
+Unknown or failed managed lookup denies. A lifecycle sentinel identifies the
+component, not a permission; unexpected component loss remains closed until
+explicit new lifecycle startup. Actor/session/current membership checks and
+production activation remain unchanged. Explicit legacy fixture callbacks retain
+their base-authorizer behavior.
+
+The owner-authorized causal baseline demonstrated the old lookup/write loss
+(6 failures); scoped new lifecycle controls passed16/0 before this candidate's
+final suites. Full results and exact publication are recorded in owning #33.
+This is an author candidate pending independent source review and runtime
+qualification, not Task5 admission or release approval. Historical A148/1 and
+B020 remain failed with unresolved causes. The existing specification, PR79/82/84,
+autonomy within its contract and multi-server task addressing remain in force.

@@ -2874,3 +2874,131 @@ future commit hash. Historical interrupted-environment cleanup remains NOT_ATTES
 Trusted/native/live tests remain NOT_RUN/HOLD. Next bounded action is a NEW
 independent reviewer of the published exact HEAD; only that reviewer may determine
 F2 closure/source acceptance. This implementer does not start it or claim acceptance.
+# R6/T4-N1 author repair candidate — 2026-10-14
+
+This dated note precedes final candidate qualification. It preserves the full
+preceding report verbatim above. Admission:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6168418721
+Prior independent source audit/verdict:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6166999695
+https://github.com/pupkinson/SymphonyNext/pull/99#issuecomment-6167029895
+
+Baseline exact HEAD d01add0c83155cd89cba770e99c1f70d8189d7a0,
+TREE b019434e03cc24da6a5ba33874fd26c4a2c12a9b,
+PARENT a1f82a4c68ed4c846526ab744c1e8e367b4c55b7,
+PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e.
+Same head/base branches and existing draftPR99.
+
+T0 actual first action12:21:31Z; deadline16:21:31Z/reserve15:51:31Z.
+One implementer; at most2 new causal repair cycles, agents0/profile changes0.
+The prior reviewer role ended before this new owner-dispatched implementation;
+its d01add0c conclusions do not accept this new candidate. A subsequent reviewer
+must be independent of this implementation. Technical session/model/effort/speed
+UNKNOWN. Historical Task4/additional/continuation/freshness/diagnostic/VERIFY/
+publication windows remain USED/CLOSED; this stage resets none of them.
+
+## Mechanism and linearization
+
+The previous AuthorizerBindings captured global defaults, installed Auth.Authorizer
+by writing those keys and later restored a snapshot. Its get-then-set/delete
+could destroy an independent later edit. The new component captures no such
+snapshot and performs no put/delete of project_authorizer or runtime_identity_authorizer.
+
+Base values remain ordinary operator/default Application configuration.
+The existing GenServer owns generation, current writer, supervisor owner and
+incarnation. Managed install linearizes in its handler; repeated Access install
+preserves the live generation. Release is fenced by generation and actual
+GenServer caller pid and linearizes by clearing owned state. It does not restore
+or compare global values. Direct put/delete, including nil/missing/same-value/
+ABA changes, remains supported and becomes effective after managed release.
+
+Both product selection sites (Projects and RuntimeIdentity) use the same
+resolve/1. Lookup is bounded by250ms and available original request time.
+The resolver accepts only a current component/incarnation reply; managed selection
+always means Auth.Authorizer, not successful Actor/session/permission validation.
+Confirmed inactive/explicit legacy selection reads the current base setting.
+
+The module-owned persistent sentinel stores component pid/incarnation only.
+It is a fail-closed lifecycle discriminator, not a durable grant. Registered
+startup without a sentinel, pending startup, unknown/malformed context, unexpected
+component loss, dead owner/writer, stale queued reply and RPC failure deny.
+Normal release/owner retirement permits base selection. Unexpected binding
+component restart remains pending until an explicit install; existing Access is
+not automatically given a replacement grant. Normal managed Application and
+separate Access-supervisor ownership are covered. Deliberate legacy fixture
+callbacks remain non-managed and use base selection. There is no new public
+endpoint/configuration service, module/dependency/table or OTP-internal mutation.
+
+## Causal receipts available at this note's freeze
+
+An owned separate detached baseline copy remained d01add0c plus exactly two
+observer/test files. Instrumentation held the real restore after completed
+Application.fetch_env, retained the real get/put/delete APIs, waited for an
+independent writer to complete, then continued old restore. No probabilistic
+sleeps, Application mock or internal-table/controller write was used.
+Observer patch SHA256:
+ea7a24eba46f31cc705c0404080c202b0f2b4908269c43fbf78f0f74044f53d2.
+
+Baseline causal RED12:37:55.585052Z–12:39:03.247924Z:
+6tests/6failures/3excluded,exit2. Both keys, direct foreign put/delete/put(nil)
+lost their completed values. Output SHA256:
+e171f7f7bfe2648454f42a1d213ac4e596ddd03d1c0587083486062f7dd56e66.
+
+Pass1 initially exposed a harness expectation error: GenServer.stop returns
+:ok rather than an exit. The next control exposed a redundant stop_supervised!
+after a temporary child had already been removed. Both first failures are
+preserved; corrections stayed in the same local ownership hypothesis.
+Unknown managed startup values conservatively remain pending; only explicit
+managed:false selects legacy mode.
+
+Scoped GREEN13:10:02.021815Z–13:10:08.686745Z:
+16tests/0failures/45excluded,exit0,seed143345/max-cases1.
+Output SHA256:
+7630215a8fcb4df1d7798fea0a9896cf4052b6a88c56adee9fde331771d07151.
+These are causal controls, not the final full owning suite.
+The matrix has108 release plus108 normal owner-shutdown schedules:
+both keys; missing/nil/explicit; foreign put/delete/put(nil), Authorizer-equal,
+original-equal and ABA; before/during/after teardown. The held transition queues
+real lifecycle handling while the independent base mutation completes; the old
+check/write gap no longer exists. Helper-only write tracing and source absence
+of base writes support no-write cleanup, alongside actual raw postconditions.
+Fresh install/concurrent writes, stale writer/generation, component death/pending
+restart, queued old incarnation, timeout/invalid context and explicit legacy
+behavior are checked. Raw/effective dual assertions and real protected GETs
+preserve R6 meaning. Owned HTTPS/PG login->own project200->two Access restarts
+and200->membership403, foreign project403, separate platform grant/revoke, and
+normal production-supervisor topology are covered without retryGET.
+
+## Qualification and scope limits
+
+At this dated note, final T1/T2/T3/T4 qualification has not yet run.
+Actual results/first failures and new HEAD/tree/parent publication belong to the
+terminal owning #33 report and PR99 body/checkpoint. No future PASS is predicted.
+The runtime/test/doc source is frozen before final suites; result publication
+uses external workpad/PR metadata rather than rewriting this dated note afterward.
+
+R1–R5 were CLOSED_AT_SOURCE only on d01add0c. Their production modules/freshness
+logic remain byte-frozen, but the changed selection consumers require independent
+preservation review. Two inherited R1 identity-wait setups currently set a raw
+wrapper while managed binding is active. The agreed representation ignores that
+base override. A narrowly scoped explicit-fixture setup adaptation was asked of
+Denis; those R1 assertions/setups remain unchanged pending that answer.
+This known fixture seam is not evidence that expired private data is released.
+
+A148/1 and B020446/1 remain FAILED/ROOT_CAUSE_UNRESOLVED; N1 is not their proven
+cause. Instrumented historical positives do not qualify pristine or establish
+first boundaries/iterations/argv/order. Prior raw packages/streams were not
+obtained; their counts/hashes/cleanup remain AUTHOR_REPORTED. Historical
+missing auxiliary snapshots, T0 differences, cache/PLT/reaping/UNKNOWN exits,
+native/trusted/live/IdP/browser/UID/ingress/Bandit/HTTP1 gates are preserved.
+
+Own resources use agent1000:1000, Elixir1.19.5/OTP28 erts16.4/default4 schedulers,
+PG17.11 on an owned Unix socket, isolated Mix/Hex/build/core/project PLTs.
+Command argv/cwd/UTC/exits/input/output hashes are in owned receipts; initial
+pwd has first-tool UTC boundary with exact subprocess nanoseconds UNKNOWN.
+No production/DF Assistant/shared caches/old archives/root drivers are modified.
+No Task5/approval/merge/deploy/Actions/trusted status; author candidate only,
+INDEPENDENT_REVIEW_PENDING / NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5.
+Original v0.5/PR79/82/84/autonomy/multi-server requirements are retained.
+
+---

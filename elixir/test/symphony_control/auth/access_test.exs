@@ -175,7 +175,8 @@ defmodule SymphonyControl.Auth.AccessTest do
 
   test "admitted default authorizers restore prior nil and explicit bindings on shutdown" do
     f = AuthHttpFixture.start!(task4: true)
-    assert Application.get_env(:symphony_elixir, :project_authorizer) == Authorizer
+    assert Application.fetch_env(:symphony_elixir, :project_authorizer) == {:ok, nil}
+    assert SymphonyControl.Auth.AuthorizerBindings.resolve(:project_authorizer) == {:ok, Authorizer}
     stop_supervised!(Access)
     assert Application.get_env(:symphony_elixir, :project_authorizer) == nil
     Application.delete_env(:symphony_elixir, :project_authorizer)
@@ -236,11 +237,25 @@ defmodule SymphonyControl.Auth.AccessTest do
       on_exit(fn -> Enum.each(saved, fn {key, value} -> restore_binding(key, value) end) end)
       Enum.each(keys, fn key -> if @before == :missing, do: Application.delete_env(:symphony_elixir, key), else: Application.put_env(:symphony_elixir, key, @before) end)
       {:ok, supervisor} = Supervisor.start_link([{Access, config: f.config}], strategy: :one_for_one)
+      binding = :sys.get_state(SymphonyControl.Auth.AuthorizerBindings)
 
       for _ <- 1..2 do
         old = Process.whereis(Access)
         Process.exit(old, :kill)
         AuthDbFixture.await!(fn -> is_pid(Process.whereis(Access)) and Process.whereis(Access) != old end)
+        assert {:ok, cfg} = Access.configuration(RequestContext.deadline())
+        assert cfg == f.config
+        current = :sys.get_state(SymphonyControl.Auth.AuthorizerBindings)
+        assert current.owner == binding.owner
+        assert current.generation == binding.generation
+        assert current.writer == Process.whereis(Access)
+        expected = if @before == :missing, do: :error, else: {:ok, @before}
+
+        Enum.each(keys, fn key ->
+          assert Application.fetch_env(:symphony_elixir, key) == expected
+          assert SymphonyControl.Auth.AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+        end)
+
         assert AuthHttpFixture.get(f, "/api/v1/projects/" <> project, cookie: login.cookie).status == 200
       end
 
@@ -301,6 +316,47 @@ defmodule SymphonyControl.Auth.AccessTest do
       refute inspect(response.body) =~ "commit_sha"
       assert Req.Response.get_header(response, "set-cookie") == []
     end
+  end
+
+  @tag :n1_lifecycle
+  test "managed HTTPS login restart and current rights retain separate base defaults" do
+    alias SymphonyControl.Auth.AuthorizerBindings
+    f = AuthHttpFixture.start!(task4: true)
+    project = AuthDbFixture.seed_project!()
+    foreign = AuthDbFixture.seed_project!()
+    AuthDbFixture.seed_membership!(f.db, f.user, project, [:viewer])
+    base = for key <- [:project_authorizer, :runtime_identity_authorizer], do: {key, Application.fetch_env(:symphony_elixir, key)}
+    login = AuthHttpFixture.login!(f)
+    path = "/api/v1/projects/" <> project
+    assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+    assert AuthHttpFixture.get(f, "/api/v1/projects/" <> foreign, cookie: login.cookie).status == 403
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: login.cookie).status == 403
+    Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)], log: false)
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: login.cookie).status == 200
+    binding = :sys.get_state(AuthorizerBindings)
+
+    for _ <- 1..2 do
+      old = Process.whereis(Access)
+      Process.exit(old, :kill)
+      AuthDbFixture.await!(fn -> is_pid(Process.whereis(Access)) and Process.whereis(Access) != old end)
+      assert {:ok, cfg} = Access.configuration(RequestContext.deadline())
+      assert cfg == f.config
+      current = :sys.get_state(AuthorizerBindings)
+      assert current.owner == binding.owner
+      assert current.generation == binding.generation
+
+      Enum.each(base, fn {key, value} ->
+        assert Application.fetch_env(:symphony_elixir, key) == value
+        assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+      end)
+
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+    end
+
+    Repo.query!("DELETE FROM control_auth_memberships WHERE project_id=$1", [AuthDbFixture.uuid(project)], log: false)
+    assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 403
+    Repo.query!("DELETE FROM control_auth_platform_grants WHERE user_id=$1", [AuthDbFixture.uuid(f.user)], log: false)
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: login.cookie).status == 403
   end
 
   test "R6 a later external binding survives abrupt restart and final supervisor stop" do

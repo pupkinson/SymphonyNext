@@ -1,7 +1,7 @@
 defmodule SymphonyControl.AuthHttpFixture do
   @moduledoc false
   require ExUnit.Assertions
-  alias SymphonyControl.Auth.{Access, Clock, Eligibility, OidcFixture, RateLimiter, Store}
+  alias SymphonyControl.Auth.{Access, AuthorizerBindings, Clock, Eligibility, OidcFixture, RateLimiter, Store}
   alias SymphonyControl.{AuthDbFixture, Repo, Router}
 
   defmodule LoginClock do
@@ -158,6 +158,9 @@ defmodule SymphonyControl.AuthHttpFixture do
       binding = %{version: "synthetic-wire-v1", evidence: provider.observation_evidence}
       ExUnit.Callbacks.start_supervised!({Eligibility, config: cfg, observer: observer, observation_binding: binding})
     end
+
+    if Keyword.has_key?(access_opts, :eligibility_confirm),
+      do: ExUnit.Callbacks.start_supervised!({AuthorizerBindings, managed: false})
 
     if Code.ensure_loaded?(Access), do: ExUnit.Callbacks.start_supervised!({Access, access_opts})
     if Code.ensure_loaded?(RateLimiter), do: ExUnit.Callbacks.start_supervised!({RateLimiter, []})

@@ -710,3 +710,37 @@ Environment filtering does not prove production file/proc isolation across UIDs;
 remains Task5. No actual agent/model engine is used by these boundary fixtures.
 The [engineering report](../docs/engineering/authentik-project-access.md) retains initial
 failures, budget history, exact source and the separate acceptance gates.
+
+
+## R6/N1 effective selection representation (2026-10-14)
+
+`AuthorizerBindings.resolve/1` returns the managed Auth.Authorizer only after
+a bounded current-lifecycle lookup. Outside a confirmed managed mode, it returns
+the current raw Application default. The raw project_authorizer and
+runtime_identity_authorizer keys are never temporary managed storage: a raw
+get_env during an active generation still shows the operator/default value.
+
+The existing component owns generation/current writer and monitors the
+supervisor owner. Access restarts retain the generation and replace only the
+writer; a stale generation or writer cannot release the current binding.
+Confirmed release clears owned state only. A module-owned persistent sentinel
+contains component pid/incarnation, not authority. Pending startup, unexpected
+component death, malformed context, queued replies from an ended incarnation
+and lookup failure deny; they cannot fall back to a permissive base. Normal
+owner retirement permits legacy selection. A restarted binding component stays
+pending until explicit install; it does not recreate a lost grant automatically.
+
+An explicit legacy fixture callback is not managed production admission.
+Concurrent direct put_env/delete_env calls remain ordinary trusted base edits,
+not a revisioned runtime API. The latest completed edit survives cleanup,
+including equal values and ABA sequences. Resolver module selection never
+replaces the existing Actor/session/current-grant checks, no public selection
+endpoint exists, and production auth activation stays disabled.
+
+The old read->completed independent base write->old restore schedule failed6/6;
+new scoped controls passed16/0, including216 release/owner-shutdown schedules,
+cold restart rights checks and production-supervisor topology. These are author
+causal controls, not the final T1/T2/T3 gates or historical failure disposition.
+Final results, first failures and exact source are in owning #33. A specific
+compatibility decision for two inherited R1 identity-barrier fixture setups was
+pending when this dated candidate note was written; their assertions are intact.

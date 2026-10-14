@@ -98,7 +98,9 @@ defmodule SymphonyControl.Application do
   end
 
   defp auth_children(nil), do: []
-  defp auth_children(auth), do: [{Clock, []}, {Eligibility, config: Keyword.fetch!(auth, :config)}, {AuthorizerBindings, []}, {Access, auth}, {RateLimiter, []}]
+
+  defp auth_children(auth),
+    do: [{Clock, []}, {Eligibility, config: Keyword.fetch!(auth, :config)}, {AuthorizerBindings, managed: not Keyword.has_key?(auth, :eligibility_confirm)}, {Access, auth}, {RateLimiter, []}]
 
   defp http_children(nil, _auth), do: {:ok, []}
 

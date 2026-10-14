@@ -16,8 +16,8 @@ defmodule SymphonyControl.RuntimeIdentity do
 
   @spec read(term()) :: {:ok, identity()} | {:error, :forbidden}
   def read(actor) do
-    with module when is_atom(module) and not is_nil(module) <-
-           Application.get_env(:symphony_elixir, :runtime_identity_authorizer),
+    with {:ok, module} when is_atom(module) and not is_nil(module) <-
+           SymphonyControl.Auth.AuthorizerBindings.resolve(:runtime_identity_authorizer),
          :ok <- module.authorize(actor, :runtime_identity_read) do
       {:ok, snapshot()}
     else

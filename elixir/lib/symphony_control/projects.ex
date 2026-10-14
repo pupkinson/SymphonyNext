@@ -119,9 +119,8 @@ defmodule SymphonyControl.Projects do
   defp valid_text?(_value), do: false
 
   defp authorize(actor, action, scope) do
-    authorizer = Application.get_env(:symphony_elixir, :project_authorizer)
-
-    with module when is_atom(module) and not is_nil(module) <- authorizer,
+    with {:ok, module} when is_atom(module) and not is_nil(module) <-
+           SymphonyControl.Auth.AuthorizerBindings.resolve(:project_authorizer),
          :ok <- module.authorize(actor, action, scope) do
       :ok
     else
