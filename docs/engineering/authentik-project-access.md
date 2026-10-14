@@ -3002,3 +3002,157 @@ INDEPENDENT_REVIEW_PENDING / NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5.
 Original v0.5/PR79/82/84/autonomy/multi-server requirements are retained.
 
 ---
+
+# R6/N1 cycle2/2 — identity-barrier fixture continuation (2026-10-14)
+
+This separate dated entry preserves all preceding text as history. Owner
+addendum explicitly authorizes only auth_http_fixture.exs and the two
+runtime-identity lifetime variants plus paired controls in access_test.exs.
+All elixir/lib, AuthDbFixture and other tests remain byte-frozen to158529de.
+Admission and exact wiring before edits:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6171441500
+Full admission API readback EXACT MATCH; same own isolated author checkout.
+
+Baseline HEAD158529de999b1f662de95e4f69132d41687956ed,
+TREE f7af07657a14475cdef163a02a8d1f153598fb0b,
+PARENT d01add0c83155cd89cba770e99c1f70d8189d7a0,
+PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e; same draft head/base branches.
+Fresh claims showed coordinator6171231155/6171241392 PREPARED/NOT_STARTED,
+no competing continuation in returned scoped histories; not global attestation.
+
+Original T0 2026-10-14T12:21:31Z/deadline16:21:31Z remain history.
+Continuation first action14:57:36Z; owner-authorized prospective extension sets
+effective deadline18:57:36Z=max(old,continuation+14400s),reserve18:27:36Z.
+Cycle1/2 was used; this consumes the sole remaining cycle2/2. Agents0/profile
+changes0; no new2/2 allocation, old windows/UNKNOWN/exits remain unchanged.
+
+## Exact fixture path and property
+
+Existing option keys remain task4 and eligibility_confirm. A narrow start_auth
+cond branch handles task4==true plus an explicitly supplied callback. Only
+callback==(&Eligibility.confirm/4) is passed unchanged; otherwise fixed
+invalid_task4_fixture_confirmation. It precedes the unchanged default/task4
+branch. There is no production option, anonymous wrapper or resolver exception.
+The real Task4 Eligibility GenServer and owned HTTPS observer remain installed.
+Explicit callback presence uses the existing AuthorizerBindings managed:false
+fixture path. Raw runtime_identity_authorizer initially names real Authorizer,
+then the unchanged IdentityReadAuthorizer wrapper becomes effective intentionally
+outside managed mode. It delegates real Authorizer.authorize before holding the
+request between authorization and RuntimeIdentity snapshot.
+
+Tests directly assert exact cfg/callback and Access.task4?true, known inactive
+owner with nil generation/writer, effective real authorizer then wrapper.
+While held they inspect only their own request's server-private dictionary and
+assert local Validity, receipt/actor/config/original deadline binding, actual
+Eligibility cache-ref acceptance and real witness currentness. These checks
+do not write request state or renew receipts. No private dict/cfg/worker/HTTP
+values are published. Production current grants/receipt/final hook remain real.
+
+For both session/credential axes original400ms setup,1500ms barrier wait,
+unchanged1800ms AuthDbFixture fail-safe,2000ms await and all negative
+identity/commit_sha/cookie assertions remain. Paired timely holds return200
+with the real schema_version/commit_sha/image_digest/config_sha256 contract;
+no fabricated identity wrapper field. No-platform-grant responses403 complete
+before a zero-wait no-barrier check. Anonymous/permissive captures are rejected.
+Unchanged N1/R6/managed HTTPS controls separately prove managed selection and
+current rights; these lifetime fixtures do not claim managed-mode coverage.
+
+## Compatibility receipts at this pre-gate freeze
+
+RED reuses own prior exact T2 input/stream, not a new run:459/2,exit2,
+output SHA256ffb3495964fc83345ad3d296298223669314bdaf0543a540d3a65dfd129259b2.
+All recorded elixir inputs equal158529de. Initial login/identity200 assertions
+preceded failure at absent identity_read_held; source managed resolver ignores
+raw wrapper. This is test compatibility RED, not security RED or historical503
+diagnosis. Prior raw streams/input receipts preserved, never overwritten.
+
+New scoped GREEN15:08:38.101035Z–15:08:48.722142Z:24tests/0failures,
+43excluded,exit0,seed143345/max-cases1. Output SHA256
+b1f592fc3f2a0157b78f420fcc96d015a4dd03bc3171a2c0c68f6920551c2b38.
+Includes8 identity cases plus unchanged16 N1/R6/lifecycle controls.
+Format/specs/style and docs/static preparation precede the final executable
+freeze. At this dated entry T1–T4 have not run. Final qualification and any
+permitted later docs/MANIFEST-only result delta must name both inventories;
+runtime-byte qualification is never represented as whole tracked-byte equality.
+
+Own identity/toolchain reconfirmed1000:1000,Elixir1.19.5/OTP28 erts16.4,
+default4 schedulers,Python3.12.14,PG17.11. New disposable own Unix PG/socket/keys
+under a continuation directory; prior own Mix/Hex/deps/build reused without
+shared-cache changes/reinstall. Lock-bound deps.get --check-locked exit0.
+First clock/pwd boundary retained; subsequent argv/cwd/UTC/exits/source+aux
+hashes recorded. Native remote and GitHub exact tuple agree.
+Current mandatory source audit body hash104fecd502be702592f76a900ae1f49d744583b41eb6641e07f4531c10a74095
+matches prior saved bytes. The old saved local terminal-report copy lacked one
+API trailing LF; fresh exact body SHAedeef7f6fd49b0cfa0c789a61b28e8b39d9d2adff0ce4f1dc3a56b37275ed784
+is separately saved; no substantive report/source drift, old copy preserved.
+
+Historical A148/1/B020 FAILED/ROOT_CAUSE_UNRESOLVED, instrumented diagnostics,
+raw-evidence/cleanup/auxiliary/T0/cache/PLT/reaping/UNKNOWN limits stay separate.
+Prior R1–R5 CLOSED_AT_SOURCE applies only to reviewed d01add0c. This author
+does not close R6/N1 or independently accept changed consumers/fixtures.
+No reviewer launch/Task5/main/release/protected CI/Actions/production/real IdP/
+browser/UID/ingress/permissions/DF Assistant/native drivers. Native/trusted/live/
+wide Bandit HOLD and original v0.5/PR79/82/84/autonomy/multi-server contracts remain.
+
+Pre-final style disposition: the first lint exit14 included new nested aliases,
+line lengths and start_auth complexity. Only new owning helpers/options were
+adapted (exact captures via aliases and private access_options); behavior unchanged.
+Second lint exit6 leaves10 remarks exclusively on unchanged158529de lines:
+Projects123,RuntimeIdentity20,old Access179/256 and managed lifecycle long line,
+plus AuthorizerBindingsTest62/142/293/396/413. Those frozen spans are untouched.
+This is a known wider STYLE_HOLD, not a fixture failure or historical503 cause.
+No exclusion/profile/policy change or frozen style repair is authorized here.
+
+## Continuation final executable gates and result-only seal
+
+Final executable input inventory (all tracked files except the three README/
+engineering docs and MANIFEST; git ls-files order SHA256 two spaces path LF):
+64acdadf5b9c67308672fc13601a1124d01c87afa388e75d08a36b7f7aef541b.
+Pre-gate whole tracked-byte inventory:
+ce45af63190fb8dc8186043980d8d81e221f870810c89737951d494fc1ce12b3.
+All subsequent changes are this separate docs/MANIFEST result delta; final
+publication inventory/static/body seals are recorded in terminal #33 handoff.
+No executable byte is changed or requalified by documentation alone.
+
+| Gate | Actual UTC | Result |
+| --- | --- | --- |
+| Scoped post-style controls |15:15:11.732725–15:15:21.637799Z|24/0,43excluded,exit0|
+| Full owning T1,seed143345/max-cases1 |15:17:18.125076–15:17:37.900724Z|67/1,exit2|
+| Exact related T2,seed381068/max-cases1 |15:19:07.204739–15:22:09.094893Z|465/0,exit0|
+| Ordinary make T3 |NOT_RUN|T1 RED blocks make; no current coverage/Dialyzer/full build qualification|
+| Bootstrap/MCP Python |15:19:53Z|12/0 and11/0,exit0 each|
+
+Post-style scoped output SHA256059172f463edddd66be8902812e427d18469edf7329ff412a75b6be6c410a8b8.
+T1 output SHA256c12dfcd761af3374f78f8bec6bf0d08c962b252c38936f3f922c5cbf319c4b9c.
+T2 output SHA256c351f724275e044a9e9f8c8c321bbccc7f7bca2d3b48c9265ee3e3d559a99845.
+Each final runtime suite ran once on those frozen executable bytes, no selective
+R6 exclusion or repeated unchanged gate. Both R1 expiry/timely/no-grant pairs
+and unchanged managed controls pass in full T1/T2; this does not hide T1 RED.
+
+New T1 first failure: unchanged standalone_http_test.exs119, initial missing
+connection remains bounded live and unready. Startup<1000ms, live/unready and
+preceding login403 assertions passed. The identity request raised
+Req.TransportError before status comparison. Actual HTTP status NOT_OBTAINED;
+safe reason/internal first boundary/root cause UNKNOWN. It is a new transport
+hold, not an observed503 or proof of a source regression caused by this fixture.
+T2's later PASS does not classify the T1 failure as harmless/flaky or close it.
+No reproduction/seed hunting/startup repair/trace or second T1 was performed.
+
+Protocol deviation retained: the independent offline Python suites were run
+while T2 was pending, rather than after it as the requested sequential gate
+schedule. Their PASS is static evidence only; sequencing is not claimed fully
+compliant and they were not blindly repeated. T1 began only after format PASS.
+The broader lint exit6/frozen10 remarks remains a separate STYLE_HOLD.
+
+Own normal PG stop and postmaster exit0/wait/reap obtained15:23:44Z.
+Ledger591 records:346 roots absent,571 ports closed,PG socket files absent.
+Own disposable PG/key/socket paths removed; receipts/source/history retained.
+No foreign/PID1/zombie signal. Old export EACCES was not retried or bypassed;
+no new attachment/package/hash claim. Published source is sufficient for review.
+
+SOURCE_SNAPSHOT_ONLY / AUTHOR_FIXTURE_COMPATIBILITY_VERIFIED /
+INDEPENDENT_REVIEW_PENDING / GATES_RED / NOT_ACCEPTED / DO_NOT_MERGE /
+NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5. R6/N1 independently open;
+historical A148/1/B020 and native/trusted/live/Bandit holds unchanged.
+Cycle2/2 consumed, no further repair cycle/profile/agent authorized. Terminal
+publication/readbacks and WRITER_RELEASED belong to owning #33/PR99/#95.

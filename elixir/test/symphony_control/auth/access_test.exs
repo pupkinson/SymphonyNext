@@ -293,11 +293,14 @@ defmodule SymphonyControl.Auth.AccessTest do
     end
   end
 
+  alias SymphonyControl.Auth.{AuthorizerBindings, Eligibility, Validity}
+
   for axis <- [:session, :credential] do
     @axis axis
     @tag :repair_identity
     test "R1 runtime identity snapshot wait beyond #{@axis} never sends private identity" do
-      f = AuthHttpFixture.start!(task4: true)
+      f = AuthHttpFixture.start!(task4: true, eligibility_confirm: &Eligibility.confirm/4, runtime_identity_authorizer: Authorizer)
+      assert_identity_fixture_binding!(f)
       Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)], log: false)
       login = AuthHttpFixture.login!(f)
       path = "/api/v1/control/identity"
@@ -306,8 +309,10 @@ defmodule SymphonyControl.Auth.AccessTest do
       update = if @axis == :credential, do: "credential_expires_at_ms=$1,expires_at_ms=LEAST(expires_at_ms,$1)", else: "expires_at_ms=$1"
       Repo.query!("UPDATE control_auth_sessions SET #{update}", [expiry], log: false)
       ref = AuthDbFixture.hold_identity_read!(f.db)
+      assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, AuthDbFixture.IdentityReadAuthorizer}
       request = Task.async(fn -> AuthHttpFixture.get(f, path, cookie: login.cookie) end)
       assert_receive {:identity_read_held, ^ref, _request, controller}, 1500
+      assert_real_identity_witness!(f, controller)
       Process.sleep(max(expiry - Clock.now().utc_ms + 20, 20))
       send(controller, {:release_identity, ref})
       response = Task.await(request, 2000)
@@ -316,6 +321,98 @@ defmodule SymphonyControl.Auth.AccessTest do
       refute inspect(response.body) =~ "commit_sha"
       assert Req.Response.get_header(response, "set-cookie") == []
     end
+
+    @tag :repair_identity
+    test "R1 runtime identity held #{@axis} read released before expiry returns the real snapshot" do
+      f = AuthHttpFixture.start!(task4: true, eligibility_confirm: &Eligibility.confirm/4, runtime_identity_authorizer: Authorizer)
+      assert_identity_fixture_binding!(f)
+      Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)], log: false)
+      login = AuthHttpFixture.login!(f)
+      path = "/api/v1/control/identity"
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+      expiry = Clock.now().utc_ms + 400
+      update = if @axis == :credential, do: "credential_expires_at_ms=$1,expires_at_ms=LEAST(expires_at_ms,$1)", else: "expires_at_ms=$1"
+      Repo.query!("UPDATE control_auth_sessions SET #{update}", [expiry], log: false)
+      ref = AuthDbFixture.hold_identity_read!(f.db)
+      assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, AuthDbFixture.IdentityReadAuthorizer}
+      request = Task.async(fn -> AuthHttpFixture.get(f, path, cookie: login.cookie) end)
+      assert_receive {:identity_read_held, ^ref, _request, controller}, 1500
+      assert_real_identity_witness!(f, controller)
+      assert Clock.now().utc_ms < expiry
+      send(controller, {:release_identity, ref})
+      response = Task.await(request, 2000)
+      assert response.status == 200
+      assert Enum.sort(Map.keys(response.body)) == ["commit_sha", "config_sha256", "image_digest", "schema_version"]
+      assert Map.fetch!(response.body, "schema_version") == 1
+      assert Enum.all?(["commit_sha", "config_sha256", "image_digest"], &is_binary(Map.fetch!(response.body, &1)))
+      assert Req.Response.get_header(response, "set-cookie") == []
+    end
+
+    @tag :repair_identity
+    test "R1 runtime identity #{@axis} fixture without a current platform grant never reaches the barrier" do
+      f = AuthHttpFixture.start!(task4: true, eligibility_confirm: &Eligibility.confirm/4, runtime_identity_authorizer: Authorizer)
+      assert_identity_fixture_binding!(f)
+      Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)], log: false)
+      login = AuthHttpFixture.login!(f)
+      path = "/api/v1/control/identity"
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+      expiry = Clock.now().utc_ms + 400
+      update = if @axis == :credential, do: "credential_expires_at_ms=$1,expires_at_ms=LEAST(expires_at_ms,$1)", else: "expires_at_ms=$1"
+      Repo.query!("UPDATE control_auth_sessions SET #{update}", [expiry], log: false)
+      Repo.query!("DELETE FROM control_auth_platform_grants WHERE user_id=$1", [AuthDbFixture.uuid(f.user)], log: false)
+      ref = AuthDbFixture.hold_identity_read!(f.db)
+      assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, AuthDbFixture.IdentityReadAuthorizer}
+      response = AuthHttpFixture.get(f, path, cookie: login.cookie)
+      assert response.status == 403
+      refute_receive {:identity_read_held, ^ref, _, _}, 0
+      refute Map.has_key?(response.body, "identity")
+      refute inspect(response.body) =~ "commit_sha"
+      assert Req.Response.get_header(response, "set-cookie") == []
+    end
+  end
+
+  for style <- [:anonymous, :permissive] do
+    @style style
+    @tag :repair_identity
+    test "R1 identity fixture rejects #{@style} Task4 callback" do
+      callback =
+        if @style == :anonymous,
+          do: fn cfg, actor, clock, deadline -> Eligibility.confirm(cfg, actor, clock, deadline) end,
+          else: fn _, _, _, _ -> :ok end
+
+      assert_raise ArgumentError, "invalid_task4_fixture_confirmation", fn ->
+        AuthHttpFixture.start!(task4: true, eligibility_confirm: callback, runtime_identity_authorizer: Authorizer)
+      end
+    end
+  end
+
+  defp assert_identity_fixture_binding!(f) do
+    {cfg, callback} = GenServer.call(Access, :binding)
+    config_matches = cfg == f.config
+    assert config_matches
+    assert callback == (&Eligibility.confirm/4)
+    assert Access.task4?(f.config, RequestContext.deadline())
+    binding = :sys.get_state(AuthorizerBindings)
+    assert binding.phase == :inactive
+    assert is_nil(binding.generation) and is_nil(binding.writer)
+    assert Process.alive?(binding.owner)
+    assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, Authorizer}
+    assert is_pid(Process.whereis(Eligibility))
+  end
+
+  defp assert_real_identity_witness!(f, controller) do
+    {:dictionary, entries} = Process.info(controller, :dictionary)
+    dictionary = Map.new(entries)
+    witness = Map.get(dictionary, {Access, :validity})
+    receipt = Map.get(dictionary, {Eligibility, :receipt})
+    assert match?(%Validity{kind: :local}, witness)
+    assert is_map(receipt) and is_reference(Map.get(receipt, :ref))
+    config_matches = witness.config == f.config
+    actor_matches = Map.get(receipt, :actor) == witness.binding
+    request_matches = witness.deadline == Map.get(dictionary, {Authorizer, :deadline})
+    assert config_matches and actor_matches and request_matches
+    assert GenServer.call(Eligibility, {:accept, f.config, receipt.key, receipt.ref}, 250) == :ok
+    assert Validity.current?(witness, f.config, witness.binding, witness.deadline)
   end
 
   @tag :n1_lifecycle

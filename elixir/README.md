@@ -744,3 +744,35 @@ causal controls, not the final T1/T2/T3 gates or historical failure disposition.
 Final results, first failures and exact source are in owning #33. A specific
 compatibility decision for two inherited R1 identity-barrier fixture setups was
 pending when this dated candidate note was written; their assertions are intact.
+
+## Identity lifetime fixture adaptation — R6/N1 cycle2/2 (2026-10-14)
+
+Only the owning identity-barrier tests and paired controls explicitly combine
+`task4: true`, `eligibility_confirm: &SymphonyControl.Auth.Eligibility.confirm/4`
+and an initial real `runtime_identity_authorizer: Auth.Authorizer`.
+AuthHttpFixture accepts only that exact external capture in the new combination;
+anonymous forwarding and permissive callbacks are rejected. Ordinary managed
+Task4 and prior default/legacy modes keep their selection behavior.
+
+The existing explicit-fixture path owns an intentionally inactive binding.
+The tests check config/callback identity, `Access.task4?`, actual cached receipt,
+local private witness and original request binding while the real authorizer's
+successful request waits before snapshot. Both expiry axes retain400ms lifetime,
+1500ms barrier/1800ms existing helper fail-safe/2000ms await and every denial,
+private-data and cookie assertion. Timely release returns the real four-field
+snapshot; removal of the current platform grant denies before the barrier.
+Unchanged managed lifecycle controls independently cover active selection,
+foreign defaults, two Access restarts and current rights revocation.
+
+Scoped24/0 is author evidence, not final qualification or independent acceptance.
+Final commands/inputs/results and later docs-only seals are in owning #33.
+All product lib/AuthDbFixture bytes remain158529de; historical failures, original
+requirements and native/trusted/live/Bandit/Task5 boundaries remain unchanged.
+
+Continuation final executable results: T1 67/1 exit2, T2 465/0 exit0. The two
+identity barriers and paired controls passed in both full suites. T1 failed at
+an unchanged standalone initial-missing-connection identity request with
+Req.TransportError before any status; cause unresolved. T3 NOT_RUN_T1_RED.
+Broader style remains RED on10 frozen158529de remarks. Python12/11 and final
+static/body results do not close those holds. This result-only docs/MANIFEST
+seal follows the tested executable freeze; exact inventories are in #33.

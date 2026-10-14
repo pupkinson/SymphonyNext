@@ -146,12 +146,7 @@ defmodule SymphonyControl.AuthHttpFixture do
   defp start_auth(cfg, provider, opts) do
     confirm = fn config, actor, clock, deadline -> wire_confirm(provider, config, actor, clock, deadline, opts) end
 
-    access_opts =
-      if Keyword.get(opts, :default_access, false) or Keyword.get(opts, :task4, false) do
-        [config: cfg]
-      else
-        [config: cfg, eligibility_confirm: Keyword.get(opts, :eligibility_confirm, confirm)]
-      end
+    access_opts = access_options(cfg, confirm, opts)
 
     if Keyword.get(opts, :task4) do
       observer = fn config, material, deadline -> observe(provider, config, material, deadline) end
@@ -164,6 +159,21 @@ defmodule SymphonyControl.AuthHttpFixture do
 
     if Code.ensure_loaded?(Access), do: ExUnit.Callbacks.start_supervised!({Access, access_opts})
     if Code.ensure_loaded?(RateLimiter), do: ExUnit.Callbacks.start_supervised!({RateLimiter, []})
+  end
+
+  defp access_options(cfg, confirm, opts) do
+    cond do
+      Keyword.get(opts, :task4) == true and Keyword.has_key?(opts, :eligibility_confirm) ->
+        callback = Keyword.fetch!(opts, :eligibility_confirm)
+        if callback != (&Eligibility.confirm/4), do: raise(ArgumentError, "invalid_task4_fixture_confirmation")
+        [config: cfg, eligibility_confirm: callback]
+
+      Keyword.get(opts, :default_access, false) or Keyword.get(opts, :task4, false) ->
+        [config: cfg]
+
+      true ->
+        [config: cfg, eligibility_confirm: Keyword.get(opts, :eligibility_confirm, confirm)]
+    end
   end
 
   def observe(provider, cfg, material, deadline) do

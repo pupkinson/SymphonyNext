@@ -221,3 +221,25 @@ This is an author candidate pending independent source review and runtime
 qualification, not Task5 admission or release approval. Historical A148/1 and
 B020 remain failed with unresolved causes. The existing specification, PR79/82/84,
 autonomy within its contract and multi-server task addressing remain in force.
+
+## R6/N1 continuation: identity-barrier fixture compatibility (2026-10-14)
+
+The owner approved a test-only adaptation of the two runtime-identity lifetime
+regressions to separate operator defaults from managed authorizer selection.
+These trusted fixtures retain Task4 and pass the exact external capture
+`Eligibility.confirm/4`; the binding owner is deliberately inactive. The real
+HTTPS observer, current local grants, receipt, Validity and final HTTP guard stay
+in use. The existing wrapper delegates real authorization before holding the
+snapshot. This lifetime coverage is separate from unchanged managed N1/R6 tests.
+
+Prior exact-input related evidence was reused as compatibility RED, not a new
+security failure. Scoped controls passed24/0; full continuation qualification
+and any later result-only documentation seal are recorded in owning #33.
+Production source is byte-frozen to158529de. Historical A148/1 and B020 remain
+unresolved; independent review and release/Task5 gates remain separate.
+
+Continuation result-only seal: full owning T1 67/1 exit2 (new frozen standalone
+transport failure, HTTP status not obtained); exact related T2 465/0 exit0.
+T3 NOT_RUN_T1_RED; broader lint retains10 frozen remarks. Bootstrap12/MCP11 and
+static/body checks are separate author evidence. SOURCE_SNAPSHOT_ONLY,
+INDEPENDENT_REVIEW_PENDING; no release or historical failure closure.
