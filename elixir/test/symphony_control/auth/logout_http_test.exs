@@ -72,7 +72,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
     jwt = OidcFixture.logout_token(f.provider)
     assert backchannel(f, jwt).status == 200
     assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 403
-    assert backchannel(f, jwt).status == 403
+    assert backchannel(f, jwt).status == 400
     assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[1]]
     assert Repo.query!("SELECT retain_until_ms-issued_at_ms >= 3600000 FROM control_auth_logout_jtis", [], log: false).rows == [[true]]
   end
@@ -102,7 +102,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
           {%{}, [fault: :disallowed_alg]},
           {%{}, [fault: :jku_other_host]}
         ] do
-      assert backchannel(f, OidcFixture.logout_token(f.provider, claims, opts)).status in [400, 403],
+      assert backchannel(f, OidcFixture.logout_token(f.provider, claims, opts)).status == 400,
              "claim fields #{inspect(Map.keys(claims))}, fault #{inspect(opts)}, elapsed seconds #{System.system_time(:second) - now}"
     end
 
@@ -122,10 +122,10 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
           URI.encode_query(%{"logout_token" => jwt}) <> "&%6Cogout_token=x",
           URI.encode_query(%{"logout_token" => String.duplicate("x", 16_385)})
         ] do
-      assert backchannel(f, jwt, body: body).status in [400, 403]
+      assert backchannel(f, jwt, body: body).status == 400
     end
 
-    assert backchannel(f, jwt, body: "", headers: [{"authorization", "Bearer " <> jwt}]).status == 403
+    assert backchannel(f, jwt, body: "", headers: [{"authorization", "Bearer " <> jwt}]).status == 400
     assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[0]]
   end
 
@@ -208,7 +208,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
     assert Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows == [[0]]
     AuthDbFixture.set_clock!(f.db, Clock.now())
     AuthDbFixture.restart_control!(f.db)
-    assert backchannel(f, jwt).status == 403
+    assert backchannel(f, jwt).status == 400
     assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[1]]
     assert local(f, login).status == 403
   end
@@ -234,7 +234,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
     assert backchannel(f, OidcFixture.logout_token(f.provider)).status == 200
     assert OidcFixture.calls(f.provider, :jwks) == before + 2
     absent = OidcFixture.logout_token(f.provider, %{}, fault: :never_known_kid)
-    assert backchannel(f, absent).status == 403
+    assert backchannel(f, absent).status == 400
     assert OidcFixture.calls(f.provider, :jwks) == before + 4
     assert OidcFixture.calls(f.provider, :token) == posts
   end
@@ -248,7 +248,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
     assert Task.await(request, 2000).status == 503
     send(worker, {:release_query, ref})
     assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[1]]
-    assert backchannel(f, jwt).status == 403
+    assert backchannel(f, jwt).status == 400
     assert Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows == [[1]]
   end
 
@@ -268,7 +268,7 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
     assert {:error, :forbidden} = Logout.backchannel(f.config, other, Clock.now(), "bad deadline")
     assert {:error, :forbidden} = Logout.backchannel(f.config, other, Clock.now(), RequestContext.deadline() - System.convert_time_unit(4500, :millisecond, :native))
     assert {:error, :forbidden} = Logout.local(f.config, actor, Clock.now())
-    assert backchannel(f, other, body: <<255>>).status == 403
+    assert backchannel(f, other, body: <<255>>).status == 400
     stop_supervised!(SymphonyControl.AuthDbFixture.SnapshotClock)
     assert local(f, login).status == 503
     assert {:error, :invalid_request} = Logout.local(f.config, actor, %{}, RequestContext.deadline())
@@ -294,8 +294,153 @@ defmodule SymphonyControl.Auth.LogoutHttpTest do
   test "an unavailable Repo and malformed form encoding give fixed errors before mutation" do
     {f, login, _path} = fixture()
     jwt = OidcFixture.logout_token(f.provider)
-    assert backchannel(f, jwt, body: "logout_token=%ZZ").status == 403
+    assert backchannel(f, jwt, body: "logout_token=%ZZ").status == 400
     stop_supervised!(SymphonyControl.Application)
     assert local(f, login).status == 503
+  end
+
+  @tag :repair_r4
+  test "R4 exact millisecond age skew and strict expiry with integer second claims" do
+    {f, _login, _path} = fixture()
+    token = OidcFixture.logout_token(f.provider)
+    deadline = System.monotonic_time(:millisecond) + 5000
+    assert {:ok, verified} = Oidc.verify_logout(f.config, token, deadline)
+    issued = verified.issued_ms
+    valid = %{verified | expires_ms: issued + 600_000}
+    assert Oidc.logout_current?(valid, issued + 300_000)
+    refute Oidc.logout_current?(valid, issued + 300_001)
+    refute Oidc.logout_current?(valid, issued + 300_999)
+    assert Oidc.logout_current?(valid, issued - 30_000)
+    refute Oidc.logout_current?(valid, issued - 30_001)
+    assert Oidc.logout_current?(%{valid | expires_ms: issued + 1000}, issued + 999)
+    refute Oidc.logout_current?(%{valid | expires_ms: issued + 1000}, issued + 1000)
+    refute Oidc.logout_current?(%{valid | expires_ms: issued + 1000}, issued + 1001)
+  end
+
+  for bound <- [:exp, :iat] do
+    @bound bound
+    @tag :repair_r2
+    test "R2 already measured Logout clock held through #{@bound} has no durable effect" do
+      {f, _login, _path} = fixture()
+      now = System.system_time(:second)
+      issued = if @bound == :iat, do: now - 240, else: now
+      expiry = now + 120
+      jwt = OidcFixture.logout_token(f.provider, %{"iat" => issued, "exp" => expiry})
+      sample = Clock.now()
+      limit = if @bound == :exp, do: expiry * 1000, else: issued * 1000 + 300_000
+      AuthDbFixture.set_clock!(f.db, %{sample | utc_ms: limit - 20})
+      ref = AuthDbFixture.hold_clock_reply!({:stack, Logout, :backchannel, 1})
+      request = Task.async(fn -> Logout.backchannel(f.config, jwt, sample) end)
+      assert_receive {:clock_reply_held, ^ref, _from, producer}, 1500
+      assert_receive {:clock_sample_measured, ^ref, _from, ^producer, measured, _native}, 1000
+      assert measured.utc_ms == limit - 20
+      Process.sleep(100)
+      send(producer, {:release_clock, ref})
+      result = Task.await(request, 2000)
+      rows = Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows
+      revoked = Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows
+      assert rows == [[0]], "expired signed JWT committed jti; result code is not rollback proof"
+      assert revoked == [[0]]
+      assert match?({:error, _}, result)
+    end
+  end
+
+  @tag :repair_r2
+  test "R2 expiry while an uncommitted jti query waits rolls back both durable changes" do
+    {f, _login, _path} = fixture()
+    now = System.system_time(:second)
+    expiry = (now + 120) * 1000
+    jwt = OidcFixture.logout_token(f.provider, %{"exp" => div(expiry, 1000)})
+    snapshot = Clock.now()
+    AuthDbFixture.set_clock!(f.db, %{snapshot | utc_ms: expiry - 160})
+    AuthDbFixture.ticking_clock!(f.db)
+    ref = AuthDbFixture.barrier!("INSERT INTO control_auth_logout_jtis")
+    request = Task.async(fn -> Logout.backchannel(f.config, jwt, snapshot) end)
+    assert_receive {:query_result_held, ^ref, worker}, 1500
+    Process.sleep(190)
+    send(worker, {:release_query, ref})
+    result = Task.await(request, 2000)
+    assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[0]]
+    assert Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows == [[0]]
+    assert match?({:error, _}, result)
+  end
+
+  @tag :repair_r5
+  test "R5 handler invalid token and replay are exactly400 without affecting local403" do
+    {f, login, _path} = fixture()
+    assert local(f, login, headers: []).status == 403
+    bad = backchannel(f, OidcFixture.logout_token(f.provider, %{"nonce" => "bad"}))
+    assert bad.status == 400
+    assert Req.Response.get_header(bad, "cache-control") == ["no-store"]
+    assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[0]]
+    jwt = OidcFixture.logout_token(f.provider)
+    assert backchannel(f, jwt).status == 200
+    assert backchannel(f, jwt).status == 400
+    assert backchannel(f, OidcFixture.logout_token(f.provider)).status == 200
+    assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[2]]
+    assert Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows == [[1]]
+  end
+
+  for bound <- [:exp, :iat] do
+    @bound bound
+    @tag :repair_db_lock
+    test "R2 #{@bound} crossing a real PostgreSQL row lock leaves jti0 and session unrevoked" do
+      {f, _login, _path} = fixture()
+      now = System.system_time(:second)
+      issued = if @bound == :iat, do: now - 240, else: now
+      expiry = now + 120
+      jwt = OidcFixture.logout_token(f.provider, %{"iat" => issued, "exp" => expiry})
+      owner = self()
+      ref = make_ref()
+
+      locker =
+        Task.async(fn ->
+          Repo.transaction(
+            fn ->
+              Repo.query!("SELECT id FROM control_auth_sessions FOR UPDATE", [], log: false)
+              send(owner, {:row_lock_held, ref})
+              receive do: ({^ref, :release} -> :ok)
+            end,
+            log: false
+          )
+        end)
+
+      assert_receive {:row_lock_held, ^ref}, 1000
+      snapshot = Clock.now()
+      limit = if @bound == :exp, do: expiry * 1000, else: issued * 1000 + 300_000
+      AuthDbFixture.set_clock!(f.db, %{snapshot | utc_ms: limit - 350})
+      AuthDbFixture.ticking_clock!(f.db)
+      request = Task.async(fn -> Logout.backchannel(f.config, jwt, snapshot) end)
+
+      AuthDbFixture.await!(
+        fn ->
+          Repo.query!("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE 'UPDATE control_auth_sessions%'", [], log: false).rows == [[1]]
+        end,
+        300
+      )
+
+      Process.sleep(max(limit - Clock.now().utc_ms + 20, 20))
+      send(locker.pid, {ref, :release})
+      assert {:ok, :ok} = Task.await(locker, 1000)
+      result = Task.await(request, 1500)
+      assert Repo.query!("SELECT count(*) FROM control_auth_logout_jtis", [], log: false).rows == [[0]]
+      assert Repo.query!("SELECT count(*) FROM control_auth_sessions WHERE revoked_at_ms IS NOT NULL", [], log: false).rows == [[0]]
+      assert match?({:error, _}, result)
+    end
+  end
+
+  test "ordinary production Clock supports actual task4 HTTPS login both rights CSRF and logout" do
+    {f, _old, path} = fixture(post_logout_path: "/signed-out")
+    stop_supervised!(AuthDbFixture.SnapshotClock)
+    start_supervised!({Clock, []})
+    login = AuthHttpFixture.login!(f)
+    assert Req.Response.get_header(login.response, "location") == ["/"]
+    assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+    Repo.query!("INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)", [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)], log: false)
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: login.cookie).status == 200
+    assert local(f, login).status == 303
+    assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 403
+    assert AuthHttpFixture.get(f, "/api/v1/control/identity", cookie: login.cookie).status == 403
+    assert backchannel(f, OidcFixture.logout_token(f.provider)).status == 200
   end
 end

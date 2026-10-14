@@ -362,7 +362,7 @@ defmodule SymphonyControl.Auth.RoutesTest do
     reply = AuthHttpFixture.callback(f, flow: flow)
     assert reply.status == 303
     assert not is_nil(AuthHttpFixture.cookie(reply, "__Host-symphony-control"))
-    assert AuthHttpFixture.get(f, "/oidc/revoke", method: :post).status == 403
+    assert AuthHttpFixture.get(f, "/oidc/revoke", method: :post).status == 400
     assert AuthHttpFixture.get(f, "/auth/callback").status == 404
     assert AuthHttpFixture.get(f, "/health/live").status == 200
     wrong = AuthHttpFixture.get(f, "/health/live", method: :post)

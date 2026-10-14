@@ -1,3 +1,29 @@
+## PR99 freshness-contract stage — saved, mandatory gates blocked
+
+Owner-approved49999ms interpretation: observation must still be <50000ms at the
+actual final decision. Exact49999/50000/50001 product-predicate tests, measured
+real HTTPS49000 cache hit/no renewal and held49999 crossing denial are retained.
+Canonical design/plan are unchanged; this is explicit owner-approved test scope.
+Admission: https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6153858886
+
+Current combined148/0; exact related446/1 (unchanged login-begin positive refusal,
+cause UNKNOWN). Standard make NOT_RUN while related is RED; no current full
+coverage/Dialyzer or all-gates claim. Code/source/patch/evidence saved, NO_NEW_HEAD.
+Authdisabled/activationfalse; independent review NOT_RUN, findings still OPEN.
+See docs/engineering/authentik-project-access.md for exact inputs, first failures,
+budget lineage and cleanup limits. All preceding report text is retained as history.
+
+---
+
+> PR99 integration continuation: mandatory gates remain **NOT GREEN**; no new HEAD was published. Exact back-channel status regressions, raw key metadata and initial Repo handoff controls are retained. Current failures, UNKNOWN standard-make interruption and cleanup limits are in [the engineering report](docs/engineering/authentik-project-access.md). Auth activation remains false; independent review is NOT_RUN. Previous reports below remain dated history.
+
+> Task4 T4-R1–R6 repair candidate: auth stays disabled; mandatory gates and independent verdict are pending.
+> Local session/credential bounds now accompany current Store reads through final protected response and callback cookie decisions.
+> Signed logout retains exact millisecond/native bounds inside the existing atomic transaction; invalid handler requests use400.
+> Cache capacity includes in-flight reservations, and a lifecycle owner preserves prior authorizers across Access restarts.
+> LOGIN still returns to `/`; post-logout keeps the separate exact operator HTTPS URI, including non-root paths.
+> See [the current repair evidence and limitations](docs/engineering/authentik-project-access.md).
+
 # Symphony Next — пакет ТЗ и задач v0.5
 
 Цель: самостоятельно размещённый на Coolify многопроектный оркестратор автономной разработки, с Authentik, собственным трекером, несколькими агентами/моделями, мобильным управлением и ChatGPT/MCP. Существующий DF Assistant не меняется.

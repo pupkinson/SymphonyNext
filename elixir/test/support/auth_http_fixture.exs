@@ -216,7 +216,26 @@ defmodule SymphonyControl.AuthHttpFixture do
   @spec login!(map(), keyword()) :: map()
   def login!(f, opts \\ []) do
     begin = get(f, "/auth/login", opts)
-    ExUnit.Assertions.assert(begin.status == 303, "GET login must return committed-flow redirect")
+
+    ExUnit.Assertions.assert(
+      begin.status == 303,
+      if begin.status == 303 do
+        "GET login must return committed-flow redirect"
+      else
+        reason =
+          case begin.body do
+            %{"error" => reason} when reason in ["invalid_request", "forbidden", "dependency_unavailable", "rate_limited", "unknown_outcome"] -> reason
+            %{"error" => nil} -> "absent"
+            %{"error" => _} -> "unknown"
+            %{} -> "absent"
+            value when value in [nil, ""] -> "absent"
+            _ -> "unknown"
+          end
+
+        "GET login must return committed-flow redirect; status=#{begin.status} error=#{reason}"
+      end
+    )
+
     location = hd(Req.Response.get_header(begin, "location"))
     authorization = Req.get!(location, request_options(f))
     callback = hd(Req.Response.get_header(authorization, "location")) |> URI.parse()

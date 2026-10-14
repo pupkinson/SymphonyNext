@@ -1,7 +1,8 @@
 defmodule SymphonyControl.Auth.Controller do
   @moduledoc "Bounded browser login, session-bound CSRF and confirmed logout responses."
   import Plug.Conn
-  alias SymphonyControl.Auth.{Access, Clock, Config, Csrf, HttpBody, Login, Logout, RateLimiter, RequestContext, Store}
+  alias SymphonyControl.Auth.{Access, Clock, Config, Csrf, HttpBody, Login, Logout}
+  alias SymphonyControl.Auth.{RateLimiter, RequestContext, Store, Validity}
   @browser "__Host-symphony-browser"
   @session "__Host-symphony-control"
   @csrf "__Host-symphony-csrf"
@@ -48,8 +49,9 @@ defmodule SymphonyControl.Auth.Controller do
            true <- RequestContext.remaining(deadline) >= 1_000,
            clock = Clock.now(250),
            true <- RequestContext.remaining(deadline) >= 750,
-           {:ok, actor} <- Store.local_actor(cfg, latest.req_cookies[@session], clock),
-           :ok <- Csrf.verify(cfg, actor, token, deadline) do
+           {:ok, {actor, witness}} <- Store.local_actor(cfg, latest.req_cookies[@session], clock, deadline),
+           :ok <- Csrf.verify(cfg, actor, token, deadline),
+           true <- Validity.current?(witness, cfg, actor, deadline) do
         local_result(clear_auth_cookies(latest), cfg, actor, clock, deadline)
       else
         {:error, :dependency_unavailable} = error -> error
@@ -72,6 +74,7 @@ defmodule SymphonyControl.Auth.Controller do
            :ok <- Logout.backchannel(latest.private.control_auth, jwt, Clock.now(RequestContext.remaining(deadline)), deadline) do
         {:ok, latest}
       else
+        {:error, reason} when reason in [:forbidden, :invalid_request] -> {:error, :invalid_request}
         {:error, reason} -> {:error, reason}
       end
     end)
@@ -79,23 +82,30 @@ defmodule SymphonyControl.Auth.Controller do
 
   defp finish_callback(latest, handle, deadline) do
     cfg = latest.private.control_auth
-    response = put_resp_cookie(latest, @session, handle, @cookie)
+    task4 = Access.task4?(cfg, deadline)
 
-    if Access.task4?(cfg, deadline) do
-      with true <- RequestContext.remaining(deadline) >= 1_000,
-           clock = Clock.now(250),
-           true <- RequestContext.remaining(deadline) >= 750,
-           {:ok, actor} <- Store.local_actor(cfg, handle, clock),
-           {:ok, token} <- Csrf.issue(cfg, actor, deadline) do
-        response = put_resp_cookie(response, @csrf, token, secure: true, http_only: false, same_site: "Strict", path: "/")
-        {:ok, response, "/"}
-      else
-        _ -> {:error, :dependency_unavailable}
-      end
-    else
+    with true <- RequestContext.remaining(deadline) >= 1_000,
+         clock = Clock.now(250),
+         true <- RequestContext.remaining(deadline) >= 750,
+         {:ok, {actor, witness}} <- Store.local_actor(cfg, handle, clock, deadline),
+         {:ok, token} <- callback_csrf(task4, cfg, actor, deadline),
+         true <- Validity.current?(witness, cfg, actor, deadline) do
+      response = put_resp_cookie(latest, @session, handle, @cookie)
+      response = callback_cookie(response, token)
       {:ok, response, "/"}
+    else
+      _ -> {:error, :dependency_unavailable}
     end
   end
+
+  defp callback_cookie(response, nil), do: response
+
+  defp callback_cookie(response, token) do
+    put_resp_cookie(response, @csrf, token, secure: true, http_only: false, same_site: "Strict", path: "/")
+  end
+
+  defp callback_csrf(false, _, _, _), do: {:ok, nil}
+  defp callback_csrf(true, cfg, actor, deadline), do: Csrf.issue(cfg, actor, deadline)
 
   defp clear_auth_cookies(conn), do: conn |> delete_resp_cookie(@session, @cookie) |> delete_resp_cookie(@csrf, secure: true, same_site: "Strict", path: "/")
 

@@ -11,6 +11,67 @@ defmodule SymphonyControl.Auth.EligibilityTest do
     {f, login, handle, actor}
   end
 
+  test "shared observation predicate accepts49999 and refuses50000 and50001 on each independent axis" do
+    {entry, base, producer} = boundary_fixture()
+
+    for axis <- [:utc_ms, :monotonic_ms], {age, expected} <- [{49_999, true}, {50_000, false}, {50_001, false}] do
+      measured = Map.update!(base, axis, &(&1 + age))
+      assert Eligibility.observation_current?(entry, measured, base.native_anchor, producer) == expected
+    end
+
+    for {age, expected} <- [{49_999, true}, {50_000, false}, {50_001, false}] do
+      now = base.native_anchor + native(age)
+      measured = %{base | native_anchor: now}
+      assert Eligibility.observation_current?(entry, measured, now, producer) == expected
+    end
+  end
+
+  test "shared observation predicate includes delivery age of an already measured49999 sample" do
+    {entry, base, producer} = boundary_fixture()
+    measured = %{base | utc_ms: base.utc_ms + 49_999, monotonic_ms: base.monotonic_ms + 49_999}
+
+    for {delivery, expected} <- [{0, true}, {1, false}, {2, false}] do
+      decision = base.native_anchor + native(delivery)
+      assert Eligibility.observation_current?(entry, measured, decision, producer) == expected
+    end
+  end
+
+  test "shared observation predicate rejects invalid samples epochs producers and native bounds" do
+    {entry, base, producer} = boundary_fixture()
+    now = base.native_anchor
+    assert Eligibility.observation_current?(entry, base, now, producer)
+
+    for measured <- [
+          nil,
+          %{},
+          %{base | sample_valid: false},
+          %{base | utc_ms: base.utc_ms - 1},
+          %{base | monotonic_ms: base.monotonic_ms - 1},
+          %{base | utc_ms: "invalid"},
+          %{base | epoch: "foreign"},
+          %{base | epoch: nil},
+          %{base | native_clock: self()},
+          %{base | native_unit: 1},
+          %{base | native_anchor: now + 1}
+        ] do
+      refute Eligibility.observation_current?(entry, measured, now, producer)
+    end
+
+    refute Eligibility.observation_current?(entry, base, now, nil)
+    refute Eligibility.observation_current?(%{entry | clock: nil}, base, now, producer)
+    refute Eligibility.observation_current?(%{entry | until_native: nil}, base, now, producer)
+    refute Eligibility.observation_current?(nil, base, now, producer)
+    refute Eligibility.observation_current?(entry, base, nil, producer)
+  end
+
+  defp boundary_fixture do
+    producer = start_supervised!({Clock, []})
+    base = Clock.now()
+    {%{clock: base, until_native: base.native_anchor + native(50_000)}, base, producer}
+  end
+
+  defp native(ms), do: System.convert_time_unit(ms, :millisecond, :native)
+
   test "queued fresh-clock reply cannot publish an observation after its measured remaining lifetime" do
     {f, _login, _handle, actor} = fixture()
     receipt = :sys.get_state(Eligibility).cache |> Map.values() |> hd()
@@ -127,6 +188,7 @@ defmodule SymphonyControl.Auth.EligibilityTest do
     {f, _login, handle, actor} = fixture()
     entry = :sys.get_state(Eligibility).cache |> Map.values() |> hd()
     refute Eligibility.current?(nil, f.config, actor, deadline())
+    refute Eligibility.current?(entry, f.config, actor, deadline(), %{})
     refute Eligibility.current?(entry, %{f.config | generation: "foreign"}, actor, deadline())
     refute Eligibility.current?(entry, f.config, actor, "bad deadline")
     refute Eligibility.current?(%{entry | clock: nil}, f.config, actor, deadline())
@@ -138,6 +200,7 @@ defmodule SymphonyControl.Auth.EligibilityTest do
     assert map_size(:sys.get_state(Eligibility).cache) == 1
     assert :ok = Eligibility.invalidate(f.config, {:sid, f.config.issuer, "session-1", nil}, deadline())
     assert :sys.get_state(Eligibility).cache == %{}
+    refute Eligibility.current?(entry, f.config, actor, deadline())
     original = :sys.get_state(Eligibility).observer
     :sys.replace_state(Eligibility, &%{&1 | observer: fn _, _, _ -> {:ok, :malformed} end})
     assert {:error, :forbidden} = Eligibility.confirm(f.config, actor, Clock.now(), deadline())
@@ -198,8 +261,10 @@ defmodule SymphonyControl.Auth.EligibilityTest do
 
     debug = fn state, event, _extra ->
       case event do
-        {:out, :ok, {^target, _tag}, _server_state} ->
+        {:in, {:"$gen_call", {^target, _tag}, {:accept, _, _, _}}} ->
           :erlang.suspend_process(target)
+
+        {:out, :ok, {^target, _tag}, _server_state} ->
           send(owner, {:cache_acceptance_measured, System.monotonic_time(:millisecond)})
 
         {:out, :ok, {^owner, _tag}, _server_state} ->
@@ -250,4 +315,97 @@ defmodule SymphonyControl.Auth.EligibilityTest do
   end
 
   defp deadline, do: System.monotonic_time(:millisecond) + 2000
+
+  for order <- [:first, :second] do
+    @order order
+    @tag :repair_r3
+    test "R3 999 entries and distinct controlled observer completions #{@order} never exceed1000" do
+      {f, _login, _handle, actor} = fixture()
+      assert {:ok, material} = Store.session_material(f.config, actor, Clock.now())
+      second_login = AuthHttpFixture.login!(f)
+      [_, second_handle] = String.split(second_login.cookie, "=", parts: 2)
+      assert {:ok, second_actor} = Store.local_actor(f.config, second_handle, Clock.now())
+      assert {:ok, second_material} = Store.session_material(f.config, second_actor, Clock.now())
+      original = :sys.get_state(Eligibility)
+      receipt = original.cache |> Map.values() |> hd()
+
+      cache =
+        Map.new(1..999, fn _ ->
+          id = Ecto.UUID.generate()
+          synthetic = %{actor | session_id: id}
+          key = {actor.issuer, actor.subject, material.sid, actor.config_generation, actor.boot_epoch, id}
+          {key, %{receipt | key: key, actor: synthetic, ref: make_ref()}}
+        end)
+
+      owner = self()
+
+      observer = fn cfg, current, budget ->
+        ref = make_ref()
+        send(owner, {:capacity_job, current.actor.session_id, self(), ref})
+        receive do: ({^ref, :release} -> original.observer.(cfg, current, budget))
+      end
+
+      :sys.replace_state(Eligibility, &%{&1 | cache: cache, observer: observer})
+      callers = for current <- [material, second_material], do: Task.async(fn -> GenServer.call(Eligibility, {:confirm, f.config, current, Clock.now(), deadline()}, 5000) end)
+      assert_receive {:capacity_job, _id, first, ref}, 1500
+
+      jobs =
+        receive do
+          {:capacity_job, _id, second, second_ref} -> [{first, ref}, {second, second_ref}]
+        after
+          100 -> [{first, ref}]
+        end
+
+      jobs = if @order == :second, do: Enum.reverse(jobs), else: jobs
+
+      Enum.each(jobs, fn {pid, reference} ->
+        send(pid, {reference, :release})
+        AuthDbFixture.await!(fn -> not Process.alive?(pid) end)
+        assert map_size(:sys.get_state(Eligibility).cache) <= 1000
+      end)
+
+      results = Enum.map(callers, &Task.await(&1, 1500))
+      assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+      assert :sys.get_state(Eligibility).inflight == %{}
+      assert map_size(:sys.get_state(Eligibility).cache) == 1000
+      assert :ok = Eligibility.invalidate(f.config, {:subject, actor.issuer, actor.subject}, deadline())
+      assert :sys.get_state(Eligibility).cache == %{}
+      :sys.replace_state(Eligibility, &%{&1 | observer: original.observer})
+      assert {:ok, _} = Access.authenticate(f.config, second_handle, Clock.now())
+    end
+  end
+
+  test "R3 full1000 rejects a new job and expiry failure invalidation release capacity" do
+    {f, _login, handle, actor} = fixture()
+    assert {:ok, material} = Store.session_material(f.config, actor, Clock.now())
+    original = :sys.get_state(Eligibility)
+    receipt = original.cache |> Map.values() |> hd()
+
+    cache =
+      Map.new(1..1000, fn _ ->
+        id = Ecto.UUID.generate()
+        key = {actor.issuer, actor.subject, material.sid, actor.config_generation, actor.boot_epoch, id}
+        {key, %{receipt | key: key, actor: %{actor | session_id: id}, ref: make_ref()}}
+      end)
+
+    :sys.replace_state(Eligibility, &%{&1 | cache: cache})
+    before = OidcFixture.calls(f.provider, :eligibility)
+    assert {:error, :dependency_unavailable} = GenServer.call(Eligibility, {:confirm, f.config, material, Clock.now(), deadline()})
+    assert map_size(:sys.get_state(Eligibility).cache) == 1000
+    assert :sys.get_state(Eligibility).inflight == %{}
+    assert OidcFixture.calls(f.provider, :eligibility) == before
+    AuthDbFixture.set_clock!(f.db, Clock.now())
+    AuthDbFixture.advance!(f.db, 50_001)
+    :sys.replace_state(Eligibility, &%{&1 | observer: fn _, _, _ -> {:error, :forbidden} end})
+    assert {:error, _} = Access.authenticate(f.config, handle, Clock.now())
+    assert :sys.get_state(Eligibility).cache == %{}
+    assert :sys.get_state(Eligibility).inflight == %{}
+    :sys.replace_state(Eligibility, &%{&1 | observer: original.observer})
+    assert {:ok, _} = Access.authenticate(f.config, handle, Clock.now())
+    assert {:ok, _} = Access.authenticate(f.config, handle, Clock.now())
+    assert OidcFixture.calls(f.provider, :eligibility) == before + 1
+    assert :ok = Eligibility.invalidate(f.config, {:session, actor.session_id}, deadline())
+    assert {:ok, _} = Access.authenticate(f.config, handle, Clock.now())
+    assert :sys.get_state(Eligibility).inflight == %{}
+  end
 end

@@ -3,7 +3,7 @@ defmodule SymphonyControl.StandaloneHttpTest do
 
   alias __MODULE__.OperatorAuthorizer
   alias SymphonyControl.Auth.{Access, Clock, Config, OidcFixture, RateLimiter}
-  alias SymphonyControl.{AuthHttpFixture, Health, Repo}
+  alias SymphonyControl.{AuthDbFixture, AuthHttpFixture, Health, Repo}
 
   setup_all do
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
@@ -49,10 +49,87 @@ defmodule SymphonyControl.StandaloneHttpTest do
     assert %{rows: [[nil]]} = Repo.query!("SELECT to_regclass('schema_migrations')", [])
   end
 
+  @tag :continuation_readiness
+  test "standalone startup waits for an actual initial connection before returning" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    owner = self()
+    ref = make_ref()
+
+    callback = fn _connection ->
+      send(owner, {:connection_held, ref, self()})
+
+      receive do
+        {:release_connection, ^ref} -> :ok
+      after
+        1000 -> :ok
+      end
+    end
+
+    starter =
+      Task.async(fn ->
+        {:ok, supervisor} = SymphonyControl.Application.start_link(enabled: true, repo: Keyword.put(f.repo, :after_connect, callback), http: [port: 0])
+        send(owner, {:standalone_started, ref, supervisor})
+
+        receive do
+          {:stop_owned_startup, ^ref} -> Supervisor.stop(supervisor)
+        after
+          2000 -> Supervisor.stop(supervisor)
+        end
+      end)
+
+    held =
+      for _ <- 1..4 do
+        assert_receive {:connection_held, ^ref, connection}, 1000
+        connection
+      end
+
+    try do
+      refute_receive {:standalone_started, ^ref, _supervisor}, 50
+      Enum.each(held, &send(&1, {:release_connection, ref}))
+      assert_receive {:standalone_started, ^ref, supervisor}, 1000
+      assert Process.alive?(supervisor)
+      assert Health.readiness() == %{ready: true, database: true, schema: true}
+    after
+      Enum.each(held, &send(&1, {:release_connection, ref}))
+      send(starter.pid, {:stop_owned_startup, ref})
+      Task.await(starter, 2000)
+    end
+  end
+
   test "default standalone startup remains Repo-only" do
     start_control(http: nil)
     assert Health.live?()
     assert [{Repo, _, :supervisor, _}] = Supervisor.which_children(SymphonyControl.Application)
+    current = Process.whereis(SymphonyControl.Application)
+    assert {:error, {:already_started, ^current}} = SymphonyControl.Application.start_link(enabled: true)
+    assert Process.whereis(SymphonyControl.Application) == current
+  end
+
+  test "initial missing connection remains bounded live and unready" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    options = Keyword.put(f.repo, :socket_dir, f.repo[:socket_dir] <> "-owned-missing")
+    started = System.monotonic_time(:millisecond)
+    start_supervised!({SymphonyControl.Application, enabled: true, repo: options, http: [port: 0]})
+    assert System.monotonic_time(:millisecond) - started < 1000
+    assert Health.live?()
+    assert Health.readiness() == %{ready: false, database: false, schema: false}
+    assert request(port(), "/auth/login").status == 403
+    assert request(port(), "/api/v1/control/identity").status == 403
+  end
+
+  test "missing canonical Repo during the initial probe cannot crash the startup owner" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    options = Keyword.put(f.repo, :name, :owned_noncanonical_repo)
+    start_supervised!({SymphonyControl.Application, enabled: true, repo: options, http: [port: 0]})
+    assert is_pid(Process.whereis(:owned_noncanonical_repo))
+    assert Process.whereis(Repo) == nil
+    assert Health.live?()
+    assert Health.readiness() == %{ready: false, database: false, schema: false}
+    assert request(port(), "/auth/login").status == 403
+    assert request(port(), "/api/v1/control/identity").status == 403
   end
 
   test "only explicit server auth opts start auth workers after Repo; env config cannot activate" do
@@ -85,7 +162,7 @@ defmodule SymphonyControl.StandaloneHttpTest do
     end
 
     start_control(auth: [config: cfg, eligibility_confirm: confirm])
-    assert length(Supervisor.which_children(SymphonyControl.Application)) == 6
+    assert length(Supervisor.which_children(SymphonyControl.Application)) == 7
     assert is_pid(Process.whereis(SymphonyControl.Auth.Eligibility))
     assert is_pid(Process.whereis(Clock))
     assert is_pid(Process.whereis(Access))

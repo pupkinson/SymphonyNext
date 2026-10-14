@@ -54,10 +54,10 @@ defmodule SymphonyControl.Auth.Oidc do
   def verify_logout(_, _, _), do: {:error, :forbidden}
 
   @spec logout_current?(term(), integer()) :: boolean()
-  def logout_current?(%{issued_ms: issued, expires_ms: expiry}, utc_ms)
+  def logout_current?(%{issued_ms: issued, expires_ms: expiry} = verified, utc_ms)
       when is_integer(issued) and is_integer(expiry) and is_integer(utc_ms) do
-    now = div(utc_ms, 1_000)
-    div(issued, 1_000) >= now - 300 and div(issued, 1_000) <= now + 30 and expiry > utc_ms
+    issued >= utc_ms - 300_000 and issued <= utc_ms + 30_000 and expiry > utc_ms and
+      (is_nil(Map.get(verified, :not_before_ms)) or verified.not_before_ms <= utc_ms)
   end
 
   def logout_current?(_, _), do: false
@@ -117,7 +117,15 @@ defmodule SymphonyControl.Auth.Oidc do
   defp logout_result(claims, sid, sub) do
     issued = claims["iat"] * 1_000
     expiry = claims["exp"] * 1_000
-    %{jti: claims["jti"], sid: sid, sub: sub, issued_ms: issued, expires_ms: expiry}
+
+    %{
+      jti: claims["jti"],
+      sid: sid,
+      sub: sub,
+      issued_ms: issued,
+      expires_ms: expiry,
+      not_before_ms: if(is_integer(claims["nbf"]), do: claims["nbf"] * 1_000)
+    }
   end
 
   defp bounded(deadline, method, fun) do

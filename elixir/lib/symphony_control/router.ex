@@ -32,6 +32,8 @@ defmodule SymphonyControl.Router do
   def call(conn, opts) do
     deadline = RequestContext.deadline()
     previous = Process.put({Authorizer, :deadline}, deadline)
+    private_keys = [{Access, :validity}, {SymphonyControl.Auth.Eligibility, :receipt}]
+    prior_private = for key <- private_keys, do: {key, Process.delete(key)}
     conn = put_private(conn, :control_deadline, deadline)
     conn = register_before_send(conn, &final_private_response/1)
 
@@ -47,6 +49,7 @@ defmodule SymphonyControl.Router do
       end
     after
       if previous, do: Process.put({Authorizer, :deadline}, previous), else: Process.delete({Authorizer, :deadline})
+      Enum.each(prior_private, fn {key, value} -> if value, do: Process.put(key, value), else: Process.delete(key) end)
     end
   end
 

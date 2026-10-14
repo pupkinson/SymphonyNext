@@ -1,7 +1,8 @@
 defmodule SymphonyControl.Auth.Access do
   @moduledoc "Server-only session confirmation. Production eligibility remains denied in Task3."
   use GenServer
-  alias SymphonyControl.Auth.{Actor, Authorizer, Clock, Config, Csrf, Eligibility, RequestContext, Routes, Store}
+  alias SymphonyControl.Auth.{Actor, AuthorizerBindings, Clock, Config, Csrf, Eligibility}
+  alias SymphonyControl.Auth.{RequestContext, Routes, Store, Validity}
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -35,23 +36,18 @@ defmodule SymphonyControl.Auth.Access do
 
   @impl true
   def terminate(_reason, _state) do
-    for {key, previous} <- Process.get({__MODULE__, :authorizers}, []) do
-      if Application.get_env(:symphony_elixir, key) == Authorizer, do: restore_authorizer(key, previous)
-    end
+    if generation = Process.get({__MODULE__, :authorizers}), do: AuthorizerBindings.release(generation)
 
     :ok
   end
 
-  defp restore_authorizer(key, {:ok, value}), do: Application.put_env(:symphony_elixir, key, value)
-  defp restore_authorizer(key, :error), do: Application.delete_env(:symphony_elixir, key)
-
   defp install_authorizers(%Config{} = cfg) do
     with {:ok, _} <- cfg |> Map.from_struct() |> Map.delete(:tls_cacerts) |> Config.load(),
          :ok <- Routes.validate(cfg) do
-      keys = [:project_authorizer, :runtime_identity_authorizer]
-      previous = for key <- keys, do: {key, Application.fetch_env(:symphony_elixir, key)}
-      Process.put({__MODULE__, :authorizers}, previous)
-      Enum.each(previous, fn {key, _} -> Application.put_env(:symphony_elixir, key, Authorizer) end)
+      parent = Process.get(:"$ancestors") |> hd()
+      owner = if is_pid(parent), do: parent, else: Process.whereis(parent)
+      {:ok, generation} = AuthorizerBindings.install(owner)
+      Process.put({__MODULE__, :authorizers}, generation)
     end
   end
 
@@ -72,8 +68,9 @@ defmodule SymphonyControl.Auth.Access do
     deadline = RequestContext.milliseconds(native_deadline)
 
     with true <- remaining(deadline) > 0,
-         {^cfg, callback} <- GenServer.call(__MODULE__, :binding, remaining(deadline)) do
-      accepted_receipt?(confirmation_receipt(callback), cfg, actor, deadline) and remaining(deadline) > 0
+         {^cfg, callback} <- GenServer.call(__MODULE__, :binding, remaining(deadline)),
+         true <- match?(%Validity{deadline: ^native_deadline}, Process.get({__MODULE__, :validity})) do
+      accepted_receipt?(confirmation_receipt(callback), cfg, actor, deadline, Process.get({__MODULE__, :validity})) and remaining(deadline) > 0
     else
       _ -> false
     end
@@ -98,10 +95,11 @@ defmodule SymphonyControl.Auth.Access do
          true <- remaining(deadline) >= 1_000,
          fresh = Clock.now(250),
          true <- remaining(deadline) >= 750,
-         {:ok, rights} <- Store.permissions(cfg, actor, scope, fresh),
+         {:ok, {rights, witness}} <- Store.permissions(cfg, actor, scope, fresh, native_deadline),
          true <- MapSet.member?(rights, action),
          true <- remaining(deadline) > 0,
-         true <- accepted_receipt?(receipt, cfg, actor, deadline) do
+         true <- accepted_receipt?(receipt, cfg, actor, deadline, witness) do
+      Process.put({__MODULE__, :validity}, witness)
       :ok
     else
       _ -> {:error, :forbidden}
@@ -128,7 +126,7 @@ defmodule SymphonyControl.Auth.Access do
     # An actor queued by a worker is only a candidate until that decision.
     case Task.yield(task, max(remaining(deadline) - 1_000, 0)) do
       {:ok, {:confirmed, actor, receipt}} ->
-        accept(cfg, handle, actor, deadline, receipt)
+        accept(cfg, handle, actor, deadline, receipt, native_deadline)
 
       {:ok, result} ->
         result
@@ -161,13 +159,14 @@ defmodule SymphonyControl.Auth.Access do
 
   defp confirm(_, _, _, _), do: {:error, :forbidden}
 
-  defp accept(cfg, handle, actor, deadline, receipt) do
+  defp accept(cfg, handle, actor, deadline, receipt, native_deadline) do
     with true <- remaining(deadline) >= 1_000,
          fresh = Clock.now(250),
          true <- remaining(deadline) >= 750,
-         {:ok, ^actor} <- Store.local_actor(cfg, handle, fresh),
+         {:ok, {^actor, witness}} <- Store.local_actor(cfg, handle, fresh, native_deadline),
          true <- remaining(deadline) > 0,
-         true <- accepted_receipt?(receipt, cfg, actor, deadline) do
+         true <- accepted_receipt?(receipt, cfg, actor, deadline, witness) do
+      Process.put({__MODULE__, :validity}, witness)
       {:ok, actor}
     else
       {:error, reason} when reason in [:dependency_unavailable, :unknown_outcome] -> {:error, :dependency_unavailable}
@@ -179,8 +178,8 @@ defmodule SymphonyControl.Auth.Access do
     if callback == (&Eligibility.confirm/4), do: {:eligibility, Eligibility.receipt()}, else: :legacy_fixture
   end
 
-  defp accepted_receipt?({:eligibility, receipt}, cfg, actor, deadline), do: Eligibility.current?(receipt, cfg, actor, deadline)
-  defp accepted_receipt?(:legacy_fixture, _cfg, _actor, _deadline), do: true
+  defp accepted_receipt?({:eligibility, receipt}, cfg, actor, deadline, witness), do: Eligibility.current?(receipt, cfg, actor, deadline, witness)
+  defp accepted_receipt?(:legacy_fixture, cfg, actor, _deadline, %Validity{deadline: request} = witness), do: Validity.current?(witness, cfg, actor, request)
 
   defp remaining(deadline), do: max(deadline - System.monotonic_time(:millisecond), 0)
 end

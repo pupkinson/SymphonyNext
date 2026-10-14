@@ -77,7 +77,7 @@ defmodule SymphonyControl.Auth.HttpBodyTest do
     f = AuthHttpFixture.start!()
     probe = probe()
 
-    for {method, path, status} <- [{"GET", "/auth/callback", 400}, {"POST", "/auth/logout", 403}, {"POST", "/auth/backchannel-logout", 403}],
+    for {method, path, status} <- [{"GET", "/auth/callback", 400}, {"POST", "/auth/logout", 403}, {"POST", "/auth/backchannel-logout", 400}],
         pipelined <- [false, true] do
       socket = connect(f)
       :ok = :ssl.send(socket, request(method, path, "content-length: 4\r\n"))

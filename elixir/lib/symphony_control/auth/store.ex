@@ -5,7 +5,7 @@ defmodule SymphonyControl.Auth.Store do
   and new handles are released only after a confirmed commit. Do not nest these calls in transactions.
   Selectors are internal authority-bearing tuples, never accepted from HTTP parameters.
   """
-  alias SymphonyControl.Auth.{Actor, Clock, Config, TokenVault}
+  alias SymphonyControl.Auth.{Actor, Clock, Config, TokenVault, Validity}
   alias SymphonyControl.Repo
   @db_options [queue: false, log: false]
   @deadline_ms 750
@@ -155,17 +155,26 @@ defmodule SymphonyControl.Auth.Store do
   end
 
   @spec local_actor(Config.t(), binary(), Clock.t()) :: result(Actor.t())
-  def local_actor(cfg, handle, clock) do
+  def local_actor(cfg, handle, clock), do: local_actor(cfg, handle, clock, nil)
+
+  @doc "Checked internal read with original-request local validity; no new authority in Actor."
+  @spec local_actor(Config.t(), binary(), Clock.t(), integer() | nil) :: result(term())
+  def local_actor(cfg, handle, clock, request) do
     deadline = deadline()
 
-    database(:read, deadline, fn ->
-      with :ok <- context(cfg, clock),
-           :ok <- nonempty_inputs([handle], 256),
-           # Read acceptance also requires a fresh trusted sample.
-           {:ok, _fresh} <- operational_clock(clock) do
-        candidate(cfg, :handle, hash(handle), clock) |> actor_result()
-      end
-    end)
+    database(
+      :read,
+      deadline,
+      fn ->
+        with :ok <- context(cfg, clock),
+             :ok <- nonempty_inputs([handle], 256),
+             # Read acceptance also requires a fresh trusted sample.
+             {:ok, _fresh} <- operational_clock(clock) do
+          candidate(cfg, :handle, hash(handle), clock) |> actor_result()
+        end
+      end,
+      envelope(cfg, request, :value)
+    )
   end
 
   @spec actor_current?(Config.t(), term(), Clock.t()) :: boolean()
@@ -176,41 +185,60 @@ defmodule SymphonyControl.Auth.Store do
 
   @doc "Server-internal session material for Eligibility and Logout only; never an Actor or HTTP payload."
   @spec session_material(Config.t(), term(), Clock.t()) :: result(map())
-  def session_material(cfg, actor, clock) do
+  def session_material(cfg, actor, clock), do: session_material(cfg, actor, clock, nil)
+
+  @spec session_material(Config.t(), term(), Clock.t(), integer() | nil) :: result(term())
+  def session_material(cfg, actor, clock, request) do
     deadline = deadline()
 
-    database(:read, deadline, fn ->
-      with :ok <- context(cfg, clock),
-           :ok <- actor_input(actor),
-           {:ok, _fresh} <- operational_clock(clock),
-           result = candidate(cfg, :id, uuid(actor.session_id), clock, :material),
-           {:guarded, {:ok, {actual, material}}, validity} <- result,
-           true <- actual == actor do
-        {:guarded, {:ok, Map.put(material, :actor, actual)}, validity}
-      else
-        {:error, _} = error -> error
-        _ -> {:error, :forbidden}
-      end
-    end)
+    database(
+      :read,
+      deadline,
+      fn ->
+        with :ok <- context(cfg, clock),
+             :ok <- actor_input(actor),
+             {:ok, _fresh} <- operational_clock(clock),
+             result = candidate(cfg, :id, uuid(actor.session_id), clock, :material),
+             {:guarded, {:ok, {actual, material}}, validity} <- result,
+             true <- actual == actor do
+          {:guarded, {:ok, Map.put(material, :actor, actual)}, validity}
+        else
+          {:error, _} = error -> error
+          _ -> {:error, :forbidden}
+        end
+      end,
+      envelope(cfg, request, actor)
+    )
   end
 
   @spec permissions(Config.t(), term(), Ecto.UUID.t() | :platform, Clock.t()) :: result(MapSet.t())
-  def permissions(cfg, actor, scope, clock) do
+  def permissions(cfg, actor, scope, clock), do: permissions(cfg, actor, scope, clock, nil)
+
+  @spec permissions(Config.t(), term(), Ecto.UUID.t() | :platform, Clock.t(), integer() | nil) :: result(term())
+  def permissions(cfg, actor, scope, clock, request) do
     deadline = deadline()
 
-    database(:read, deadline, fn ->
-      with :ok <- context(cfg, clock),
-           {:ok, target} <- scope_id(scope),
-           :ok <- actor_input(actor),
-           # The SQL statement owns the coherent session/grant decision.
-           {:ok, _fresh} <- operational_clock(clock) do
-        current_permissions(cfg, actor, target, clock)
-      end
-    end)
+    database(
+      :read,
+      deadline,
+      fn ->
+        with :ok <- context(cfg, clock),
+             {:ok, target} <- scope_id(scope),
+             :ok <- actor_input(actor),
+             # The SQL statement owns the coherent session/grant decision.
+             {:ok, _fresh} <- operational_clock(clock) do
+          current_permissions(cfg, actor, target, clock)
+        end
+      end,
+      envelope(cfg, request, actor)
+    )
   end
 
   @spec revoke(Config.t(), selector(), Clock.t()) :: :ok | {:error, Config.reason()}
-  def revoke(cfg, selector, clock) do
+  def revoke(cfg, selector, clock), do: revoke(cfg, selector, clock, nil)
+
+  @spec revoke(Config.t(), selector(), Clock.t(), Validity.t() | nil) :: :ok | {:error, Config.reason()}
+  def revoke(cfg, selector, clock, guard) do
     deadline = deadline()
 
     database(:write, deadline, fn ->
@@ -218,14 +246,17 @@ defmodule SymphonyControl.Auth.Store do
            {:ok, where, params} <- selector_sql(cfg, selector),
            # Revocation uses the current trusted event time.
            {:ok, fresh} <- operational_clock(clock) do
-        revoke_transaction(where, params, fresh)
+        revoke_transaction(where, params, fresh, cfg, selector, guard)
       end
     end)
     |> committed_ok()
   end
 
   @spec accept_logout(Config.t(), binary(), selector(), integer(), Clock.t()) :: :ok | {:error, Config.reason()}
-  def accept_logout(cfg, jti, selector, retain_until_ms, clock) do
+  def accept_logout(cfg, jti, selector, retain_until_ms, clock), do: accept_logout(cfg, jti, selector, retain_until_ms, clock, nil)
+
+  @spec accept_logout(Config.t(), binary(), selector(), integer(), Clock.t(), Validity.t() | nil) :: :ok | {:error, Config.reason()}
+  def accept_logout(cfg, jti, selector, retain_until_ms, clock, guard) do
     deadline = deadline()
 
     database(:write, deadline, fn ->
@@ -234,7 +265,7 @@ defmodule SymphonyControl.Auth.Store do
            :ok <- retention(retain_until_ms, clock),
            {:ok, where, params} <- selector_sql(cfg, selector),
            {:ok, _fresh} <- operational_clock(clock),
-           do: logout_transaction(cfg, jti, retain_until_ms, where, params, clock)
+           do: logout_transaction(cfg, jti, retain_until_ms, where, params, clock, {selector, guard})
     end)
     |> committed_ok()
   end
@@ -249,15 +280,19 @@ defmodule SymphonyControl.Auth.Store do
     end
   end
 
-  defp revoke_transaction(where, params, clock) do
+  defp revoke_transaction(where, params, clock, cfg, selector, guard) do
     transaction(fn ->
+      local_guard!(guard, cfg, selector, clock)
       revoke_rows(where, params, clock)
+      local_guard!(guard, cfg, selector, clock)
       :ok
     end)
   end
 
-  defp logout_transaction(cfg, jti, retain_until_ms, where, params, clock) do
+  defp logout_transaction(cfg, jti, retain_until_ms, where, params, clock, {selector, guard}) do
     transaction(fn ->
+      signed_guard!(guard, cfg, jti, selector, clock)
+
       result =
         query!(
           """
@@ -268,9 +303,32 @@ defmodule SymphonyControl.Auth.Store do
         )
 
       if result.num_rows == 0, do: Repo.rollback(:forbidden)
+      signed_guard!(guard, cfg, jti, selector, clock)
       revoke_rows(where, params, clock)
+      # This final synchronous decision follows all query/lock waits and
+      # precedes transaction return / COMMIT dispatch. Expiry rolls back both
+      # still-uncommitted changes; a later confirmed COMMIT is never undone.
+      signed_guard!(guard, cfg, jti, selector, clock)
       :ok
     end)
+  end
+
+  defp signed_guard!(nil, _cfg, _jti, _selector, _clock), do: :ok
+  defp signed_guard!(%Validity{kind: :signed} = guard, cfg, jti, selector, clock), do: mutation_guard!(guard, cfg, {jti, selector}, clock)
+  defp signed_guard!(_, _, _, _, _), do: Repo.rollback(:forbidden)
+  defp local_guard!(nil, _cfg, _selector, _clock), do: :ok
+
+  defp local_guard!(%Validity{kind: :local, binding: %Actor{session_id: id} = actor} = guard, cfg, {:session, id}, clock),
+    do: mutation_guard!(guard, cfg, actor, clock)
+
+  defp local_guard!(_, _, _, _), do: Repo.rollback(:forbidden)
+
+  defp mutation_guard!(%Validity{deadline: request} = guard, cfg, binding, clock) do
+    with {:ok, fresh} <- operational_clock(clock), true <- Validity.current?(guard, cfg, binding, request, fresh), true <- System.monotonic_time() < Process.get({__MODULE__, :deadline}) do
+      :ok
+    else
+      _ -> Repo.rollback(:forbidden)
+    end
   end
 
   defp committed_ok({:ok, :ok}), do: :ok
@@ -552,13 +610,20 @@ defmodule SymphonyControl.Auth.Store do
 
   defp checked(error, _validity), do: error
 
-  defp database(mode, deadline, operation) do
+  defp envelope(_cfg, nil, _binding), do: nil
+  defp envelope(cfg, request, binding), do: {cfg, request, binding}
+
+  defp database(mode, deadline, operation, envelope \\ nil) do
     unavailable = {:error, if(mode == :write, do: :unknown_outcome, else: :dependency_unavailable)}
 
     task =
       Task.async(fn ->
         Process.put({__MODULE__, :deadline}, deadline)
-        safe_operation(operation, unavailable)
+
+        safe_operation(
+          fn -> enveloped_operation(operation, envelope) end,
+          unavailable
+        )
       end)
 
     case Task.yield(task, remaining(deadline)) do
@@ -572,6 +637,11 @@ defmodule SymphonyControl.Auth.Store do
     end
   end
 
+  defp enveloped_operation(operation, envelope) do
+    key = if envelope, do: envelope |> elem(0) |> Validity.key_id()
+    wrap_envelope(operation.(), envelope, key)
+  end
+
   defp accept(result, deadline, unavailable) do
     # Acceptance belongs to the caller, including queued on-time worker replies.
     accepted = accept_fresh(result, deadline)
@@ -583,13 +653,36 @@ defmodule SymphonyControl.Auth.Store do
       {false, _} ->
         unavailable
 
+      {true, {:enveloped, {:guarded, {:ok, value}, {validity, fresh}}, {cfg, request, binding}, key}} ->
+        accept_envelope(value, validity, fresh, {cfg, request, binding}, key, now, deadline)
+
       {true, {:guarded, value, {validity, fresh}}} ->
         if valid_native?(validity, fresh, now), do: value, else: {:error, :forbidden}
+
+      {true, {:enveloped, error, _envelope, _key}} ->
+        error
 
       {true, value} ->
         value
     end
   end
+
+  defp accept_envelope(value, validity, fresh, {cfg, request, binding}, key, now, deadline) do
+    actor = if binding == :value, do: value, else: binding
+    witness = Validity.local(validity, fresh, cfg, actor, request, key)
+    current = valid_native?(validity, fresh, now) and Validity.current?(witness, cfg, actor, request)
+
+    if current and System.monotonic_time() < deadline do
+      {:ok, {value, witness}}
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp wrap_envelope({:guarded, _, _} = result, envelope, key) when not is_nil(envelope), do: {:enveloped, result, envelope, key}
+  defp wrap_envelope(result, _envelope, _key), do: result
+
+  defp accept_fresh({:enveloped, result, envelope, key}, deadline), do: {:enveloped, accept_fresh(result, deadline), envelope, key}
 
   defp accept_fresh({:guarded, result, validity}, deadline) do
     with {:ok, fresh} <- fresh_clock(deadline), true <- valid_at?(validity, fresh) do

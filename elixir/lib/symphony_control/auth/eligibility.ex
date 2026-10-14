@@ -1,7 +1,7 @@
 defmodule SymphonyControl.Auth.Eligibility do
   @moduledoc "Bounded current observation lifecycle. Unproved production observation stays closed."
   use GenServer
-  alias SymphonyControl.Auth.{Actor, Clock, Config, Store}
+  alias SymphonyControl.Auth.{Actor, Clock, Config, Store, Validity}
   @age 50_000
   @max_cache 1000
   @max_inflight 32
@@ -47,16 +47,19 @@ defmodule SymphonyControl.Auth.Eligibility do
   def receipt, do: Process.get({__MODULE__, :receipt})
 
   @spec current?(term(), Config.t(), term(), integer()) :: boolean()
-  def current?(%{key: key, ref: ref, actor: actor} = receipt, cfg, actor, deadline) do
+  def current?(receipt, cfg, actor, deadline), do: current?(receipt, cfg, actor, deadline, nil)
+
+  @spec current?(term(), Config.t(), term(), integer(), Validity.t() | nil) :: boolean()
+  def current?(%{key: key, ref: ref, actor: actor} = receipt, cfg, actor, deadline, witness) do
     with true <- remaining(deadline) > 0,
          clock = Clock.now(min(remaining(deadline), 250)),
          true <- fresh?(receipt, clock),
          :ok <- GenServer.call(__MODULE__, {:accept, cfg, key, ref}, remaining(deadline)) do
+      local_valid = local_current?(witness, cfg, actor, clock)
       now = System.monotonic_time()
-      life = min(@age - (clock.utc_ms - receipt.clock.utc_ms), @age - (clock.monotonic_ms - receipt.clock.monotonic_ms))
 
       now < System.convert_time_unit(deadline, :millisecond, :native) and
-        now < receipt.until_native and now < clock.native_anchor + System.convert_time_unit(life, :millisecond, :native)
+        observation_current?(receipt, clock, now, Process.whereis(Clock)) and local_valid
     else
       _ -> false
     end
@@ -66,7 +69,11 @@ defmodule SymphonyControl.Auth.Eligibility do
     _, _ -> false
   end
 
-  def current?(_, _, _, _), do: false
+  def current?(_, _, _, _, _), do: false
+
+  defp local_current?(nil, _, _, _), do: true
+  defp local_current?(%Validity{deadline: request} = witness, cfg, actor, clock), do: Validity.current?(witness, cfg, actor, request, clock)
+  defp local_current?(_, _, _, _), do: false
 
   @spec invalidate(Config.t(), Store.selector(), integer()) :: :ok | {:error, Config.reason()}
   def invalidate(cfg, selector, deadline) do
@@ -116,7 +123,7 @@ defmodule SymphonyControl.Auth.Eligibility do
     case Map.get(state.inflight, key) do
       %{ref: ^ref, deadline: deadline} ->
         result = if remaining(deadline) > 0, do: result, else: {:error, :dependency_unavailable}
-        state = publish(state, key, result)
+        {state, result} = publish(state, key, result)
         {:noreply, finish(state, key, result, false)}
 
       _ ->
@@ -150,7 +157,7 @@ defmodule SymphonyControl.Auth.Eligibility do
       %{waiters: waiters} = job when length(waiters) < @max_waiters ->
         {:noreply, put_in(state.inflight[key], %{job | waiters: [from | waiters]})}
 
-      nil when map_size(state.inflight) < @max_inflight and map_size(state.cache) < @max_cache ->
+      nil when map_size(state.inflight) < @max_inflight and map_size(state.cache) + map_size(state.inflight) < @max_cache ->
         start_refresh(state, key, material, deadline, from)
 
       _ ->
@@ -214,12 +221,12 @@ defmodule SymphonyControl.Auth.Eligibility do
   defp observation_binding?(_), do: false
 
   defp publish(state, key, {:ok, receipt}) do
-    if System.monotonic_time() < receipt.until_native,
-      do: put_in(state.cache[key], receipt),
-      else: state
+    if System.monotonic_time() < receipt.until_native and (Map.has_key?(state.cache, key) or map_size(state.cache) < @max_cache),
+      do: {put_in(state.cache[key], receipt), {:ok, receipt}},
+      else: {state, {:error, :dependency_unavailable}}
   end
 
-  defp publish(state, _key, _failure), do: state
+  defp publish(state, _key, failure), do: {state, failure}
 
   defp finish(state, key, result, kill?) do
     {job, inflight} = Map.pop(state.inflight, key)
@@ -233,23 +240,37 @@ defmodule SymphonyControl.Auth.Eligibility do
   defp key(%{actor: actor, sid: sid}),
     do: {actor.issuer, actor.subject, sid, actor.config_generation, actor.boot_epoch, actor.session_id}
 
-  defp fresh?(entry, clock) do
-    valid_clock?(clock) and valid_clock?(entry.clock) and clock.epoch == entry.clock.epoch and
-      clock.utc_ms >= entry.clock.utc_ms and clock.utc_ms - entry.clock.utc_ms < @age and
-      clock.monotonic_ms >= entry.clock.monotonic_ms and clock.monotonic_ms - entry.clock.monotonic_ms < @age and
-      System.monotonic_time() < entry.until_native
+  @doc "Internal age predicate at an explicit native decision; config, actor and cache-ref acceptance remain separate."
+  @spec observation_current?(term(), term(), integer(), pid() | nil) :: boolean()
+  def observation_current?(%{clock: observed, until_native: until}, measured, now, producer)
+      when is_integer(now) and is_integer(until) do
+    with true <- valid_clock?(observed, now, producer),
+         true <- valid_clock?(measured, now, producer),
+         true <- measured.epoch == observed.epoch,
+         ages = [measured.utc_ms - observed.utc_ms, measured.monotonic_ms - observed.monotonic_ms],
+         true <- Enum.all?(ages, &(&1 >= 0 and &1 < @age)) do
+      remaining = @age - Enum.max(ages)
+      now < until and now < measured.native_anchor + System.convert_time_unit(remaining, :millisecond, :native)
+    else
+      _ -> false
+    end
   end
 
-  defp valid_clock?(%{sample_valid: true} = clock) do
+  def observation_current?(_, _, _, _), do: false
+
+  defp fresh?(entry, clock), do: observation_current?(entry, clock, System.monotonic_time(), Process.whereis(Clock))
+  defp valid_clock?(clock), do: valid_clock?(clock, System.monotonic_time(), Process.whereis(Clock))
+
+  defp valid_clock?(%{sample_valid: true} = clock, now, current_producer) do
     numbers = Enum.map([:utc_ms, :monotonic_ms, :native_anchor, :native_unit], &Map.get(clock, &1))
     producer = Map.get(clock, :native_clock)
 
     Enum.all?(numbers, &is_integer/1) and is_binary(Map.get(clock, :epoch)) and is_pid(producer) and
-      producer == Process.whereis(Clock) and clock.native_unit == System.convert_time_unit(1, :second, :native) and
-      clock.native_anchor <= System.monotonic_time()
+      producer == current_producer and clock.native_unit == System.convert_time_unit(1, :second, :native) and
+      clock.native_anchor <= now
   end
 
-  defp valid_clock?(_), do: false
+  defp valid_clock?(_, _, _), do: false
 
   defp valid_selector?(%Config{issuer: issuer}, {:subject, issuer, sub}), do: is_binary(sub) and byte_size(sub) > 0
   defp valid_selector?(%Config{issuer: issuer}, {:sid, issuer, sid, sub}), do: is_binary(sid) and byte_size(sid) > 0 and (is_nil(sub) or (is_binary(sub) and byte_size(sub) > 0))
