@@ -98,16 +98,23 @@ defmodule SymphonyControl.Auth.AuthorizerBindings do
   defp selected(:base, key), do: base(key)
   defp base(key), do: Application.get_env(:symphony_elixir, key)
 
-  # All waiting and raw-base reads precede this synchronous acceptance point.
+  # The closing sample bounds completed state reads; only the local result
+  # follows it. All waiting and raw-base reads precede this acceptance guard.
   defp accept_selection(module, decision, limit) do
-    if RequestContext.timely?(limit) and current?(decision), do: {:ok, module, decision}, else: {:error, :forbidden}
+    if RequestContext.timely?(limit) and current?(decision) and RequestContext.timely?(limit) do
+      {:ok, module, decision}
+    else
+      {:error, :forbidden}
+    end
   end
 
   # The callback runs in the caller, preserving its process-local receipt and
   # Validity. Only the original request deadline applies after lookup completes.
   defp accept_authorization(decision, deadline) do
-    (is_nil(deadline) or RequestContext.timely?(deadline)) and current?(decision)
+    request_timely?(deadline) and current?(decision) and request_timely?(deadline)
   end
+
+  defp request_timely?(deadline), do: is_nil(deadline) or RequestContext.timely?(deadline)
 
   defp current?(decision) do
     live_decision?(decision) and :persistent_term.get(@context, :absent) == decision

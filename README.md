@@ -259,3 +259,17 @@ exit/reap observations remain UNKNOWN. Author GREEN does not erase that hold.
 Independent review of the new exact HEAD is required. NOT_ACCEPTED_FOR_TASK5 /
 NOT_RELEASE_APPROVAL / DO_NOT_MERGE. Full causal matrix, style-only equivalence,
 input/output seals and limits are appended to docs/engineering/authentik-project-access.md.
+
+
+2026-10-15 — R6-TIME author candidate adds a fresh closing native-time check after
+complete binding-state validation. Selection retains its original lookup limit;
+callback acceptance retains only the original HTTP deadline, with nil context
+unchanged. Descriptor/lifecycle/defaults and both consumers are byte-preserved.
+Actual direct RuntimeIdentity/Projects causal controls: old4 semantic RED plus4
+positive controls; fixed8/0. Standard native regressions run without the one-off
+observer. Fresh T1 98/0,T2 496/0,ordinary make862/0/6 with100% coverage and
+Dialyzer0,strict lint,T4 Python12/11 passed. Full causal times/diff/source/limits
+and first failures are appended to docs/engineering/authentik-project-access.md.
+Prior prepared-cache process hold and UNKNOWN remain; current preparation004
+also had inherited HOME despite own cache paths, then corrected/rechecked.
+This is not independent acceptance or Task5/release approval. DO_NOT_MERGE.

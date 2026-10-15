@@ -764,4 +764,140 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
 
   defp restore(key, :error), do: Application.delete_env(:symphony_elixir, key)
   defp restore(key, {:ok, value}), do: Application.put_env(:symphony_elixir, key, value)
+
+  defmodule TimeBoundaryLegacy do
+    def authorize(:operator, :runtime_identity_read), do: :ok
+    def authorize(:operator, :project_create, :platform), do: :ok
+  end
+
+  for key <- @keys, context <- [:request, :absent] do
+    @time_key key
+    @time_context context
+    @tag :r6_time
+    test "R6-TIME #{@time_key} native closing samples follow complete state checks with #{@time_context} context" do
+      if @time_key == :project_authorizer, do: AuthDbFixture.start!()
+      start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+      Application.put_env(:symphony_elixir, @time_key, TimeBoundaryLegacy)
+      descriptor = :persistent_term.get({AuthorizerBindings, :lifecycle})
+      deadline = if @time_context == :request, do: RequestContext.deadline(), else: nil
+      owner = self()
+      ref = make_ref()
+      started = System.monotonic_time()
+
+      caller =
+        Task.async(fn ->
+          if deadline, do: Process.put({Authorizer, :deadline}, deadline)
+          receive do: ({:time_run, ^ref} -> :ok)
+          result = time_consume(@time_key)
+          send(owner, {:time_result, ref, match?({:ok, _}, result)})
+          receive do: ({:time_finish, ^ref} -> :ok), after: (1000 -> :ok)
+        end)
+
+      time_trace(caller.pid, true)
+      send(caller.pid, {:time_run, ref})
+
+      try do
+        assert_receive {:time_result, ^ref, true}, 1000
+        events = time_events(caller.pid)
+        state_calls = time_indices(events, :state_call)
+        state_returns = time_indices(events, :state_return)
+        assert length(state_calls) == 2 and length(state_returns) == 2
+        [{:time_call, lookup_limit, _} | _] = Enum.filter(events, &match?({:time_call, _, _}, &1))
+        callback = hd(time_indices(events, :callback_return))
+        time_assert_closing(events, hd(state_calls), hd(state_returns), callback, lookup_limit)
+
+        if deadline do
+          refute deadline == lookup_limit
+          time_assert_closing(events, List.last(state_calls), List.last(state_returns), length(events), deadline)
+        else
+          refute Enum.any?(Enum.drop(events, List.last(state_calls)), &match?({:time_call, _, _}, &1))
+        end
+
+        assert :persistent_term.get({AuthorizerBindings, :lifecycle}) == descriptor
+        elapsed = System.convert_time_unit(System.monotonic_time() - started, :native, :microsecond) / 1000
+        IO.puts("R6_TIME_NATIVE key=#{@time_key} context=#{@time_context} elapsed_ms=#{elapsed} state_checks=2 closing_order=verified")
+        send(caller.pid, {:time_finish, ref})
+        assert Task.await(caller, 1000) == :ok
+      after
+        time_trace(caller.pid, false)
+        if Process.alive?(caller.pid), do: Task.shutdown(caller, :brutal_kill)
+      end
+    end
+  end
+
+  for key <- @keys do
+    @time_key key
+    @tag :r6_time
+    test "R6-TIME #{@time_key} request at or after its exact native bound denies before callback" do
+      if @time_key == :project_authorizer, do: AuthDbFixture.start!()
+      start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+      Application.put_env(:symphony_elixir, @time_key, TimeBoundaryLegacy)
+      bound = System.monotonic_time()
+      Process.put({Authorizer, :deadline}, bound)
+
+      try do
+        assert System.monotonic_time() >= bound
+        assert_denied(time_consume(@time_key))
+        if @time_key == :project_authorizer, do: assert(Repo.query!("SELECT count(*) FROM projects", [], log: false).rows == [[0]])
+      after
+        Process.delete({Authorizer, :deadline})
+      end
+    end
+  end
+
+  defp time_consume(:runtime_identity_authorizer), do: RuntimeIdentity.read(:operator)
+  defp time_consume(:project_authorizer), do: Projects.create_project(:operator, %{key: "TIME", name: "Native time control"})
+
+  defp time_trace(pid, enabled) do
+    match = if enabled, do: [{:_, [], [{:return_trace}]}], else: false
+    :erlang.trace_pattern({RequestContext, :timely?, 1}, match, [:local])
+    :erlang.trace_pattern({AuthorizerBindings, :current?, 1}, match, [:local])
+    :erlang.trace_pattern({TimeBoundaryLegacy, :authorize, :_}, match, [:local])
+    if enabled, do: :erlang.trace(pid, true, [:call, :monotonic_timestamp, {:tracer, self()}])
+  end
+
+  defp time_events(pid) do
+    ref = :erlang.trace_delivered(pid)
+    time_collect(ref, [])
+  end
+
+  defp time_collect(ref, events) do
+    receive do
+      {:trace_delivered, _, ^ref} ->
+        Enum.reverse(events)
+
+      {:trace_ts, _, :call, {RequestContext, :timely?, [bound]}, at} ->
+        time_collect(ref, [{:time_call, bound, at} | events])
+
+      {:trace_ts, _, :return_from, {RequestContext, :timely?, 1}, true, at} ->
+        time_collect(ref, [{:time_return, true, at} | events])
+
+      {:trace_ts, _, :call, {AuthorizerBindings, :current?, _}, at} ->
+        time_collect(ref, [{:state_call, true, at} | events])
+
+      {:trace_ts, _, :return_from, {AuthorizerBindings, :current?, 1}, true, at} ->
+        time_collect(ref, [{:state_return, true, at} | events])
+
+      {:trace_ts, _, :return_from, {TimeBoundaryLegacy, :authorize, _}, :ok, at} ->
+        time_collect(ref, [{:callback_return, true, at} | events])
+
+      {:trace_ts, _, _, _, _} ->
+        time_collect(ref, events)
+    after
+      1000 -> flunk("native time trace delivery not confirmed")
+    end
+  end
+
+  defp time_indices(events, kind) do
+    for {{tag, _, _}, index} <- Enum.with_index(events), tag == kind, do: index
+  end
+
+  defp time_assert_closing(events, call, returned, endpoint, bound) do
+    preceding = Enum.take(events, call) |> Enum.filter(&match?({:time_call, _, _}, &1)) |> List.last()
+    assert {:time_call, ^bound, _} = preceding
+    closing = Enum.slice(events, returned + 1, max(endpoint - returned - 1, 0))
+    assert [{:time_call, ^bound, sample}, {:time_return, true, _}] = closing
+    {_, _, state_completed} = Enum.at(events, returned)
+    assert state_completed <= sample
+  end
 end

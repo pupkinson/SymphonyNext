@@ -3324,3 +3324,367 @@ Historical A148/1/B020/earlier T1 transport remain unresolved and are not
 attributed to N2. Activation/defaults/Task5/native/trusted/live/production
 boundaries remain unchanged. NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL /
 NOT_ACCEPTED / DO_NOT_MERGE. Cycle2/2 used, agents0/profile changes0.
+
+
+## 2026-10-15 — R6-TIME closing native-time candidate
+
+This separately authorized Task4 repair starts from5845695a1929dc13528a6ba9c0ec297303cf8c0a,
+tree446db2d34d0813cf3573eda95f388d1351a2b3d7, parent7be77f06, base097d64ad.
+Independent report6187290039/verdict6187300062 closed N2 at source and preserved
+N1/R1–R5, identity adaptation, STYLE equivalence and consumer fault contracts.
+R6-TIME/P2 remained: the early true time sample preceded unfinished current?.
+These source dispositions remain prior independent conclusions; the new candidate
+requires another exact-HEAD review. No Task5/release acceptance is supplied.
+
+Product delta is only the two acceptance time boundaries and one private predicate
+in AuthorizerBindings. Order is preliminary time -> entire registration/liveness/
+final-descriptor check -> fresh same absolute native bound -> local result.
+Selection retains its original L=min(prepare-start+250ms,D); post-callback retains
+only the captured original requestD. NilD keeps existing absent-context behavior;
+no new deadline, renewed budget, grace/epsilon, retry, stability loop or final RPC.
+The closing native sample upper-bounds completion of the descriptor validation.
+Clock and mutable state are not one atomic CPU operation. No physical return,
+HTTP send or arbitrary VM-pause-after-completed-check hard realtime is promised.
+The normal callback follows selection acceptance in the original caller, and its
+result has the separate request-deadline guard. Descriptor publication/revisions,
+lifecycle/interfaces/defaults and both frozen consumers are unchanged.
+
+### Causal RED -> GREEN, separate from standard qualification
+
+One own clean copy retained all255 tracked5845695 blobs for baseline011. The
+one-off observer is exactly one added call at the START of current?/1, before
+registration/liveness/descriptor work. Native RequestContext return tracing proves
+the preceding sample was true; at this hold0 state checks had completed for lookup,
+1 for post-callback. The latter also observes the real legacy authorize MFA
+returning :ok. Real prepare/RPC/raw Application candidate reads are not replaced.
+Both real RuntimeIdentity.read and Projects.create_project execute; Projects uses
+its real own disposable PostgreSQL fixture. No HTTP before-send hook is involved.
+Callbacks and state checks retain the actual caller PID, confirmed by trace and
+callback messages. Descriptor and full real helper state stay equal across hold.
+No fake reply/descriptor/Clock/Actor/result is supplied.
+
+Parent baseline observer SHA25685d110422fff685fc8580adeda678e6f92312b564c84b2c7b71a1a330d8cf431;
+untracked test SHA256f03c7e63c63f7fda1dc1a8a894ee9546c2089f031f9da7ef75011907a7defd92.
+The same observer line and test execute after the product repair: derived overlay
+SHA2561a629d0b2f01afd9f642621e48a02204c41dc07386aea6aa92a5399fa5e3f05a.
+The latter digest was saved after its run; exact derivation from the recorded
+product input plus the same one-line diff is retained, not presented as an earlier
+independent full auxiliary seal. Tracked source, test overlay, patch, runner/env
+and source-generation transcript are preserved for that causal execution.
+Baseline0118 tests/4 expected failures/exit2; four timely pairs PASS.
+Green013 same8 tests/0 failures/exit0. Each expired result is now denied; lookup
+callbacks0, post-callback callbacks1, Projects rows0. Timely controls still pass.
+
+Times below are actual monotonic milliseconds relative to this caller's start.
+L/D are from the real original RequestContext calls, not invented durations.
+Caller start precedes prepare by a few milliseconds; L-start can therefore exceed
+250 while the unchanged lookup itself remains250. Holds release at/after the exact
+observed bound; rounding only affects the observer's reported overshoot.
+
+| Key | Gap | Timing | Old hold/release | Old release-bound | Old result/rows | New hold/release | New release-bound | New result/callbacks/rows |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| project_authorizer | lookup | timely | 2.264/2.343 | -249.883 | project_created/[[1]] | 2.812/2.903 | -249.87 | project_created/1/[[1]] |
+| project_authorizer | callback | timely | 3.505/3.732 | -4996.267 | project_created/[[1]] | 2.433/2.484 | -4997.516 | project_created/1/[[1]] |
+| runtime_identity_authorizer | lookup | expired | 4.295/254.743 | 0.499 | identity_disclosed/not_applicable | 3.822/254.975 | 1.192 | denied/0/not_applicable |
+| project_authorizer | callback | expired | 2.265/5000.896 | 0.896 | project_created/[[1]] | 2.682/5001.319 | 1.32 | denied/1/[[0]] |
+| runtime_identity_authorizer | callback | timely | 2.786/2.843 | -4997.156 | identity_disclosed/not_applicable | 2.965/3.037 | -4996.962 | identity_disclosed/1/not_applicable |
+| project_authorizer | lookup | expired | 3.159/254.146 | 1.027 | project_created/[[1]] | 2.105/253.2 | 1.12 | denied/0/[[0]] |
+| runtime_identity_authorizer | lookup | timely | 2.382/2.457 | -249.892 | identity_disclosed/not_applicable | 2.94/2.999 | -249.917 | identity_disclosed/1/not_applicable |
+| runtime_identity_authorizer | callback | expired | 3.819/5001.76 | 1.76 | identity_disclosed/not_applicable | 3.699/5001.845 | 1.846 | denied/1/not_applicable |
+
+OriginalD was approximately5000ms in all causal cases. Lookup-negative releases
+remained beforeD; post-callback-negative releases crossedD under unchanged state.
+Instrumentation overhead is included: total real prepare plus trace/observer
+pre-hold work was2.2–4.3ms in baseline, a conservative upper bound on observer
+entry overhead rather than a separately estimated production cost. Deliberate
+250ms/5s holds dominate negative duration. No latency/SLO claim is inferred.
+
+The observer file was moved OUT of checkout before native qualification; no
+observer symbol exists in the on-disk product BEAM. Full T1/T2/make never load it.
+Six additive native owning regressions use ordinary local call tracing, not code
+replacement or suspension: both actual consumer paths with request/nil context
+observe the closing same-bound sample after complete current? and before callback/
+local success. Native015 scope40/0 (all prior34 plus new6) passed;
+request-at/after-bound controls deny with no project effect. Native012 on old code
+found four missing closing samples; a count-based slice removed its negative-step
+warning without relaxing assertions. Existing300ms callback-underD, originalD
+expiry, invalid context, callback exceptions, N2 activation/ABA/writer, absent/
+retired tombstone, no-grant/grant/revoke/identity/defaults controls remain.
+Every prior owning-test byte before module-end is retained; all other tests and
+fixtures, Projects/RuntimeIdentity/Access/RequestContext/Clock/Store/Validity/
+Eligibility, policies/plans/lock/Makefile remain frozen to5845695.
+
+### Preparation and retained holds
+
+Before any Mix operation the installed launcher chain was read and hashed.
+The reset-to-shared-cache launcher was not run. Direct selection uses the same
+installed pinned Elixir1.19.5/OTP28.5 binaries, same +S4:4, CA/proxy/rebar and own
+Mix/Hex/deps/build/core/project PLT paths. Actual process introspection001/005 and
+PLT path introspection022 record those destinations. Normal pinned Hex2.5.2 and
+mix deps.get --check-locked use own paths; no system tool install or foreign DB.
+
+Current preparation exception004: an env command frontend escaped the runner's
+initial HOME dispatch, so compile had inherited HOME while all cache/deps/build
+paths were own. TERM was requested on that owned process; observed exit0 does not
+attest fully isolated completion. Original HOME pre-bytes/effects are UNKNOWN.
+Runner corrected this for every non-Git command;005+ actual own HOME rechecked.
+This is disclosed, not erased by later GREEN. Initial read-only/clone probes are
+in the tool transcript; exact pre-run full hash receipts begin with001, not
+retroactively claimed for earlier reads.
+
+PROCESS_HOLD_PREPARED_CACHE / PRE_BYTES_UNKNOWN from N2+STYLE remains. Old shared
+cache is not deleted/restored/re-attested, old PLT/PG unknown exits and old adopted
+zombies are not touched. This is process/toolchain evidence, not Eligibility cache.
+Historical transport/A148/B020 remains UNKNOWN/unresolved without R6-TIME attribution.
+
+Conservative new R6-TIME T02026-10-15T08:15:00Z (first tool clock08:15:17Z),
+deadline12:15:00Z/reserve11:45:00Z; client UTC+3 window11:15–15:15/reserve14:45.
+One causal repair cycle used; maximum2, agents0/profile changes0. Prior N2+STYLE
+cycle2/2, original T0/explicit24h extension and all earlier budgets stay USED.
+
+
+### One-off observer source, retained for source-review reproducibility
+
+The following is dated diagnostic input, not a product/fixture edit or a standard
+qualification target. Its absolute author path identifies the historical overlay;
+a separate reproducer uses its own owned evidence path. Generate the overlay
+from the target product file with exactly this one-line diff, then execute the
+following test file in a disposable VM with the normal real owning fixtures.
+Keep the overlay/test outside the standard T1/T2/make target and end that VM
+before qualification. The4 negative baseline assertions fail at consumer results;
+after the minimal fix all8 assertions pass. No private packet is required to
+read these conditions or the published production repair.
+
+```diff
+--- published-authorizer-bindings.ex
++++ one-off-observer.ex
+@@ -112,0 +113 @@
++    SymphonyControl.R6TimeObserver.before_current()
+```
+
+```elixir
+defmodule SymphonyControl.R6TimeObserver do
+  def before_current do
+    {owner, ref, target} = Process.get({__MODULE__, :control})
+    hit = Process.get({__MODULE__, :hit}, 0) + 1
+    Process.put({__MODULE__, :hit}, hit)
+
+    if hit == target do
+      send(owner, {:r6_held, ref, self(), System.monotonic_time()})
+      receive do
+        {:r6_release, ^ref} -> :ok
+      after
+        8000 -> exit(:observer_setup_timeout)
+      end
+    end
+  end
+end
+
+Code.compile_file("/workspace/work/pr99-r6-time-20261015T081517Z/observer-authorizer-bindings.ex")
+
+defmodule SymphonyControl.R6TimeObserverTest do
+  use ExUnit.Case, async: false
+  alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+  alias SymphonyControl.{AuthDbFixture, Projects, Repo, RuntimeIdentity}
+
+  defmodule Legacy do
+    def authorize({owner, ref}, :runtime_identity_read), do: callback(owner, ref)
+    def authorize({owner, ref}, :project_create, :platform), do: callback(owner, ref)
+    defp callback(owner, ref) do
+      send(owner, {:r6_callback, ref, self()})
+      :ok
+    end
+  end
+
+  for key <- [:runtime_identity_authorizer, :project_authorizer], boundary <- [:lookup, :callback], timing <- [:expired, :timely] do
+    @key key
+    @boundary boundary
+    @timing timing
+    test "R6-TIME #{@key} #{@boundary} #{@timing} after early sample" do
+      if @key == :project_authorizer, do: AuthDbFixture.start!()
+      old = Application.fetch_env(:symphony_elixir, @key)
+      Application.put_env(:symphony_elixir, @key, Legacy)
+      on_exit(fn -> restore(@key, old) end)
+      helper = start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+      descriptor = :persistent_term.get({AuthorizerBindings, :lifecycle})
+      state = :sys.get_state(helper)
+      assert state.phase == :inactive
+      owner = self()
+      ref = make_ref()
+      target = if @boundary == :lookup, do: 1, else: 2
+      request_deadline = RequestContext.deadline()
+      started = System.monotonic_time()
+
+      caller = Task.async(fn ->
+        Process.put({Authorizer, :deadline}, request_deadline)
+        Process.put({SymphonyControl.R6TimeObserver, :control}, {owner, ref, target})
+        receive do: ({:start, ^ref} -> :ok)
+        result = consume(@key, {owner, ref})
+        send(owner, {:r6_result, ref, classify(result), System.monotonic_time()})
+        receive do: ({:finish, ^ref} -> :ok), after: (2000 -> :ok)
+      end)
+
+      match = [{:_, [], [{:return_trace}]}]
+      :erlang.trace_pattern({RequestContext, :timely?, 1}, match, [:local])
+      :erlang.trace_pattern({Legacy, :authorize, :_}, match, [:local])
+      :erlang.trace_pattern({AuthorizerBindings, :current?, 1}, match, [:local])
+      :erlang.trace(caller.pid, true, [:call, :monotonic_timestamp, {:tracer, self()}])
+      send(caller.pid, {:start, ref})
+
+      try do
+        assert_receive {:r6_held, ^ref, pid, held}, 500
+        assert pid == caller.pid
+        before = traces(caller.pid)
+        samples = for {:trace_ts, ^pid, :call, {RequestContext, :timely?, [bound]}, _} <- before, do: bound
+        lookup_limit = hd(samples)
+        bound = if @boundary == :lookup, do: lookup_limit, else: request_deadline
+        assert List.last(samples) == bound
+        assert held < bound
+        assert List.last(for {:trace_ts, ^pid, :return_from, {RequestContext, :timely?, 1}, result, _} <- before, do: result) == true
+        completed = Enum.count(before, &match?({:trace_ts, ^pid, :return_from, {AuthorizerBindings, :current?, 1}, true, _}, &1))
+        assert completed == target - 1
+        callbacks_before = Enum.count(before, &match?({:trace_ts, ^pid, :return_from, {Legacy, :authorize, _}, :ok, _}, &1))
+        assert callbacks_before == target - 1
+        assert :persistent_term.get({AuthorizerBindings, :lifecycle}) == descriptor
+        assert :sys.get_state(helper) == state
+        if @timing == :expired, do: wait_until(bound)
+        resumed = System.monotonic_time()
+        if @boundary == :lookup, do: assert(resumed < request_deadline)
+        if @timing == :expired, do: assert(resumed >= bound), else: assert(resumed < bound)
+        send(pid, {:r6_release, ref})
+        assert_receive {:r6_result, ^ref, result, finished}, 2000
+        after_traces = traces(pid)
+        callbacks = callbacks_before + Enum.count(after_traces, &match?({:trace_ts, ^pid, :return_from, {Legacy, :authorize, _}, :ok, _}, &1))
+        rows = if @key == :project_authorizer, do: Repo.query!("SELECT count(*) FROM projects", [], log: false).rows, else: :not_applicable
+        same = :persistent_term.get({AuthorizerBindings, :lifecycle}) == descriptor
+        assert same
+        assert callback_pids(ref) == if(callbacks == 1, do: [pid], else: [])
+        IO.puts(Jason.encode!(%{control: "R6_TIME", key: @key, boundary: @boundary, timing: @timing, result: result,
+          early_true_observed: true, completed_state_checks_at_hold: completed, descriptor_unchanged: same,
+          callbacks: callbacks, callbacks_before_hold: callbacks_before, domain_rows: rows,
+          hold_age_ms: ms(held-started), release_age_ms: ms(resumed-started), finish_age_ms: ms(finished-started),
+          original_lookup_ms: ms(lookup_limit-started), original_request_ms: ms(request_deadline-started),
+          release_minus_bound_ms: ms(resumed-bound), observer: "native_one_line_before_current_overlay"}))
+        send(pid, {:finish, ref})
+        Task.await(caller, 2000)
+        if @timing == :expired do
+          assert result == :denied
+          assert callbacks == if(@boundary == :lookup, do: 0, else: 1)
+          if @key == :project_authorizer, do: assert(rows == [[0]])
+        else
+          assert result == if(@key == :project_authorizer, do: :project_created, else: :identity_disclosed)
+          assert callbacks == 1
+          if @key == :project_authorizer, do: assert(rows == [[1]])
+        end
+      after
+        send(caller.pid, {:r6_release, ref})
+        send(caller.pid, {:finish, ref})
+        if Process.alive?(caller.pid), do: Task.shutdown(caller, :brutal_kill)
+        :erlang.trace_pattern({RequestContext, :timely?, 1}, false, [:local])
+        :erlang.trace_pattern({Legacy, :authorize, :_}, false, [:local])
+        :erlang.trace_pattern({AuthorizerBindings, :current?, 1}, false, [:local])
+      end
+    end
+  end
+
+  defp consume(:runtime_identity_authorizer, actor), do: RuntimeIdentity.read(actor)
+  defp consume(:project_authorizer, actor), do: Projects.create_project(actor, %{key: "TIME", name: "R6 time fixture"})
+  defp classify({:ok, %{schema_version: 1}}), do: :identity_disclosed
+  defp classify({:ok, %SymphonyControl.Project{}}), do: :project_created
+  defp classify({:error, :forbidden}), do: :denied
+  defp classify({:error, %{code: :forbidden}}), do: :denied
+  defp classify(_), do: :unexpected
+  defp ms(native), do: System.convert_time_unit(native, :native, :microsecond) / 1000
+
+  defp traces(pid) do
+    ref = :erlang.trace_delivered(pid)
+    collect(ref, [])
+  end
+  defp collect(ref, acc) do
+    receive do
+      {:trace_delivered, _, ^ref} -> Enum.reverse(acc)
+      event when elem(event, 0) == :trace_ts -> collect(ref, [event | acc])
+    after
+      1000 -> flunk("observer trace delivery not confirmed")
+    end
+  end
+  defp callback_pids(ref, acc \\ []) do
+    receive do
+      {:r6_callback, ^ref, pid} -> callback_pids(ref, [pid | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+  defp wait_until(bound) do
+    left = bound - System.monotonic_time()
+    if left > 0 do
+      wait = System.convert_time_unit(left, :native, :millisecond) + 1
+      receive do: (:not_sent -> flunk("unexpected observer message")), after: (wait -> :ok)
+      wait_until(bound)
+    end
+  end
+  defp restore(key, :error), do: Application.delete_env(:symphony_elixir, key)
+  defp restore(key, {:ok, value}), do: Application.put_env(:symphony_elixir, key, value)
+end
+```
+
+
+### Fresh frozen-candidate qualification
+
+T1:98/0, T2:496/0, ordinary make(T3):862 tests/0 failures/6 unchanged live
+skips,100% coverage,Dialyzer0 errors/0 skipped, all exit0. T4 bootstrap12/0
+then MCP11/0 ran after full make, without runtime overlap. Full format/specs/
+strict lint PASS before freeze. First strict lint018 reported five long lines
+in new trace helpers; wrapping only those additions resolved them, with no
+quality/config/threshold/skip/assertion change. Protected tests remain exact.
+
+| Receipt | UTC start → end | Exit | Output SHA256 |
+| --- | --- | --- | --- |
+| 023-T1 | 2026-10-15T08:39:55.088566+00:00 → 2026-10-15T08:40:20.777538+00:00 | 0 | 0e19387050de42543b3a1f84313c1dbfb72047fbe574acdedde45ee0656a1fb7 |
+| 024-T2 | 2026-10-15T08:41:05.220497+00:00 → 2026-10-15T08:44:15.096753+00:00 | 0 | 44076d50aa50f3780cceae292ae0e495a5b00ca7d38befba5a59854c468797f4 |
+| 025-T3 | 2026-10-15T08:45:37.937306+00:00 → 2026-10-15T08:52:17.742969+00:00 | 0 | c886f62921b72a7baea49c961b34acbc6d8175f67eaba252e5ff035d74c8a10f |
+| 026-T4-bootstrap | 2026-10-15T08:53:36.956322+00:00 → 2026-10-15T08:53:37.103837+00:00 | 0 | 37e893beca7811536883d0f090c31852c57b1d82416257550c7f5e66c792010b |
+| 027-T4-mcp | 2026-10-15T08:53:37.193024+00:00 → 2026-10-15T08:53:37.432866+00:00 | 0 | 5c61909cc2340350b34fb98224c3eff7ceb5d41b9fae5f42220dea4ae0fa5205 |
+
+Exact argv, with T1/T2 cwd elixir and T3/T4 cwd repository root:
+
+```text
+023-T1: ["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]
+024-T2: ["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]
+025-T3: ["make", "-C", "elixir", "all"]
+026-T4-bootstrap: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]
+027-T4-mcp: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]
+```
+
+All five fresh gate inputs whole255: a978e5386603690b54fe954b1fe4ef3648bb719bc2747f3b46929b079608bc8a.
+Executable/test/config251 seal: b8f1237f937ae25aa9ac79f766f23fea112ec6775d1586382abeac9fe72e354a.
+
+011-pristine-time-red: exit2, output 67b39973cabfaba224deb6017d1c81165c667372a5e61320455b05c39e5423bd.
+
+012-native-order-red: exit2, output 66f913b8dd16f85a73f777c07db2e2bce1133364a68f0e5daa65d2c2a35d04f0.
+
+013-causal-time-green: exit0, output 1d2c59616775f40b15ed1bf6d484883753bf0ad2e80d897cc296627cb40a2d6a.
+
+015-native-controls: exit0, output cecafcb9aa7ee45f9fe185c5464dac11821a5bda5cddde91b0a97ff0b775cbe7.
+
+018-strict-lint: exit4, output 00c710117f1b6ae71be8e62f29d96535d052bc6b18d1303625e82a44ccce5667.
+
+021-lint-final: exit0, output c637d6466a8da95b5c689bad55768579864a648658f11a35bb74017bc4abe642.
+
+
+Receipts retain argv/cwd/UTC/exit, tracked input inventory and patch, untracked
+observer seal when present, runner/env/actual executable hashes and safe output
+hash. Inventory format is lowercase SHA256 + two spaces + git ls-files relative
+path + LF; aggregate SHA256 hashes exact list bytes. Only the three permitted
+Markdown docs and MANIFEST are excluded from executable seal. Later docs-only
+results/MANIFEST are not represented as earlier full tracked input. Publication
+handoff in #33 records actual PR-body checker/readbacks, exact commit/tree and
+equality of every tested executable blob with that commit.
+
+R6-TIME AUTHOR_FIXED_CANDIDATE / AUTHOR_GATES_PASSED / INDEPENDENT_REVIEW_PENDING.
+N2/N1/R1–R5, original Task1–3 snapshots and all earlier failures/UNKNOWN stay in
+history. Current author results do not replace independent review or prove the
+old shared cache/HOME preservation. PROCESS_HOLD_PREPARED_CACHE/PRE_BYTES_UNKNOWN /
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE. No next stage starts
+from this documentation. Original autonomy/multi-server/product requirements,
+activation=false and native/trusted/live/production boundaries remain unchanged.
