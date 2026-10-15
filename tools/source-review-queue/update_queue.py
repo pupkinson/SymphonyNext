@@ -55,7 +55,7 @@ def sha(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def read(path, maximum=1000000):
+def read(path, maximum=1000000, *, observed=False):
     path = Path(path)
     require(not any(p.is_symlink() for p in (path, *path.parents)), 'PATH_SYMLINK')
     with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), 'rb') as f:
@@ -63,7 +63,7 @@ def read(path, maximum=1000000):
         require(stat.S_ISREG(s.st_mode) and s.st_size <= maximum, 'FILE_LIMIT')
         raw = f.read(maximum + 1)
     require(len(raw) <= maximum, 'FILE_LIMIT')
-    return raw
+    return (raw, s) if observed else raw
 
 
 def trusted(path, uid):
@@ -120,9 +120,10 @@ def journal_json(raw):
     return value
 
 
-def journal(path, maximum=1000000):
+def journal(path, maximum=1000000, *, observed=False):
     try:
-        return journal_json(read(path, maximum))
+        data = read(path, maximum, observed=observed)
+        return (journal_json(data[0]), data[1]) if observed else journal_json(data)
     except (OSError, ValueError, TypeError):
         raise Hold('NOTIFICATION_JOURNAL_MISSING_OR_INVALID') from None
 
@@ -398,8 +399,9 @@ class Updater:
             require(all((p.name in names or re.fullmatch(temporary, p.name))
                         and p.is_file() and not p.is_symlink()
                         for p in directory.iterdir()), 'NOTIFICATION_DIRECTORY')
-        intent, receipt, removed = (journal(directory / n, 100000) for n in
-                                    ('comment-intent.json', 'comment-readback.json', 'label-removed.json'))
+        records = [journal(directory / n, 100000, observed=True) for n in
+                   ('comment-intent.json', 'comment-readback.json', 'label-removed.json')]
+        (intent, intended), (receipt, received), (removed, retired) = records
         require(set(intent) == {'body'} and isinstance(intent['body'], str)
                 and 0 < len(intent['body'].encode()) <= 100000, 'NOTIFICATION_COMMENT_INTENT')
         require(set(receipt) == {'id'} and type(receipt['id']) is int
@@ -407,17 +409,46 @@ class Updater:
         require(set(removed) == {'confirmed', 'at'} and removed['confirmed'] is True,
                 'NOTIFICATION_LABEL_OUTCOME_UNKNOWN')
         confirmed_at = timestamp(removed['at'])
+        # This is evidence from the existing trusted queue's canonical live
+        # files, not permission to infer receipt content from file presence.
+        # save()/once() create a fresh inode, fsync, then atomically replace;
+        # a retained hold requires the COMMENT receipt's later replacement.
+        # Copied/retimed proofs are outside that provenance. Coarse/equal
+        # post-hold times or clock/order anomalies remain HOLD, never success.
+        now = time.time_ns()
+
+        def coherent(metadata):
+            require(metadata.st_dev == intended.st_dev and metadata.st_nlink == 1
+                    and 0 < metadata.st_mtime_ns <= metadata.st_ctime_ns <= now,
+                    'NOTIFICATION_FILE_CHRONOLOGY')
+
+        for _value, metadata in records:
+            coherent(metadata)
+        require(intended.st_mtime_ns <= received.st_mtime_ns <= retired.st_mtime_ns
+                and intended.st_ctime_ns <= received.st_ctime_ns <= retired.st_ctime_ns
+                and confirmed_at.timestamp() <= retired.st_mtime_ns / 10 ** 9,
+                'NOTIFICATION_FILE_CHRONOLOGY')
         label_intent = directory / 'label-remove-intent.json'
         if label_intent.exists() or label_intent.is_symlink():
-            deletion = journal(label_intent)
+            deletion, deleting = journal(label_intent, observed=True)
+            coherent(deleting)
             require(set(deletion) == {'at'} and timestamp(deletion['at']) <= confirmed_at,
                     'NOTIFICATION_LABEL_OUTCOME_UNKNOWN')
+            require(deleting.st_mtime_ns <= retired.st_mtime_ns
+                    and deleting.st_ctime_ns <= retired.st_ctime_ns
+                    and timestamp(deletion['at']).timestamp() <= deleting.st_mtime_ns / 10 ** 9,
+                    'NOTIFICATION_FILE_CHRONOLOGY')
         hold = directory / 'delivery-hold.json'
         if legacy and (hold.exists() or hold.is_symlink()):
-            value = journal(hold)
+            value, held = journal(hold, observed=True)
+            coherent(held)
             require(set(value) == {'reason', 'at'} and isinstance(value['reason'], str)
                     and value['reason'] and timestamp(value['at']) <= confirmed_at,
                     'NOTIFICATION_DELIVERY_UNRESOLVED')
+            require(held.st_mtime_ns < received.st_mtime_ns
+                    and held.st_ctime_ns < received.st_ctime_ns
+                    and timestamp(value['at']).timestamp() <= held.st_mtime_ns / 10 ** 9,
+                    'NOTIFICATION_COMMENT_RECONCILIATION_UNCONFIRMED')
         return intent['body']
 
     def notification_result(self, result, number, generation):

@@ -1,0 +1,90 @@
+{
+  "base": "bd418f3de9a1c7153be54ccc91a94b888bc701b2",
+  "branch": "feat/sn102-executor-profile-20261015",
+  "budget": {
+    "candidate": "2/2_when_handed_to_independent_review",
+    "definition": "prepared_candidate_handed_to_review_not_commit_or_test",
+    "handoff_deadline": "2026-10-15T22:45:52Z",
+    "prior_cycles": [
+      2,
+      2
+    ],
+    "source_cutoff": "2026-10-15T22:15:52Z",
+    "start": "2026-10-15T18:45:52Z"
+  },
+  "filesystem_evidence": {
+    "ambiguous_chronology": "HOLD_NEVER_RETIME",
+    "fresh_1c_db_filesystem": "UNKNOWN_DF_UNAVAILABLE",
+    "provenance": "trusted_queue_written_live_journals_not_copied_or_retimed_operator_proofs",
+    "requires": "coherent_clock_and_adequate_resolution",
+    "source": "same_nofollow_FD_bytes_and_fstat_of_existing_canonical_save_once_records"
+  },
+  "independent_candidate1": {
+    "conditions": {
+      "4281361556": "PASS",
+      "4281361568": "PASS",
+      "4285700019": "FAIL"
+    },
+    "earlier_report_sha256": "f1a48417dbe4f15ac57bc6fe6f8c84b62cdb7030f0f8802ed453296e337fef91",
+    "head": "bd418f3de9a1c7153be54ccc91a94b888bc701b2",
+    "report_sha256": "82369805aab5d6a3393b47bbb3314ca368e01399a6edbdae75d5eb07ffe5dcda",
+    "result": "REWORK",
+    "tree": "985077ff5f1a0f95e3d1412f491f09eabe33d6d9",
+    "unmocked_clock_log_sha256": "0326e54525233567ae99993cedb865003568f1e75612a1b5db3db97cc24dbf9d",
+    "unmocked_clock_repro_cases": 4,
+    "url": "https://github.com/pupkinson/SymphonyNext/pull/103#issuecomment-6200332301"
+  },
+  "issue": 102,
+  "log_sha256": {
+    "sn102-notification-corrective-oldhead-red.log": "353661a95c411033af4054a6d57548bf27ba2533b103971b559b2fae6336e61f",
+    "sn102-notification-corrective-red.log": "287017f504760df9ce4b79e70d7a143e0b5b961ecd87718928ceb770cff00b07",
+    "sn102-notification-corrective-suite.log": "8b06002524cfb5abf0bafe6b8facb6b4e4cf565c1c4ca36ea75ed312255fd085"
+  },
+  "native_rollback": "NOT_RUN",
+  "owner_admission": 6199784094,
+  "pilot104_105": "NOT_RUN",
+  "pr": 103,
+  "preserved": {
+    "actual_repo": "FULL_REGRESSION_INCLUDED_NO_SKIPS",
+    "critical_ast_unchanged": [
+      "Controller",
+      "Updater.intake",
+      "Updater.drain",
+      "Updater.reviews_applied",
+      "Updater.disposition",
+      "Updater.seal"
+    ],
+    "main_candidate_and_failed_review": "PRESERVED_HISTORY",
+    "python310_ast": true,
+    "queue_execution_predecessor_bytes_unchanged": true
+  },
+  "root_update": "NOT_RUN",
+  "schema": "snq-source-evidence/v1",
+  "scope_expanded": false,
+  "source_sha256": {
+    "tools/source-review-queue/UPDATE.md": "2360ea2c86f5ccb3f2022d5610440cd0b4ddf3102e730d3d919ff9a3b4a24c49",
+    "tools/source-review-queue/evidence/gh102-notification-journals.md": "d90edd57dda42b47f1e5d2f62b87a15ab7037482c4bdcade1f717a07292c1de2",
+    "tools/source-review-queue/tests/test_queue_updater_notifications.py": "ec9419bca84d164deddb609c7e1bbb28858383d7bcee1bcfad9e944fe70b71e0",
+    "tools/source-review-queue/update_queue.py": "39838423e6876407980f45b564496f35261b60f238b93070492b0101e20ff901"
+  },
+  "stage_base": "15ec685e51492f24816e18a2771a0b38f582fe57",
+  "status": "AUTHOR_VERIFIED_PENDING_NEW_EXACT_HEAD_REVIEW",
+  "target": "4285700019_stale_comment_receipt_after_label_fallback",
+  "tests": {
+    "added_corrective": 5,
+    "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+    "corrective_oldhead_red": {
+      "exit_code": 1,
+      "subtest_failures": 9,
+      "tests": 4,
+      "updater": "immutable_bd418f3"
+    },
+    "errors": 0,
+    "exit_code": 0,
+    "failures": 0,
+    "main36_retained": true,
+    "previous244_retained": true,
+    "skips": 0,
+    "tests": 285
+  }
+}

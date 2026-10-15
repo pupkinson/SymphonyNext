@@ -2,6 +2,38 @@
 
 ## Current controlled updater — 15 October 2026
 
+### Corrective notification candidate after independent review
+
+Candidate1bd418f3 was independently rejected, report
+[6200332301](https://github.com/pupkinson/SymphonyNext/pull/103#issuecomment-6200332301):
+4285700019 FAIL; both older P1 preservation checks PASS. The actual queue's
+hold-then-fallback path can update label proof while leaving a stale comment
+receipt. Its280GREEN is historical and does not establish acceptance.
+
+The sole permitted corrective candidate checks both content and the existing
+canonical file-write evidence. Bytes and fstat come from the same nofollow FD.
+Intent, comment receipt and label proof must have coherent nonfuture mtime/ctime
+order on the same filesystem, with one link each. A retained delivery hold
+requires a strictly newer COMMENT receipt and subsequent label confirmation;
+a later label marker alone never resolves it. Equal or anomalous order HOLD.
+The existing queue's actual successful GET reconciliation rewrites that receipt
+without replaying POST/DELETE, and passes the gate with its hold retained.
+
+This contract applies to trusted queue-written live journals produced by the
+existing new-temp-inode/fsync/atomic-replace save/once. Operator copied/retimed
+confirmations do not establish that provenance. Metadata is supporting
+filesystem evidence, not a new journal field or a signature. Coherent clock and
+adequate resolution are required; ambiguous metadata blocks transition and is
+never rewritten by updater. Fresh1c-db filesystem/service attestation remains
+UNKNOWN while DF transport is unavailable. No queue/execution change is needed.
+
+Corrective suite285PASS/0skips (all244+36main+5corrective), including actual
+candidate/predecessor stale-receipt RED→GREEN and actual recovery. All named
+intake/drain/review/application/artifact regressions remain. A new independent
+exact-HEAD verdict is still required before packaging; older failure reports,
+budgets, cycles and REVIEW_BLOCKED archives are retained. Source cutoff and
+handoff deadline below are unchanged; no install/pilot is included.
+
 ### Notification-journal source stage, P1 4285700019
 
 Owner admission: #102 comment6199784094. New stage starts18:45:52UTC,
@@ -29,7 +61,8 @@ is nevertheless inspected. No missing terminal notification is compatible.
 Comment intent must have its actual body schema, exact source formatter or
 developer issue/generation/state/revision/result binding, and a positive integer
 readback ID. Confirmed label absence needs its own correctly typed marker and
-timezone-aware timestamp, later than any DELETE intent or delivery hold. A
+timezone-aware timestamp, later than any DELETE intent or delivery hold;
+retained holds also require a strictly later comment receipt file replacement. A
 root developer marker (`confirmed:false`) is only predecessor compatibility;
 it cannot replace any nested delivery receipt. Legacy has no nested contract:
 its ROOT final and ROOT delivery proofs are mandatory. Missing/corrupt/duplicate

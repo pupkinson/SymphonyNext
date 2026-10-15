@@ -4,6 +4,7 @@ Includes both original4285700019 counterexamples, strengthened to use actual
 notify/deliver bodies. Positive fixtures are written by the unchanged queue.
 """
 import copy
+import importlib.util
 import json
 import stat
 import unittest
@@ -171,8 +172,86 @@ class NotificationTests(unittest.TestCase):
         job = self.f.state / 'jobs/GH-77'
         fixtures.save(job / 'delivery-hold.json', {'reason': 'COMMENT_PUBLICATION_UNRESOLVED',
                                                   'at': '2026-10-15T00:00:00Z'})
+        api = self.legacy_api(job, matches=1)
+        with patch.object(q, 'QROOT', self.f.state):
+            q.finish_task(77, api)  # Real readback replacement after the hold.
         self.assertEqual(self.f.update.rollback()['status'], 'ROLLED_BACK')
         self.assertTrue((job / 'delivery-hold.json').exists())
+
+    def legacy_api(self, job, matches):
+        body = json.loads((job / 'comment-intent.json').read_bytes())['body']
+
+        class ReconcileOnly:
+            def get(self, path):
+                if '/comments?' in path:
+                    return [{'id': 12345 + n, 'body': body} for n in range(matches)]
+                return {'labels': []}
+
+            def request(self, *args, **kwargs):
+                raise AssertionError('Unknown writes must never be replayed')
+        return ReconcileOnly()
+
+    def legacy_modules(self):
+        spec = importlib.util.spec_from_file_location('notification_pinned_predecessor',
+                    fixtures.UPDATER.parent / 'evidence/predecessor/queue.py')
+        predecessor = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(predecessor)
+        return (q, predecessor)
+
+    def test_later_fallback_label_marker_cannot_hide_stale_comment_readback(self):
+        # Independent candidate1 finding: both real implementations retain an
+        # older comment receipt while fallback writes a newer label marker.
+        for module in self.legacy_modules():
+            for matches in (0, 2):
+                with self.subTest(module=module.__name__, matches=matches):
+                    self.setUp()
+                    job = self.f.state / 'jobs/GH-77'
+                    receipt = (job / 'comment-readback.json').read_bytes()
+                    with patch.object(module, 'QROOT', self.f.state):
+                        with self.assertRaisesRegex(module.Hold, 'COMMENT_PUBLICATION_UNRESOLVED'):
+                            module.finish_task(77, self.legacy_api(job, matches))
+                    self.assertEqual((job / 'comment-readback.json').read_bytes(), receipt)
+                    self.holds()
+
+    def test_actual_queue_recovery_replaces_comment_proof_without_reposting(self):
+        for module in self.legacy_modules():
+            with self.subTest(module=module.__name__):
+                self.setUp()
+                job = self.f.state / 'jobs/GH-77'
+                with patch.object(module, 'QROOT', self.f.state):
+                    with self.assertRaises(module.Hold):
+                        module.finish_task(77, self.legacy_api(job, 0))
+                    module.finish_task(77, self.legacy_api(job, 1))
+                before = self.f.state_bytes()
+                self.assertEqual(self.f.update.rollback()['status'], 'ROLLED_BACK')
+                self.assertEqual(self.f.state_bytes(), before)
+
+    def test_ambiguous_equal_or_future_receipt_chronology_holds(self):
+        import os
+        import time
+        for kind in ('equal', 'future', 'reversed'):
+            with self.subTest(kind=kind):
+                self.setUp()
+                job = self.f.state / 'jobs/GH-77'
+                fixtures.save(job / 'delivery-hold.json', dict(reason='COMMENT_PUBLICATION_UNRESOLVED', at=q.utc()))
+                with patch.object(q, 'QROOT', self.f.state):
+                    q.finish_task(77, self.legacy_api(job, 1))
+                hold_time = (job / 'delivery-hold.json').stat().st_mtime_ns
+                observed = hold_time if kind == 'equal' else time.time_ns() + 10 ** 12 if kind == 'future' else hold_time - 1
+                os.utime(job / 'comment-readback.json', ns=(observed, observed))
+                self.holds()
+
+    def test_new_comment_intent_cannot_reuse_older_readback_and_label_proof(self):
+        _, notice = self.developer()
+        intent = json.loads((notice / 'comment-intent.json').read_bytes())
+        (notice / 'comment-intent.json').unlink()
+        q.save(notice / 'comment-intent.json', intent)
+        self.holds()
+
+    def test_new_delete_intent_cannot_reuse_old_marker_even_with_old_at_field(self):
+        _, notice = self.developer()
+        q.save(notice / 'label-remove-intent.json', {'at': '2026-10-15T00:00:00Z'})
+        self.holds()
 
     def test_developer_body_issue_generation_state_head_and_final_must_match(self):
         for field, value in [('issue', 105), ('issue', True), ('generation', 2), ('generation', True),
@@ -242,8 +321,10 @@ class NotificationTests(unittest.TestCase):
                 self.holds()
 
     def test_completed_label_delete_intent_and_no_delete_intent_both_pass(self):
-        _, notice = self.developer()
+        attempt, notice = self.developer()
         fixtures.save(notice / 'label-remove-intent.json', {'at': '2026-10-15T00:00:00Z'})
+        q.execution_adapter().notify(104, attempt, self.legacy_api(notice, 1),
+                                     json.loads((attempt / 'final.json').read_bytes()))
         self.assertEqual(self.f.update.rollback()['status'], 'ROLLED_BACK')
 
     def test_atomic_save_leftovers_are_not_confirmations_or_pending_api_writes(self):
