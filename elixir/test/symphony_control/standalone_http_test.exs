@@ -116,7 +116,17 @@ defmodule SymphonyControl.StandaloneHttpTest do
     assert Health.live?()
     assert Health.readiness() == %{ready: false, database: false, schema: false}
     assert request(port(), "/auth/login").status == 403
-    assert request(port(), "/api/v1/control/identity").status == 403
+    identity_started = System.monotonic_time(:millisecond)
+
+    try do
+      assert request(port(), "/api/v1/control/identity").status == 403
+    rescue
+      error in Req.TransportError ->
+        reason = if error.reason in [:closed, :timeout, :econnrefused, :econnreset, :enetunreach, :nxdomain], do: error.reason, else: :UNKNOWN
+        elapsed = System.monotonic_time(:millisecond) - identity_started
+        IO.puts("T1_MISSING_DB error_class=Req.TransportError reason=#{reason} elapsed_ms=#{elapsed} status=NOT_OBTAINED client_stage=request_call listener_stage=NOT_OBSERVED")
+        reraise error, __STACKTRACE__
+    end
   end
 
   test "missing canonical Repo during the initial probe cannot crash the startup owner" do
@@ -399,6 +409,71 @@ defmodule SymphonyControl.StandaloneHttpTest do
                     )
                   )}
       end)
+    end
+  end
+
+  @tag :n2
+  test "N2 owning supervisor graceful Access retirement and restart fence the inactive reply" do
+    alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+    alias SymphonyControl.RuntimeIdentity
+    provider = OidcFixture.start!()
+    cfg = OidcFixture.config(provider)
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, OperatorAuthorizer)
+    start_control(auth: [config: cfg])
+    helper = Process.whereis(AuthorizerBindings)
+    active = :sys.get_state(helper)
+    assert active.owner == Process.whereis(SymphonyControl.Application)
+    assert active.writer == Process.whereis(Access)
+    assert :ok = Supervisor.terminate_child(SymphonyControl.Application, Access)
+    inactive = :sys.get_state(helper)
+    assert inactive.phase == :inactive
+    refute inactive.revision == active.revision
+    assert {:ok, _} = RuntimeIdentity.read(:operator)
+    :ok = :sys.suspend(helper)
+    started = System.monotonic_time(:millisecond)
+
+    caller =
+      Task.async(fn ->
+        Process.put({Authorizer, :deadline}, RequestContext.deadline())
+        RuntimeIdentity.read(:operator)
+      end)
+
+    AuthDbFixture.await!(
+      fn ->
+        {:messages, messages} = Process.info(helper, :messages)
+        Enum.any?(messages, &match?({:"$gen_call", _, {:resolve, _}}, &1))
+      end,
+      100
+    )
+
+    :erlang.suspend_process(caller.pid)
+    :ok = :sys.resume(helper)
+
+    try do
+      AuthDbFixture.await!(
+        fn ->
+          {:messages, messages} = Process.info(caller.pid, :messages)
+          Enum.any?(messages, &match?({_, {:ok, :base, _}}, &1))
+        end,
+        100
+      )
+
+      assert {:ok, access} = Supervisor.restart_child(SymphonyControl.Application, Access)
+      assert Access.configuration(RequestContext.deadline()) == {:ok, cfg}
+      current = :sys.get_state(helper)
+      assert Process.whereis(AuthorizerBindings) == helper
+      assert current.incarnation == active.incarnation
+      assert current.writer == access
+      refute current.generation == active.generation
+      refute current.revision == inactive.revision
+      :erlang.resume_process(caller.pid)
+      assert Task.await(caller, 1000) == {:error, :forbidden}
+      assert System.monotonic_time(:millisecond) - started < 250
+      assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, Authorizer}
+      assert RuntimeIdentity.read(:operator) == {:error, :forbidden}
+      assert Application.fetch_env(:symphony_elixir, :runtime_identity_authorizer) == {:ok, OperatorAuthorizer}
+    after
+      :sys.resume(helper)
     end
   end
 

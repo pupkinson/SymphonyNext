@@ -776,3 +776,19 @@ Req.TransportError before any status; cause unresolved. T3 NOT_RUN_T1_RED.
 Broader style remains RED on10 frozen158529de remarks. Python12/11 and final
 static/body results do not close those holds. This result-only docs/MANIFEST
 seal follows the tested executable freeze; exact inventories are in #33.
+
+
+2026-10-15 — T4-N2/P1 + STYLE author candidate: effective authorizer decisions
+carry a unique lifecycle revision through raw selection and callback acceptance
+in Projects/RuntimeIdentity. Callbacks keep their original request process and
+HTTP deadline; lookup250ms remains a separate delivery bound. Operator defaults,
+legacy/graceful lifecycle, current grants and protected identity controls remain.
+Fresh final T1 92/0, T2 490/0, ordinary make856/0/6 unchanged skips with100%
+coverage/Dialyzer0 errors, strict lint and Python12/11 passed. First make failed
+coverage99.82%; cycle2 removed duplicate inner callback catches, retaining the
+original consumer error boundaries. First failures and historical results remain.
+Prepared-cache isolation was breached during early setup; pre-bytes and some old
+exit/reap observations remain UNKNOWN. Author GREEN does not erase that hold.
+Independent review of the new exact HEAD is required. NOT_ACCEPTED_FOR_TASK5 /
+NOT_RELEASE_APPROVAL / DO_NOT_MERGE. Full causal matrix, style-only equivalence,
+input/output seals and limits are appended to docs/engineering/authentik-project-access.md.

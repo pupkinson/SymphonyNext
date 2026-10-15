@@ -1,7 +1,7 @@
 defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
   use ExUnit.Case, async: false
   alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
-  alias SymphonyControl.AuthDbFixture
+  alias SymphonyControl.{AuthDbFixture, Projects, Repo, RuntimeIdentity}
   @keys [:project_authorizer, :runtime_identity_authorizer]
 
   setup do
@@ -59,7 +59,10 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
   test "direct base writes survive real release in both orders and held teardown without helper writes" do
     owner = self()
 
-    for key <- @keys, original <- [:error, {:ok, nil}, {:ok, __MODULE__}], mutation <- [:foreign, :delete, nil, :authorizer, :original, :aba], timing <- [:before, :during, :after] do
+    originals = [:error, {:ok, nil}, {:ok, __MODULE__}]
+    mutations = [:foreign, :delete, nil, :authorizer, :original, :aba]
+
+    for key <- @keys, original <- originals, mutation <- mutations, timing <- [:before, :during, :after] do
       restore(key, original)
       helper = start_supervised!({AuthorizerBindings, owner: owner})
       trace_base_writes!(helper)
@@ -139,7 +142,9 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
     assert AuthorizerBindings.resolve(:project_authorizer) == {:ok, Authorizer}
     send(current.pid, {:release, generation})
     assert Task.await(current, 1000) == :ok
-    assert AuthorizerBindings.resolve(:project_authorizer) == {:ok, Application.get_env(:symphony_elixir, :project_authorizer)}
+
+    assert AuthorizerBindings.resolve(:project_authorizer) ==
+             {:ok, Application.get_env(:symphony_elixir, :project_authorizer)}
   end
 
   defmodule LegacyAuthorizer do
@@ -262,7 +267,7 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
 
     AuthDbFixture.await!(fn ->
       {:messages, messages} = Process.info(caller.pid, :messages)
-      Enum.any?(messages, &match?({_, {:ok, :managed}}, &1))
+      Enum.any?(messages, &match?({_, {:ok, :managed, {^helper, _, _, :active, _, _, _}}}, &1))
     end)
 
     stop_supervised!(AuthorizerBindings)
@@ -290,7 +295,10 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
 
   @tag :n1_causal_green
   test "normal owner shutdown preserves independent base updates inside and around teardown" do
-    for key <- @keys, original <- [:error, {:ok, nil}, {:ok, __MODULE__}], mutation <- [:foreign, :delete, nil, :authorizer, :original, :aba], timing <- [:before, :during, :after] do
+    originals = [:error, {:ok, nil}, {:ok, __MODULE__}]
+    mutations = [:foreign, :delete, nil, :authorizer, :original, :aba]
+
+    for key <- @keys, original <- originals, mutation <- mutations, timing <- [:before, :during, :after] do
       restore(key, original)
       owner = spawn(fn -> receive do: (:stop -> :ok) end)
       assert {:ok, _} = AuthorizerBindings.install(owner)
@@ -311,6 +319,333 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
       result = expected(mutation, original)
       assert Application.fetch_env(:symphony_elixir, key) == result
       assert AuthorizerBindings.resolve(key) == {:ok, effective(result)}
+    end
+  end
+
+  for key <- @keys, transition <- [:install, :inactive_aba] do
+    @key key
+    @transition transition
+    @tag :n2
+    test "N2 #{@key} queued inactive reply rejects #{@transition} in the same helper" do
+      Application.put_env(:symphony_elixir, @key, LegacyAuthorizer)
+      owner = self()
+      helper = start_supervised!({AuthorizerBindings, owner: owner})
+      assert {:ok, old_generation} = AuthorizerBindings.install(owner)
+      assert :ok = AuthorizerBindings.release(old_generation)
+      inactive = :sys.get_state(helper)
+      {caller, started, deadline} = queued_selection!(helper, :base, fn -> consume(@key, :operator) end)
+
+      try do
+        assert {:ok, generation} = AuthorizerBindings.install(owner)
+        active = :sys.get_state(helper)
+        assert active.phase == :active
+        refute generation == old_generation
+        assert active.incarnation == inactive.incarnation
+        refute active.revision == inactive.revision
+        if @transition == :inactive_aba, do: assert(:ok == AuthorizerBindings.release(generation))
+        current = :sys.get_state(helper)
+        assert Process.whereis(AuthorizerBindings) == helper
+        refute current.revision == inactive.revision
+        :erlang.resume_process(caller.pid)
+        assert_denied(consume_result(caller))
+        assert System.monotonic_time(:millisecond) - started < 250
+        assert RequestContext.timely?(deadline)
+      after
+        resume_if_alive(caller.pid)
+      end
+    end
+  end
+
+  for key <- @keys do
+    @key key
+    @tag :n2
+    test "N2 #{@key} active release/install and writer handoff never reuse a decision" do
+      owner = self()
+      helper = start_supervised!({AuthorizerBindings, owner: owner})
+      assert {:ok, generation} = AuthorizerBindings.install(owner)
+      first = :sys.get_state(helper)
+      assert {:ok, ^generation} = AuthorizerBindings.install(owner)
+      assert :sys.get_state(helper).revision == first.revision
+      assert AuthorizerBindings.resolve(@key) == {:ok, Authorizer}
+      assert :sys.get_state(helper).revision == first.revision
+      {caller, _, _} = queued_selection!(helper, :managed, fn -> AuthorizerBindings.resolve(@key) end)
+
+      try do
+        {writer, same_generation} = installing_writer(owner)
+        assert same_generation == generation
+        current = :sys.get_state(helper)
+        assert current.writer == writer.pid
+        refute current.revision == first.revision
+        assert :ok = AuthorizerBindings.release(generation)
+        assert :sys.get_state(helper).revision == current.revision
+        :erlang.resume_process(caller.pid)
+        assert consume_result(caller) == {:error, :forbidden}
+        send(writer.pid, {:release, generation})
+        assert Task.await(writer, 1000) == :ok
+        assert {:ok, next_generation} = AuthorizerBindings.install(owner)
+        refute next_generation == generation
+        {caller2, _, _} = queued_selection!(helper, :managed, fn -> AuthorizerBindings.resolve(@key) end)
+
+        try do
+          assert :ok = AuthorizerBindings.release(next_generation)
+          assert {:ok, final_generation} = AuthorizerBindings.install(owner)
+          refute final_generation == next_generation
+          :erlang.resume_process(caller2.pid)
+          assert consume_result(caller2) == {:error, :forbidden}
+        after
+          resume_if_alive(caller2.pid)
+        end
+      after
+        resume_if_alive(caller.pid)
+      end
+    end
+  end
+
+  @tag :n2
+  test "N2 queued active reply rejects a dead writer before another install" do
+    helper = start_supervised!({AuthorizerBindings, owner: self()})
+    {writer, _generation} = installing_writer(self())
+    operation = fn -> AuthorizerBindings.resolve(:runtime_identity_authorizer) end
+    {caller, _, _} = queued_selection!(helper, :managed, operation)
+
+    try do
+      Task.shutdown(writer, :brutal_kill)
+      refute Process.alive?(writer.pid)
+      :erlang.resume_process(caller.pid)
+      assert consume_result(caller) == {:error, :forbidden}
+    after
+      resume_if_alive(caller.pid)
+    end
+  end
+
+  @tag :n2
+  test "N2 delivered lookup result still expires at lookup250 before caller acceptance" do
+    helper = start_supervised!({AuthorizerBindings, managed: false})
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, LegacyAuthorizer)
+    {caller, started, deadline} = queued_selection!(helper, :base, fn -> RuntimeIdentity.read(:operator) end)
+
+    try do
+      receive do: (:never_sent -> flunk("unexpected message")), after: (270 -> :ok)
+      assert System.monotonic_time(:millisecond) - started >= 250
+      assert RequestContext.timely?(deadline)
+      :erlang.resume_process(caller.pid)
+      assert consume_result(caller) == {:error, :forbidden}
+    after
+      resume_if_alive(caller.pid)
+    end
+  end
+
+  defmodule HeldLegacy do
+    def authorize(actor, :runtime_identity_read), do: hold(actor)
+    def authorize(actor, _action, _scope), do: hold(actor)
+
+    defp hold({owner, ref}) do
+      send(owner, {:legacy_callback_started, ref, self()})
+      receive do: ({:release_callback, ^ref} -> :ok), after: (1500 -> :deny)
+    end
+  end
+
+  for key <- @keys, context <- [:inactive, :retired] do
+    @key key
+    @context context
+    @tag :n2
+    test "N2 #{@key} delayed legacy callback is fenced through #{@context} managed startup" do
+      helper = start_supervised!({AuthorizerBindings, managed: false, owner: self()})
+      if @context == :retired, do: stop_supervised!(AuthorizerBindings)
+      Application.put_env(:symphony_elixir, @key, HeldLegacy)
+      parent = self()
+      ref = make_ref()
+      caller = Task.async(fn -> consume(@key, {parent, ref}) end)
+      assert_receive {:legacy_callback_started, ^ref, callback}, 250
+      assert callback == caller.pid
+      if @context == :retired, do: start_supervised!({AuthorizerBindings, owner: self()})
+      assert {:ok, _} = AuthorizerBindings.install(self())
+      if @context == :inactive, do: assert(Process.whereis(AuthorizerBindings) == helper)
+      send(callback, {:release_callback, ref})
+      assert_denied(consume_result(caller))
+    end
+  end
+
+  @tag :n2
+  test "N2 stable legacy callback retains its budget beyond lookup250 but not original HTTP deadline" do
+    start_supervised!({AuthorizerBindings, managed: false})
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, HeldLegacy)
+    parent = self()
+
+    for expired <- [false, true] do
+      ref = make_ref()
+      lifetime = System.convert_time_unit(100, :millisecond, :native)
+      deadline = if expired, do: System.monotonic_time() + lifetime, else: RequestContext.deadline()
+
+      caller =
+        Task.async(fn ->
+          Process.put({Authorizer, :deadline}, deadline)
+          RuntimeIdentity.read({parent, ref})
+        end)
+
+      assert_receive {:legacy_callback_started, ^ref, callback}, 250
+      receive do: (:never_sent -> flunk("unexpected message")), after: (300 -> :ok)
+      send(callback, {:release_callback, ref})
+      result = consume_result(caller)
+      if expired, do: assert(result == {:error, :forbidden}), else: assert(match?({:ok, %{schema_version: 1}}, result))
+    end
+  end
+
+  for key <- @keys, context <- [:inactive, :retired] do
+    @key key
+    @context context
+    @tag :n2
+    test "N2 #{@key} raw candidate read precedes final guarded #{@context} selection" do
+      helper = start_supervised!({AuthorizerBindings, managed: false, owner: self()})
+      if @context == :retired, do: stop_supervised!(AuthorizerBindings)
+      Application.put_env(:symphony_elixir, @key, LegacyAuthorizer)
+      parent = self()
+      ref = make_ref()
+      started = System.monotonic_time(:millisecond)
+
+      caller =
+        Task.async(fn ->
+          Process.put({Authorizer, :deadline}, RequestContext.deadline())
+          {:ok, selection} = AuthorizerBindings.prepare(@key)
+          {candidate, _, _, _} = selection
+          send(parent, {:raw_candidate_read, ref, candidate})
+
+          receive do
+            {:accept_candidate, ^ref} ->
+              AuthorizerBindings.authorize_selected(selection, consumer_arguments(@key, :operator))
+          after
+            200 -> :deny
+          end
+        end)
+
+      assert_receive {:raw_candidate_read, ^ref, LegacyAuthorizer}, 200
+      if @context == :retired, do: start_supervised!({AuthorizerBindings, owner: self()})
+      assert {:ok, _} = AuthorizerBindings.install(self())
+      if @context == :inactive, do: assert(Process.whereis(AuthorizerBindings) == helper)
+      send(caller.pid, {:accept_candidate, ref})
+      assert consume_result(caller) == :deny
+      assert System.monotonic_time(:millisecond) - started < 250
+    end
+  end
+
+  @tag :n2
+  test "N2 unaccepted unknown or pending proof cannot authorize a legacy callback" do
+    start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, LegacyAuthorizer)
+    assert {:ok, selection} = AuthorizerBindings.prepare(:runtime_identity_authorizer)
+    {module, decision, limit, deadline} = selection
+    arguments = [:operator, :runtime_identity_read]
+    assert :ok = AuthorizerBindings.authorize_selected(selection, arguments)
+
+    for invalid <- [:unknown, put_elem(decision, 3, :pending), put_elem(decision, 2, make_ref())] do
+      assert :deny = AuthorizerBindings.authorize_selected({module, invalid, limit, deadline}, arguments)
+    end
+  end
+
+  @tag :n2
+  test "N2 stale legacy callback cannot commit a project domain effect" do
+    AuthDbFixture.start!()
+    start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+    Application.put_env(:symphony_elixir, :project_authorizer, HeldLegacy)
+    parent = self()
+    ref = make_ref()
+
+    caller =
+      Task.async(fn ->
+        Process.put({Authorizer, :deadline}, RequestContext.deadline())
+        Projects.create_project({parent, ref}, %{key: "N2", name: "Must remain absent"})
+      end)
+
+    assert_receive {:legacy_callback_started, ^ref, callback}, 250
+    assert {:ok, _} = AuthorizerBindings.install(self())
+    send(callback, {:release_callback, ref})
+    assert_denied(consume_result(caller))
+    assert Repo.query!("SELECT count(*) FROM projects", [], log: false).rows == [[0]]
+  end
+
+  @tag :n2
+  test "N2 fresh VM absent selection cannot survive a complete managed lifecycle" do
+    script = ~S"""
+    alias SymphonyControl.Auth.AuthorizerBindings
+    alias SymphonyControl.RuntimeIdentity
+    defmodule FreshVmLegacy do
+      def authorize(:operator, :runtime_identity_read), do: :ok
+      def authorize({parent, ref}, :runtime_identity_read) do
+        send(parent, {:callback, self(), ref})
+        receive do: ({:release, ^ref} -> :ok), after: (200 -> :deny)
+      end
+    end
+    :absent = :persistent_term.get({AuthorizerBindings, :lifecycle}, :absent)
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, FreshVmLegacy)
+    {:ok, %{schema_version: 1}} = RuntimeIdentity.read(:operator)
+    parent = self()
+    ref = make_ref()
+    caller = Task.async(fn -> RuntimeIdentity.read({parent, ref}) end)
+    receive do
+      {:callback, callback, ^ref} ->
+        {:ok, supervisor} = Supervisor.start_link([{AuthorizerBindings, owner: self()}], strategy: :one_for_one)
+        {:ok, generation} = AuthorizerBindings.install(self())
+        :ok = AuthorizerBindings.release(generation)
+        :ok = Supervisor.stop(supervisor)
+        {:legacy, revision} = :persistent_term.get({AuthorizerBindings, :lifecycle})
+        true = is_reference(revision)
+        send(callback, {:release, ref})
+    after
+      200 -> raise "fresh VM callback barrier was not reached"
+    end
+    {:error, :forbidden} = Task.await(caller, 1000)
+    IO.puts("N2_FRESH_VM_ABSENT_GUARDED")
+    """
+
+    ebin = Application.app_dir(:symphony_elixir, "ebin")
+    {output, exit} = System.cmd(System.find_executable("elixir"), ["-pa", ebin, "-e", script], stderr_to_stdout: true)
+    assert exit == 0
+    assert String.trim(output) == "N2_FRESH_VM_ABSENT_GUARDED"
+  end
+
+  defp consumer_arguments(:runtime_identity_authorizer, actor), do: [actor, :runtime_identity_read]
+  defp consumer_arguments(:project_authorizer, actor), do: [actor, :project_read, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+
+  defp consume(:runtime_identity_authorizer, actor), do: RuntimeIdentity.read(actor)
+  defp consume(:project_authorizer, actor), do: Projects.get_project(actor, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+  defp consume_result(caller), do: Task.await(caller, 1000)
+  defp assert_denied({:error, :forbidden}), do: :ok
+  defp assert_denied({:error, %{code: :forbidden}}), do: :ok
+  defp assert_denied(_result), do: flunk("stale binding authorization escaped the consumer guard")
+
+  defp queued_selection!(helper, mode, operation) do
+    :ok = :sys.suspend(helper)
+    deadline = RequestContext.deadline()
+    started = System.monotonic_time(:millisecond)
+
+    caller =
+      Task.async(fn ->
+        Process.put({Authorizer, :deadline}, deadline)
+        operation.()
+      end)
+
+    await_call!(helper, :resolve)
+    :erlang.suspend_process(caller.pid)
+    :ok = :sys.resume(helper)
+
+    AuthDbFixture.await!(
+      fn ->
+        {:messages, messages} = Process.info(caller.pid, :messages)
+        Enum.any?(messages, &match?({_, {:ok, ^mode, {^helper, _, revision, _, _, _, _}}} when is_reference(revision), &1))
+      end,
+      100
+    )
+
+    {caller, started, deadline}
+  end
+
+  defp resume_if_alive(pid) do
+    if Process.alive?(pid) do
+      try do
+        :erlang.resume_process(pid)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 
@@ -393,7 +728,10 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
   defp effective({:ok, value}), do: value
 
   defp trace_base_writes!(helper) do
-    for function <- [:put_env, :delete_env, :put_all_env], do: :erlang.trace_pattern({Application, function, :_}, true, [:local])
+    for function <- [:put_env, :delete_env, :put_all_env] do
+      :erlang.trace_pattern({Application, function, :_}, true, [:local])
+    end
+
     :erlang.trace(helper, true, [:call])
   end
 
@@ -410,7 +748,10 @@ defmodule SymphonyControl.Auth.AuthorizerBindingsTest do
            "binding lifecycle wrote operator defaults"
 
     :erlang.trace(helper, false, [:call])
-    for function <- [:put_env, :delete_env, :put_all_env], do: :erlang.trace_pattern({Application, function, :_}, false, [:local])
+
+    for function <- [:put_env, :delete_env, :put_all_env] do
+      :erlang.trace_pattern({Application, function, :_}, false, [:local])
+    end
   end
 
   defp collect_calls(helper, calls) do

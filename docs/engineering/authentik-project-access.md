@@ -3156,3 +3156,171 @@ NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5. R6/N1 independently open;
 historical A148/1/B020 and native/trusted/live/Bandit holds unchanged.
 Cycle2/2 consumed, no further repair cycle/profile/agent authorized. Terminal
 publication/readbacks and WRITER_RELEASED belong to owning #33/PR99/#95.
+
+
+## 2026-10-15 — T4-N2/P1 revision-bound authorizer candidate
+
+This separately authorized N2 + STYLE stage starts from published7be77f06,
+parent158529de, base097d64ad. Earlier sections remain dated history.
+It does not repeat the exhausted R6/N1 cycle2/2 or accept Task5/release.
+Owner explicitly extended the original2026-10-14T22:43:03Z deadline by24h;
+T0 remains2026-10-14T18:43:03Z, cleanup reserve22:13:03Z on October15.
+
+The existing lifecycle owner publishes one persistent descriptor containing
+helper PID, incarnation, unique revision, phase, generation, owner and writer.
+Startup, release, install and writer handoff publish before acknowledging the
+transition. Reads and an idempotent install by the same writer keep revision.
+Normal retirement publishes a unique known-legacy tombstone, preventing the
+absent/managed/absent ABA. Unexpected loss retains closed metadata.
+Application defaults are never installed, deleted or restored by this lifecycle.
+
+The descriptor publication is the mode-transition point. Selection obtains its
+candidate, including the raw base read, before comparing the current descriptor.
+Both Projects and RuntimeIdentity invoke the guarded authorization seam, then
+accept callback success only against the same decision and original HTTP
+deadline. The callback runs in its original request process, preserving exact
+MFA, receipt and Validity. There is no callback/SQL execution in the binding
+GenServer, retry or fallback on mismatch. Lookup250ms bounds lookup delivery;
+it does not become the callback budget. A module returned by compatibility
+resolve/1 alone is not reusable authority. Revisions grant no eligibility.
+The final synchronous local comparison is the selection/authorization decision
+point; arbitrary VM pauses after completion are not hard realtime promises.
+
+### Causal controls and their actual barrier boundaries
+
+| Control | Barrier before final acceptance | Observed postcondition |
+| --- | --- | --- |
+| Original7be real RuntimeIdentity RED | Genuine inactive reply already in suspended caller mailbox; real same-owner install acknowledged | Same supervised helper/incarnation, new generation, erroneous snapshot;6ms below lookup250; original deadline timely |
+| Both consumer keys | Real inactive/active reply queued before caller acceptance | Same-helper install, inactive ABA, active release/install and same-generation writer replacement invalidate old decision |
+| Raw base candidate | prepare/1 has read the real candidate; caller waits before authorize_selected/2 | Both keys reject after inactive or retired startup transition; this is an internal seam control |
+| Real HTTPS project/identity | Real authenticated caller held at produced inactive reply or inside actual trusted legacy callback | Valid human/session/real Eligibility receipt, no grants; managed install acknowledged before release;403/no private body or cookie within250ms |
+| Legacy callback | Callback has started in caller and is held before returning :ok | Managed transition invalidates result; real project create has no SQL effect |
+| Fresh child VM | Genuine absent legacy callback held while complete managed install/release/normal retirement occurs | New legacy tombstone differs; stale :ok denied, stable initial legacy succeeds |
+| Actual Application lifecycle | Access gracefully retired, helper stays alive, genuine inactive reply queued | Access restart installs new generation/revision in same helper; stale identity denied |
+| Delivery/deadline controls | Produced reply held beyond250ms, or callback held300ms | Late lookup denied; stable callback beyond250ms succeeds under original deadline and fails after its expiration |
+
+Existing dead owner/writer, pending, malformed metadata, helper replacement,
+ended-incarnation reply, current grants/revoke/foreign-project and N1 direct
+put/delete/same-value/ABA teardown controls remain. Exact task4 fixture capture
+Eligibility.confirm/4, real observer,400ms identity lifetime and all protected
+Actor/receipt/grant/privacy assertions remain. No AuthDbFixture or Access
+functional source changes were made. Earlier R1–R5/N1 source conclusions are
+preservation context, not independent runtime acceptance of this candidate.
+
+### STYLE delta, separate from functional selection changes
+
+Fresh ordinary mix lint before edits exited6: four alias diagnostics at
+Projects123, RuntimeIdentity20, AccessTest179/256; six long-line diagnostics at
+AuthorizerBindingsTest62/142/293/396/413 and AccessTest425. The complete log is
+retained, SHA25679c8de9f6676309d07be15c4c91a27e30c2d52b2b6fd8be27186f4d1bf5acf0c.
+These are actual fresh paths, including AccessTest rather than Access.ex.
+
+Style-only changes add equivalent aliases, wrap assertions/trace calls, and
+factor pure literal iteration lists without changing values/order. Existing
+test bodies normalized for aliases and those literal bindings compare equal:
+23 AuthorizerBindingsTest and22 AccessTest bodies/helpers, zero mismatches.
+The one internal-reply assertion intentionally adapted to the descriptor is a
+functional protocol delta, excluded from that style-only claim; its stale
+incarnation refusal remains. Callback arity/MFA, guards, errors, result shapes,
+deadlines and protected assertions are unchanged by style changes. No quality
+configuration, exclusion, threshold, Makefile, dependency lock or coverage flag
+changed. Fresh final pre-freeze strict lint has no diagnostics.
+
+### Evidence limitations retained
+
+Initial debugger barrier controls failed in test coordination, not product
+semantics. Later exact-form one-shot debugger controls passed4/0; final tracked
+controls use the internal production seam and do not alter coverage compilation.
+First HTTPS candidate controls failed4/22 because the trusted legacy test
+callback lacked a request-local receipt; repaired fixture callback performs the
+real Eligibility.confirm/4 instead of fabricating/copying a receipt. Every first
+failure/log/input is retained. Scoped preservation then passed48/0; one later
+proof-control test passed separately. No failure is relabeled or erased.
+
+Preparation violated the intended cache boundary: the installed launcher reset
+MIX_HOME/HEX_HOME, so early Hex/deps/core-PLT commands affected shared prepared
+cache. Pre-bytes are UNKNOWN; no blind restoration or preservation claim.
+Later commands use the same pinned real Elixir1.19.5/OTP28.5 binaries, unchanged
+four schedulers, actual own cache paths, existing CA/proxy/rebar and unchanged
+lock. Early002–004 inventory seals had a cwd defect; complete007+ seals do not
+retroactively repair them. Interrupted own PLT build038 exit/reap remains
+UNKNOWN. Own PostgreSQL restart observed crash recovery; old shutdown/reap is
+UNKNOWN. No foreign/PID1/adopted-zombie signals were sent.
+
+Each fresh gate receipt stores argv/cwd/UTC/exit, exact tracked-byte SHA256 list,
+aggregate input hash, patch/untracked seals, output hash, selected nonsecret
+environment and actual executable/runner hashes. List format is lowercase
+SHA256, two spaces, relative path, newline in git ls-files order. Executable
+seal excludes only the three permitted Markdown docs and MANIFEST.sha256.
+Final results below are appended after runtime gates; no late full inventory
+is represented as having existed before tests. Local receipts/overlays are
+retained; published source requires no private archive for independent review.
+
+
+Cycle1 fresh gates: T1 92/0 exit0; T2 490/0 exit0. First full make048
+exited2 after856 tests/0 failures/6 unchanged live skips: coverage99.82%
+versus100%, so Dialyzer NOT_RUN. Four uncovered lines were the original
+Projects/RuntimeIdentity rescue/catch boundaries, because the new common seam
+caught callback faults before those consumers. Cycle1 inputa6274fd0a51e445c372ec3a77143fb784fe0a3eb8092802f7057823175b7675a;
+executable485be3356d95a86ac9d83226fa1a48450c7d865a1b7acf19cfefd45eef8e64bb.
+First make output6d3431df0e5f1db31b8606ebc70f5667a725d62ae0582375f7772afae8d079f6.
+Cycle1 T4 NOT_RUN. All first results and coverage HTML are retained.
+
+Cycle2/2 removes only the duplicate inner callback rescue/catch from the
+internal AuthorizerBindings seam. Real legacy exceptions/throws/exits again
+reach each original consumer's unchanged forbidden boundary; mismatched
+revision/deadline still denies explicitly. prepare/1 retains fail-closed lookup
+handling. The existing frozen IdentityTest and ProjectsTest negative callback
+assertions exercise the original boundaries again; no artificial fault,
+weakened assertion or coverage exemption. Scoped controls97/0 passed after
+this causal change. No third causal repair cycle is available.
+
+
+### Fresh final candidate author qualification
+
+T1:92 tests/0 failures; T2:490/0; T3 ordinary make:856/0/6 unchanged live
+skips,100% coverage, Dialyzer0 errors/0 skipped; all exit0. Full format,
+specs and strict lint passed before cycle2 freeze. T4 bootstrap12/0 and MCP11/0
+ran after full make completed, sequentially without runtime overlap.
+
+| Receipt | UTC start → end | Exit | Output SHA256 |
+| --- | --- | --- | --- |
+| 054-cycle2-T1 | 2026-10-15T04:41:02.186953+00:00 → 2026-10-15T04:41:25.613377+00:00 | 0 | 421cfc5ba66c90df57617b5428f1eb15ac0d63db129e1f301a6e8d53ddf0c9d3 |
+| 055-cycle2-T2 | 2026-10-15T04:41:53.890149+00:00 → 2026-10-15T04:44:50.443646+00:00 | 0 | 50479895d28dd92f513fb0a1a732bff2ccf41cf378b61a778570aea485f69718 |
+| 056-cycle2-T3 | 2026-10-15T04:45:04.448494+00:00 → 2026-10-15T04:50:38.233449+00:00 | 0 | c053a5ebd4eb7f43a7fdf810c8e90bdb2d7872254e6851ab65e54eaac6ce91c7 |
+| 057-T4-bootstrap | 2026-10-15T04:50:54.830692+00:00 → 2026-10-15T04:50:54.988288+00:00 | 0 | d44f94a892b77183bc0e0de4c49edf60231c8feebdce5a228026bd43a92f4457 |
+| 058-T4-mcp | 2026-10-15T04:50:55.075402+00:00 → 2026-10-15T04:50:55.304318+00:00 | 0 | eb07e6c4b9906bc32b99dd73a8edd3eae4531594dedd6d51407b8af60624de00 |
+
+Exact command argv (cwd is repository root except T1/T2 in elixir):
+
+```text
+054-cycle2-T1: ["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]
+055-cycle2-T2: ["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]
+056-cycle2-T3: ["make", "-C", "elixir", "all"]
+057-T4-bootstrap: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]
+058-T4-mcp: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]
+```
+
+All five fresh runtime/Python inputs have whole-tracked seal
+f674af3ffe6aec30f832fd43d435e2b965fac9b28a2a9de5eb0fdd6ff82f1476.
+Executable/test/config251-file seal: 2a3b3be29efe99a4290c67f1ce3e59d767fca266fa4dda4b0ad72405a78fe0ca.
+The final docs-only/MANIFEST seal follows these gates; final full tracked
+inventory did not exist before them. Commit equality, final static/body checks
+and publication readbacks are recorded in owning #33. No full make is
+substituted by a source review or silently rerun after a docs-only seal.
+
+Baseline011 untracked observer overlay SHA256
+8405d3b221656eebb95cbb5112ef9e979ab0d9f457d20978a0b35ba31b49fd00;
+semantic RED output5f9477d6d187eed25d1445ab498d60f19ca811628e38bb18ef32464b7cd6fe0a.
+Additional baseline HTTPS REDs were4/4; their old bound assertion was after
+the failing status assertion and was not reached. The6ms baseline011 and
+current candidate bounds are the actual timely semantic evidence.
+
+N2 AUTHOR_FIXED_CANDIDATE / STYLE_AUTHOR_CHECK_PASS / AUTHOR_GATES_PASSED.
+Independent N2/R6, N1/R1–R5 preservation, consumer guards and style equivalence
+review remains required on the new exact published HEAD. Cache-boundary breach
+and early provenance/exit UNKNOWN remain process holds, not repaired by GREEN.
+Historical A148/1/B020/earlier T1 transport remain unresolved and are not
+attributed to N2. Activation/defaults/Task5/native/trusted/live/production
+boundaries remain unchanged. NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL /
+NOT_ACCEPTED / DO_NOT_MERGE. Cycle2/2 used, agents0/profile changes0.

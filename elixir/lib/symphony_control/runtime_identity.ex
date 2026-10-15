@@ -7,6 +7,8 @@ defmodule SymphonyControl.RuntimeIdentity do
   Hashes are reported observations, not proof of independently verified images.
   """
 
+  alias SymphonyControl.Auth.AuthorizerBindings
+
   @type identity :: %{
           schema_version: 1,
           commit_sha: String.t(),
@@ -16,11 +18,8 @@ defmodule SymphonyControl.RuntimeIdentity do
 
   @spec read(term()) :: {:ok, identity()} | {:error, :forbidden}
   def read(actor) do
-    with {:ok, module} when is_atom(module) and not is_nil(module) <-
-           SymphonyControl.Auth.AuthorizerBindings.resolve(:runtime_identity_authorizer),
-         :ok <- module.authorize(actor, :runtime_identity_read) do
-      {:ok, snapshot()}
-    else
+    case AuthorizerBindings.authorize(:runtime_identity_authorizer, [actor, :runtime_identity_read]) do
+      :ok -> {:ok, snapshot()}
       _denied -> {:error, :forbidden}
     end
   rescue

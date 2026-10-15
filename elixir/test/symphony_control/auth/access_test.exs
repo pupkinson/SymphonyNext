@@ -1,6 +1,6 @@
 defmodule SymphonyControl.Auth.AccessTest do
   use ExUnit.Case, async: false
-  alias SymphonyControl.Auth.{Access, Actor, Authorizer, Clock, RequestContext, Store, TokenVault}
+  alias SymphonyControl.Auth.{Access, Actor, Authorizer, AuthorizerBindings, Clock, RequestContext, Store, TokenVault}
   alias SymphonyControl.{AuthDbFixture, AuthHttpFixture, Repo}
 
   for role <- [:viewer, :contributor, :operator, :approver, :project_admin] do
@@ -176,7 +176,7 @@ defmodule SymphonyControl.Auth.AccessTest do
   test "admitted default authorizers restore prior nil and explicit bindings on shutdown" do
     f = AuthHttpFixture.start!(task4: true)
     assert Application.fetch_env(:symphony_elixir, :project_authorizer) == {:ok, nil}
-    assert SymphonyControl.Auth.AuthorizerBindings.resolve(:project_authorizer) == {:ok, Authorizer}
+    assert AuthorizerBindings.resolve(:project_authorizer) == {:ok, Authorizer}
     stop_supervised!(Access)
     assert Application.get_env(:symphony_elixir, :project_authorizer) == nil
     Application.delete_env(:symphony_elixir, :project_authorizer)
@@ -237,7 +237,7 @@ defmodule SymphonyControl.Auth.AccessTest do
       on_exit(fn -> Enum.each(saved, fn {key, value} -> restore_binding(key, value) end) end)
       Enum.each(keys, fn key -> if @before == :missing, do: Application.delete_env(:symphony_elixir, key), else: Application.put_env(:symphony_elixir, key, @before) end)
       {:ok, supervisor} = Supervisor.start_link([{Access, config: f.config}], strategy: :one_for_one)
-      binding = :sys.get_state(SymphonyControl.Auth.AuthorizerBindings)
+      binding = :sys.get_state(AuthorizerBindings)
 
       for _ <- 1..2 do
         old = Process.whereis(Access)
@@ -245,7 +245,7 @@ defmodule SymphonyControl.Auth.AccessTest do
         AuthDbFixture.await!(fn -> is_pid(Process.whereis(Access)) and Process.whereis(Access) != old end)
         assert {:ok, cfg} = Access.configuration(RequestContext.deadline())
         assert cfg == f.config
-        current = :sys.get_state(SymphonyControl.Auth.AuthorizerBindings)
+        current = :sys.get_state(AuthorizerBindings)
         assert current.owner == binding.owner
         assert current.generation == binding.generation
         assert current.writer == Process.whereis(Access)
@@ -253,7 +253,7 @@ defmodule SymphonyControl.Auth.AccessTest do
 
         Enum.each(keys, fn key ->
           assert Application.fetch_env(:symphony_elixir, key) == expected
-          assert SymphonyControl.Auth.AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+          assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
         end)
 
         assert AuthHttpFixture.get(f, "/api/v1/projects/" <> project, cookie: login.cookie).status == 200
@@ -293,7 +293,7 @@ defmodule SymphonyControl.Auth.AccessTest do
     end
   end
 
-  alias SymphonyControl.Auth.{AuthorizerBindings, Eligibility, Validity}
+  alias SymphonyControl.Auth.{Eligibility, Validity}
 
   for axis <- [:session, :credential] do
     @axis axis
@@ -415,14 +415,167 @@ defmodule SymphonyControl.Auth.AccessTest do
     assert Validity.current?(witness, f.config, witness.binding, witness.deadline)
   end
 
+  defmodule N2Legacy do
+    def authorize(%Actor{} = actor, :runtime_identity_read), do: confirm_and_permit(actor)
+    def authorize(%Actor{} = actor, :project_read, _scope), do: confirm_and_permit(actor)
+
+    defp confirm_and_permit(actor) do
+      cfg = Application.fetch_env!(:symphony_elixir, :auth_http_fixture_config)
+      deadline = Process.get({Authorizer, :deadline}) || RequestContext.deadline()
+      # Real eligibility supplies the request-local receipt, but no grant.
+      with :ok <- Eligibility.confirm(cfg, actor, Clock.now(), RequestContext.milliseconds(deadline)), do: permit()
+    end
+
+    defp permit do
+      case Application.get_env(:symphony_elixir, :n2_legacy_callback) do
+        {owner, ref} ->
+          send(owner, {:n2_legacy_callback_started, ref, self()})
+          receive do: ({:release_n2_callback, ^ref} -> :ok), after: (1500 -> :deny)
+
+        nil ->
+          :ok
+      end
+    end
+  end
+
+  for axis <- [:project, :identity], barrier <- [:reply, :callback] do
+    @axis axis
+    @barrier barrier
+    @tag :n2
+    test "N2 HTTPS #{@axis} no-grant human cannot cross managed install at #{@barrier}" do
+      f = AuthHttpFixture.start!(task4: true, eligibility_confirm: &Eligibility.confirm/4, project_authorizer: N2Legacy, runtime_identity_authorizer: N2Legacy)
+      project = AuthDbFixture.seed_project!()
+      login = AuthHttpFixture.login!(f)
+      [_, handle] = String.split(login.cookie, "=", parts: 2)
+      assert {:ok, %Actor{}} = Access.authenticate(f.config, handle, Clock.now())
+      path = if @axis == :project, do: "/api/v1/projects/" <> project, else: "/api/v1/control/identity"
+      # The trusted legacy default really permits this current human, whereas
+      # no current project/platform grant exists for the managed authorizer.
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+      assert Repo.query!("SELECT count(*) FROM control_auth_memberships", [], log: false).rows == [[0]]
+      assert Repo.query!("SELECT count(*) FROM control_auth_platform_grants", [], log: false).rows == [[0]]
+      helper = Process.whereis(AuthorizerBindings)
+      inactive = :sys.get_state(helper)
+      assert inactive.phase == :inactive
+      ref = make_ref()
+      if @barrier == :callback, do: Application.put_env(:symphony_elixir, :n2_legacy_callback, {self(), ref})
+      on_exit(fn -> Application.delete_env(:symphony_elixir, :n2_legacy_callback) end)
+      if @barrier == :reply, do: :ok = :sys.suspend(helper)
+      started = System.monotonic_time(:millisecond)
+      request = Task.async(fn -> AuthHttpFixture.get(f, path, cookie: login.cookie) end)
+      controller = n2_http_barrier!(helper, @barrier, ref)
+
+      try do
+        assert_n2_authenticated!(f, controller, @barrier)
+        assert {:ok, generation} = AuthorizerBindings.install(inactive.owner)
+        active = :sys.get_state(helper)
+        assert Process.whereis(AuthorizerBindings) == helper
+        assert active.incarnation == inactive.incarnation
+        assert active.generation == generation
+        assert active.phase == :active
+        refute active.revision == inactive.revision
+        n2_resume_http(controller, @barrier, ref)
+        response = Task.await(request, 2000)
+        assert System.monotonic_time(:millisecond) - started < 250
+        assert response.status == 403
+        refute inspect(response.body) =~ project
+        refute inspect(response.body) =~ "commit_sha"
+        assert Req.Response.get_header(response, "set-cookie") == []
+      after
+        n2_resume_http(controller, @barrier, ref)
+        :sys.resume(helper)
+        Application.delete_env(:symphony_elixir, :n2_legacy_callback)
+      end
+
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 403
+
+      if @axis == :project do
+        AuthDbFixture.seed_membership!(f.db, f.user, project, [:viewer])
+      else
+        Repo.query!(
+          "INSERT INTO control_auth_platform_grants(id,user_id,permission,revision) VALUES($1,$2,'runtime_identity_read',1)",
+          [Ecto.UUID.bingenerate(), AuthDbFixture.uuid(f.user)],
+          log: false
+        )
+      end
+
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
+      Repo.query!("DELETE FROM control_auth_memberships", [], log: false)
+      Repo.query!("DELETE FROM control_auth_platform_grants", [], log: false)
+      assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 403
+    end
+  end
+
+  defp assert_n2_authenticated!(f, controller, :callback), do: assert_real_identity_witness!(f, controller)
+
+  defp assert_n2_authenticated!(f, controller, :reply) do
+    {:dictionary, entries} = Process.info(controller, :dictionary)
+    dictionary = Map.new(entries)
+    witness = Map.get(dictionary, {Access, :validity})
+    assert match?(%Validity{kind: :local}, witness)
+    config_matches = witness.config == f.config
+    request_matches = witness.deadline == Map.get(dictionary, {Authorizer, :deadline})
+    assert config_matches and request_matches
+    assert Validity.current?(witness, f.config, witness.binding, witness.deadline)
+    # Authentication's real worker receipt is already in the authoritative
+    # cache. It is never fabricated or copied into the controller dictionary.
+    receipts = :sys.get_state(Eligibility).cache |> Map.values()
+    receipt = Enum.find(receipts, &(&1.actor == witness.binding))
+    assert is_map(receipt) and is_reference(receipt.ref)
+    deadline = RequestContext.milliseconds(witness.deadline)
+    assert Eligibility.current?(receipt, f.config, witness.binding, deadline, witness)
+  end
+
+  defp n2_http_barrier!(helper, :reply, _ref) do
+    AuthDbFixture.await!(
+      fn ->
+        {:messages, messages} = Process.info(helper, :messages)
+        Enum.any?(messages, &match?({:"$gen_call", _, {:resolve, _}}, &1))
+      end,
+      150
+    )
+
+    {:messages, messages} = Process.info(helper, :messages)
+    [{:"$gen_call", {controller, _}, {:resolve, _}}] = Enum.filter(messages, &match?({:"$gen_call", _, {:resolve, _}}, &1))
+    :erlang.suspend_process(controller)
+    :ok = :sys.resume(helper)
+
+    AuthDbFixture.await!(
+      fn ->
+        {:messages, replies} = Process.info(controller, :messages)
+        Enum.any?(replies, &match?({_, {:ok, :base, {^helper, _, _, :inactive, nil, _, nil}}}, &1))
+      end,
+      100
+    )
+
+    controller
+  end
+
+  defp n2_http_barrier!(_helper, :callback, ref) do
+    assert_receive {:n2_legacy_callback_started, ^ref, controller}, 200
+    controller
+  end
+
+  defp n2_resume_http(controller, :callback, ref), do: send(controller, {:release_n2_callback, ref})
+
+  defp n2_resume_http(controller, :reply, _ref) do
+    if Process.alive?(controller) do
+      try do
+        :erlang.resume_process(controller)
+      rescue
+        ArgumentError -> :ok
+      end
+    end
+  end
+
   @tag :n1_lifecycle
   test "managed HTTPS login restart and current rights retain separate base defaults" do
-    alias SymphonyControl.Auth.AuthorizerBindings
     f = AuthHttpFixture.start!(task4: true)
     project = AuthDbFixture.seed_project!()
     foreign = AuthDbFixture.seed_project!()
     AuthDbFixture.seed_membership!(f.db, f.user, project, [:viewer])
-    base = for key <- [:project_authorizer, :runtime_identity_authorizer], do: {key, Application.fetch_env(:symphony_elixir, key)}
+    keys = [:project_authorizer, :runtime_identity_authorizer]
+    base = for key <- keys, do: {key, Application.fetch_env(:symphony_elixir, key)}
     login = AuthHttpFixture.login!(f)
     path = "/api/v1/projects/" <> project
     assert AuthHttpFixture.get(f, path, cookie: login.cookie).status == 200
