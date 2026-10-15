@@ -1,3 +1,13 @@
+# GH102 developer profile — source candidate, 2026-10-15
+
+An opt-in developer broker now shares the existing Symphony/GitHub dispatcher
+with the unchanged source reviewer. See [executor contract](README_EXECUTOR.md)
+and [update/rollback gates](UPDATE.md). No executor policy is enabled or installed
+by this source change. Independent exact-HEAD review, installed-predecessor
+verification, owner-approved update and the two-agent live pilot remain separate.
+
+The reports below preserve PR90 history; they are not installation attestations.
+
 # Exact prompt delivery binding — 2026-10-08
 
 GH96/P1 source correction in existing PR90; owner admission GH87 comment6067390168.

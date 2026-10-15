@@ -1,0 +1,55 @@
+{
+  "schema": "snq-source-evidence/v1",
+  "issue": 102,
+  "base": "60e4a6d4b9054dfdb5d55e0f2b76a9fc0b10e506",
+  "status": "AUTHOR_TESTED_NOT_ACCEPTED",
+  "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+  "python": "3.12.14",
+  "logs": [
+    {
+      "name": "sn102-baseline.log",
+      "exit_code": 0,
+      "tests": 143,
+      "sha256": "3bb3f178d15aee25ef225ec2245b3092b55dcdc4a9d6c92ef8eaf7396cdcee9f"
+    },
+    {
+      "name": "sn102-red.log",
+      "exit_code": 1,
+      "tests": 23,
+      "sha256": "8b4501b4cf5555e6c401a70914d79cca522b06c7571289e00cfaf5afafc9c08f"
+    },
+    {
+      "name": "sn102-source-final.log",
+      "exit_code": 0,
+      "tests": 194,
+      "sha256": "eb1a8df1306f9490e3d34b497ec612e9a96ecd8f80b24e4cd3f6fb8010ebb37b"
+    }
+  ],
+  "source_sha256": {
+    "tools/source-review-queue/candidate/execution.py": "94050cf28b510f8dc5dcd3b657c42d865e59a4b0c2e3b54a9fcfa2308c8d8ef9",
+    "tools/source-review-queue/candidate/queue.py": "bae1ae20b782da54b8740ba001ecb2a613f46466ec98f3c5ffc363c0ea8ac601",
+    "tools/source-review-queue/tests/test_queue_context.py": "3faf0c4126d320aa5439742fc7d21be8faf4015ca0b777e8d58a23b9784e6fb2",
+    "tools/source-review-queue/tests/test_queue_development_limits.py": "34338c1bb0e5d3adc4cdcbbca03477bd6843b6d2210e0e66d242a4e406ea442c",
+    "tools/source-review-queue/tests/test_queue_eof_ordering.py": "f662629c996cdda5b7a3c0c7fb72e985e5573e4cd80a04b381d80ba2af03f36a",
+    "tools/source-review-queue/tests/test_queue_executor.py": "2c98ba05358786075079530ee7ea0a1e7f978af167b87b891c59bcfda14219c6",
+    "tools/source-review-queue/tests/test_queue_executor_lifecycle.py": "40c38bc8b484103d339eae5f041268a7bc60615d050578878ebf5e9ef60ad87f",
+    "tools/source-review-queue/tests/test_queue_gate.py": "97bd82711de516dec748accbeee90c7bf8ca857164d2470505a1623f5137e8fa",
+    "tools/source-review-queue/tests/test_queue_negative.py": "f6bbc430af87a4fac0abb8f8038f8cdee262cc005c79a827f77156fa820def97",
+    "tools/source-review-queue/tests/test_queue_profiles.py": "2c7b2dd123582e00ff95039a1b12711cb22f3c0c94ac7e3e4bf2c230fc36acb5",
+    "tools/source-review-queue/tests/test_queue_prompt_integrity.py": "54010ec66b8ff105b28aa956b862e77614df97766ae2212518e9a6ba155e62ab",
+    "tools/source-review-queue/tests/test_queue_proxy.py": "6b719f882359ba37e68ec9cba2cd245df9233e113740789701cb886841007681",
+    "tools/source-review-queue/tests/test_queue_review_findings.py": "f0ba50b915421f00661e162e0cd05a482d4612cdde98583637210c09cbd1ef06",
+    "tools/source-review-queue/tests/test_queue_schema_downgrade.py": "13afaedab2ac631a7649eaccee6c221a65469fa0dc09dc43a7622b9c5f5dbc81"
+  },
+  "grammar_3_10": "PASS",
+  "old_guard_asts_unchanged": 20,
+  "installed": "UNKNOWN_NOT_CHANGED",
+  "live_pilot": "NOT_RUN",
+  "real_model_calls_by_runner": 0,
+  "local_bwrap_probe": "FAILED_NETLINK_ROUTE_OPERATION_NOT_PERMITTED",
+  "external_boundaries": "GitHub/model fixtures; command runner fixture explicitly marks TEST_DOUBLE_NOT_NATIVE",
+  "server_errors": [
+    "Connection timed out",
+    "-32603 Internal error"
+  ]
+}
