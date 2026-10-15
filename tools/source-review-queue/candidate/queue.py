@@ -882,6 +882,26 @@ class Api:
         finally:c.close()
     def get(self,path):return self.request('GET',path)
 
+    def blob_bytes(self,oid,size):
+        """Bounded developer-only raw Git blob; reviewer JSON caps stay intact."""
+        require(callable(getattr(self,'execution_scope',None)),'API_SCOPE_DENIED')
+        require(isinstance(oid,str) and re.fullmatch('[a-f0-9]{40}',oid)
+                and type(size) is int and 0<=size<=33554432,'RAW_BLOB_LIMIT')
+        path='/git/blobs/'+oid
+        require(self.allowed('GET',path,None),'API_SCOPE_DENIED')
+        c=http.client.HTTPSConnection('api.github.com',timeout=18)
+        try:
+            c.request('GET','/repos/'+REPO+path,headers={
+                'Authorization':'Bearer '+self.token,'User-Agent':'SymphonyNext-Persistent-Queue-v1',
+                'Accept':'application/vnd.github.raw+json'})
+            r=c.getresponse()
+            require(r.status==200,'API_HTTP_'+str(r.status))
+            raw=r.read(size+1)
+            require(len(raw)==size and git_blob_sha(raw)==oid,'BLOB_HASH_OR_SIZE')
+            return raw
+        except (OSError,http.client.HTTPException):raise Hold('API_READ_TRANSPORT') from None
+        finally:c.close()
+
 
 def job_number(path):
     path=Path(path)

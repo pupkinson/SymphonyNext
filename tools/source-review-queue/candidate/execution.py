@@ -26,6 +26,11 @@ TOOLS=('snq_dev_read','snq_dev_write','snq_dev_test')
 MAX_FILE=4*1024*1024
 MAX_TOTAL=32*1024*1024
 MAX_OUTPUT=65536
+# The upstream demonstration video is input, never editable source. Keep the
+# 4MiB broker/write cap and 32MiB aggregate cap; permit only this exact larger
+# read-only Git object. A changed asset needs a new reviewed code pin.
+IMMUTABLE_ASSETS={'.github/media/symphony-demo.mp4':{
+    'blob':'32b1f857f45eb901905ea24355b599fb417f53c5','bytes':30446771,'mode':'100644'}}
 
 
 class Adapter:
@@ -227,10 +232,14 @@ class Adapter:
             self.require(not p.is_symlink(),'FILE_SYMLINK')
             if p.is_dir():continue
             name=p.relative_to(root).as_posix();self.path(name)
-            data=self.q.read(p,MAX_FILE);total+=len(data)
+            asset=IMMUTABLE_ASSETS.get(name)
+            data=self.q.read(p,asset['bytes'] if asset else MAX_FILE);total+=len(data)
             self.require(len(out)<4000 and total<=MAX_TOTAL,'WORKSPACE_LIMIT')
             out[name]={'sha256':self.q.sha(data),'blob':self.q.git_blob_sha(data),
                        'mode':'100755' if p.stat().st_mode&0o111 else '100644'}
+            if asset:
+                self.require(len(data)==asset['bytes'] and out[name]['blob']==asset['blob']
+                             and out[name]['mode']==asset['mode'],'READ_ONLY_ASSET_CHANGED')
         return out
 
     def changes(self,root,baseline,allowed):
@@ -362,15 +371,19 @@ class Adapter:
         for entry in entries['tree']:
             path=self.path(entry.get('path'));self.require(path not in seen,'TREE_DUPLICATE');seen.add(path)
             if entry.get('type')=='tree':continue
+            asset=IMMUTABLE_ASSETS.get(path)
             self.require(entry.get('type')=='blob' and entry.get('mode') in ('100644','100755')
                          and isinstance(entry.get('sha'),str) and re.fullmatch('[a-f0-9]{40}',entry['sha'])
-                         and type(entry.get('size')) is int and 0<=entry['size']<=MAX_FILE,'SOURCE_MODE_OR_SIZE')
-            blob=api.get('/git/blobs/'+entry['sha'])
-            try:raw=base64.b64decode(blob.get('content',''),validate=False)
-            except (ValueError,TypeError):raise self.q.Hold('BLOB_ENCODING') from None
-            self.require(blob.get('sha')==entry['sha'] and blob.get('encoding')=='base64'
-                         and len(raw)==entry['size'] and self.q.git_blob_sha(raw)==entry['sha'],'BLOB_HASH_OR_SIZE')
-            total+=len(raw);self.require(total<=MAX_TOTAL,'WORKSPACE_LIMIT')
+                         and type(entry.get('size')) is int and entry['size']>=0
+                         and (entry['size']<=MAX_FILE or asset is not None
+                              and (entry['sha'],entry['size'],entry['mode'])==
+                                  (asset['blob'],asset['bytes'],asset['mode'])),'SOURCE_MODE_OR_SIZE')
+            total+=entry['size'];self.require(total<=MAX_TOTAL,'WORKSPACE_LIMIT')
+            # Raw media avoids base64/JSON expansion beyond the review API cap.
+            # Both transport and materializer verify exact bytes/hash/size.
+            raw=api.blob_bytes(entry['sha'],entry['size'])
+            self.require(isinstance(raw,bytes) and len(raw)==entry['size']
+                         and self.q.git_blob_sha(raw)==entry['sha'],'BLOB_HASH_OR_SIZE')
             target=self.file_target(root,path);target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
             self.q.once(target,raw,0o755 if entry['mode']=='100755' else 0o644)
         return self.snapshot(root)

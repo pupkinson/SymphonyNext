@@ -34,6 +34,11 @@ class DeveloperGit(FakeGit):
         self.commits={B:{'sha':B,'tree':{'sha':BT}}}
         self.prs=[];self.issues=[];self.comments=[]
 
+    def blob_bytes(self,oid,size):
+        raw=self.blobs[oid]
+        assert len(raw)==size
+        return raw
+
     def get(self,path):
         from urllib.parse import unquote
         if path=='':return {'id':q.REPO_ID}

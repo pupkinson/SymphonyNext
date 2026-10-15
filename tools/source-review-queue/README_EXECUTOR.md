@@ -58,6 +58,30 @@ Each `tasks["<issue number>"]` grant contains exactly `role`, `enabled`,
 `{issue, head}` references to accepted artifacts. Unknown fields are rejected.
 There is no issue-controlled model, sandbox, API target or permission override.
 
+## Complete repository input, including the upstream video
+
+Developer materialization uses bounded raw Git blobs, verifies byte count and
+Git object SHA, and retains every file. GitHub's raw blob media type is documented
+at https://docs.github.com/en/rest/git/blobs#get-a-blob. Reviewer JSON transport
+and its response limits are unchanged. The writable/read-tool file limit remains
+4MiB; the complete workspace limit remains 32MiB and 4000 entries.
+
+Only `.github/media/symphony-demo.mp4`, mode100644, blob
+`32b1f857f45eb901905ea24355b599fb417f53c5`, exactly30446771bytes, gets the
+larger immutable-input read limit. A different path/blob/mode/size is refused;
+new upstream large assets require another reviewed pin. Snapshot verification
+hashes this complete asset and refuses modification. It cannot become writable
+or be read through the model's bounded file tool. There are no omitted files.
+Publication starts from the exact original Git tree and emits only admitted
+changes, preserving every untouched blob and mode, including the video.
+
+`test_queue_real_repository.py` uses all199files/33232573bytes in the actual
+e6fa3d22 base, never a replacement small repo. It also applies the emitted tree
+delta through Git's index/tree implementation in a separate object directory
+and checks all untouched object IDs. Local Git replaces HTTP in this fixture;
+the separate raw HTTP tests check caps, hash/size, scope and HTTP errors. These
+checks are not live model or target-service sandbox evidence.
+
 ## Isolation and actual command gate
 
 Every developer receives `workspaces/GH-N/developer-gG`, a fresh native thread,

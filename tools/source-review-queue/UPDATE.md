@@ -1,5 +1,79 @@
 # GH102 update and rollback contract
 
+## Current controlled updater — 15 October 2026
+
+`update_queue.py` is now the owner-run updater, with commands `check`, `apply`
+and `rollback`. CLI host, unit and installation/state paths are fixed. It does
+not install dependencies, widen systemd/OS/API access, read credentials, label
+issues, admit workers or restore old journals. `--install-start` is never used.
+The prior contract below is historical; its UNKNOWN installed/native facts
+have been superseded by #102 comment6188369467 and the fresh readback below.
+
+The current service is source-review-only. Its verified static predecessor is:
+
+| File | SHA256 |
+| --- | --- |
+| queue.py | 7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1 |
+| WORKFLOW.md | 863dcc07d8120597786370f7d43a8df7645b91940cf5ffc03fd08e674a4bc3e5 |
+| tmux.conf | efbb1c10814140d8b2be96cc9e02cab29d15814f5e00b36ddb2821c46a1864ee |
+| installed.json | b96964a5a184d6670628f9cf925a87dfbccedffcf219d870aa5662c5c1ce8b57 |
+
+Bubblewrap0.6.1 and the six owner-run native prerequisite checks have passed;
+they are not repeated by this updater. DF Desktop permits static readback in
+/opt/symphony-next-queue-v1. PID854 and idle dashboard were unchanged by source
+work. Root updater execution, installed PR103 and the live pilot remain NOT_RUN.
+
+### Package and owner boundary
+
+The handoff archive contains the reviewed updater, manifest, four payload files
+and non-secret qualification evidence. The manifest binds exact commit/tree,
+independent review URL/result, updater SHA, candidate hashes and the predecessor
+above. Its review record is an auditable coordinator receipt, not a cryptographic
+GitHub signature; the operator can verify its linked exact-HEAD bot result.
+No package is admitted before completed independent review of the final bytes.
+The owner receives the exact archive SHA and verified server path. The archive
+must be copied, hash-checked and unpacked into a new private root directory
+before executing Python with `-I -B`. Root owns the package and all payload files.
+
+`check` verifies static hashes, disabled policy, retained legacy metadata,
+unchanged unit identity/command, empty dashboard arrays and retired/reconciled
+journals. An unknown outbox or an unfinished developer blocks transition.
+It reads no runtime environment/auth files and changes no service or queue state.
+The CLI takes only a local exclusive updater lock in the installation directory.
+
+`apply` saves a verified root-private predecessor under
+`/opt/symphony-next-queue-v1/.rollback/<exact-head>/` before stopping the same
+service. After confirmed stop/quiescence it replaces only queue.py,
+execution.py, installed.json and an inert executor-policy.json. Workflow,
+tmux, unit, service identity, credentials and state are retained. Payload and
+durable control-record hashes are read back before start; dashboard and state
+are checked after start. A failed start triggers exact static rollback; if
+quiescence/known bytes cannot be established, it holds stopped rather than
+overwriting unknown data. The backup record enables explicit rollback after
+an interrupted static replacement. Repeated completed apply does not restart.
+
+`rollback` requires idle/reconciled jobs and unchanged approved static bytes,
+then restores the exact predecessor static files and removes the two previously
+absent developer files. It never restores an old copy of state. If pilot policy
+was enabled or jobs/outboxes remain pending, reconcile/revoke them first under
+their existing admission; this script will not silently terminate paid work or
+remove GitHub labels. Repeated completed rollback does not restart.
+
+Qualification uses real temporary files and a systemd test double, including
+failed startup, interrupted replacement, stale/author review, unknown outbox,
+active work, symlinks and repeated calls. Actual7fa0ee predecessor recovery was
+also exercised on owned retired/developer journals: no API/model call or state
+change; it skips the preserved developer roots. These checks are not a real
+service update or live rollback. Their exact logs/seals accompany the package.
+
+After owner-authorized apply, independently read back installed hashes, service,
+policy and dashboard. Then update the existing #104/#105 base bindings and
+grant/label those two tasks only after their separate live admission. This
+package leaves their dispatch disabled and creates no duplicate issue.
+
+<details>
+<summary>Historical preparation-only contract, superseded where noted above</summary>
+
 Status: **SOURCE_CANDIDATE / NOT_INSTALLED / LIVE_NOT_RUN**.
 This is an update preparation contract, not an admitted server command or a
 working updater. The old `--install-start` is not used to update an existing
@@ -103,3 +177,5 @@ observe real changes and actual permitted tests, and verify two separate exact
 reviews. Also exercise stop/timeout/restart without duplicate model turns, PRs
 or review tasks. Preserve failed attempts and costs. Do not label the MVP graph
 or all backlog for launch. Unit/process/protocol fixtures are not this pilot.
+
+</details>

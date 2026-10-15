@@ -1,0 +1,373 @@
+#!/usr/bin/env python3
+"""Owner-run exact-predecessor update; no admission, credentials or state restore.
+
+CLI paths/unit are fixed. The injectable paths/controller are for offline
+qualification only. Copy the reviewed package to a private root-owned directory
+and verify its outer SHA256 before running this file as root on 1c-db.
+"""
+import ast
+import fcntl
+import hashlib
+import http.client
+import json
+import os
+from pathlib import Path
+import re
+import socket
+import stat
+import subprocess
+import sys
+import time
+
+UNIT = 'symphony-next-queue.service'
+INSTALL = Path('/opt/symphony-next-queue-v1')
+STATE = Path('/var/lib/symphony-next-bootstrap/queue-v1')
+PREDECESSOR = {
+    'queue.py': '7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1',
+    'WORKFLOW.md': '863dcc07d8120597786370f7d43a8df7645b91940cf5ffc03fd08e674a4bc3e5',
+    'tmux.conf': 'efbb1c10814140d8b2be96cc9e02cab29d15814f5e00b36ddb2821c46a1864ee',
+    'installed.json': 'b96964a5a184d6670628f9cf925a87dfbccedffcf219d870aa5662c5c1ce8b57'}
+PAYLOAD = {'queue.py', 'execution.py', 'installed.json', 'executor-policy.json'}
+IDENTITY = dict(User='symphony-next', Group='symphony-next',
+                WorkingDirectory=str(STATE), ProtectSystem='strict',
+                KillMode='control-group', Restart='no')
+
+
+class Hold(Exception):
+    pass
+
+
+def require(value, code):
+    if not value:
+        raise Hold(code)
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def read(path, maximum=1000000):
+    path = Path(path)
+    require(not any(p.is_symlink() for p in (path, *path.parents)), 'PATH_SYMLINK')
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), 'rb') as f:
+        s = os.fstat(f.fileno())
+        require(stat.S_ISREG(s.st_mode) and s.st_size <= maximum, 'FILE_LIMIT')
+        raw = f.read(maximum + 1)
+    require(len(raw) <= maximum, 'FILE_LIMIT')
+    return raw
+
+
+def trusted(path, uid):
+    path = Path(path)
+    require(not any(p.is_symlink() for p in (path, *path.parents)), 'PATH_SYMLINK')
+    for p in (path, *path.parents):
+        s = p.stat()
+        require(s.st_uid in (0, uid) and (not s.st_mode & 0o022 or p != path
+                and stat.S_ISDIR(s.st_mode) and s.st_mode & stat.S_ISVTX), 'UNTRUSTED_PACKAGE_PATH')
+
+
+def atomic(path, raw, mode=0o644, uid=None, gid=None):
+    path = Path(path)
+    require(not path.is_symlink(), 'PATH_SYMLINK')
+    tmp = path.with_name('.' + path.name + '.sn102-' + str(os.getpid()))
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(raw)
+            os.fchmod(f.fileno(), mode)
+            if uid is not None:
+                os.fchown(f.fileno(), uid, gid)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def save(path, value):
+    atomic(path, (json.dumps(value, sort_keys=True, indent=2) + '\n').encode(), 0o600)
+
+
+class Controller:
+    def command(self, *args):
+        p = subprocess.run(['/usr/bin/systemctl', *args, UNIT], capture_output=True, text=True,
+                           timeout=55, env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'SYSTEMD_PAGER': ''})
+        require(p.returncode == 0, 'SYSTEMCTL_FAILED')
+        return p.stdout
+
+    def properties(self):
+        fields = ','.join((*IDENTITY, 'ExecStart', 'MainPID', 'ActiveState', 'SubState', 'ControlGroup'))
+        return dict(line.split('=', 1) for line in self.command('show', '--property=' + fields).splitlines() if '=' in line)
+
+    def identity(self):
+        data = self.properties()
+        command = '/usr/bin/python3 -I -B /opt/symphony-next-queue-v1/queue.py --serve'
+        require('argv[]=' + command + ' ;' in data.get('ExecStart', ''), 'SERVICE_COMMAND_CHANGED')
+        return {key: data.get(key) for key in IDENTITY}
+
+    def idle(self):
+        c = http.client.HTTPConnection('127.0.0.1', 4327, timeout=3)
+        try:
+            c.request('GET', '/api/v1/state')
+            r = c.getresponse()
+            raw = r.read(1000001)
+            require(r.status == 200 and len(raw) <= 1000000, 'DASHBOARD_UNAVAILABLE')
+            data = json.loads(raw)
+            return isinstance(data, dict) and all(isinstance(data.get(k), list) and not data[k]
+                                                for k in ('running', 'blocked', 'retrying'))
+        except (OSError, ValueError, http.client.HTTPException):
+            raise Hold('DASHBOARD_UNAVAILABLE') from None
+        finally:
+            c.close()
+
+    def stopped(self):
+        data = self.properties()
+        require(data.get('ControlGroup') in ('', '/system.slice/' + UNIT), 'SERVICE_CGROUP_CHANGED')
+        group = Path('/sys/fs/cgroup/system.slice') / UNIT / 'cgroup.procs'
+        return data.get('ActiveState') == 'inactive' and data.get('MainPID') == '0' and (
+            not group.exists() or not read(group, 65536).strip())
+
+    def stop(self):
+        self.command('stop')
+        require(self.stopped(), 'SERVICE_NOT_STOPPED')
+
+    def start(self):
+        self.command('start')
+
+    def healthy(self):
+        for _ in range(45):
+            data = self.properties()
+            if data.get('ActiveState') == 'failed':
+                return False
+            if data.get('ActiveState') == 'active' and data.get('MainPID') not in ('', '0', None):
+                try:
+                    if self.idle():
+                        return True
+                except Hold:
+                    pass
+            time.sleep(1)
+        return False
+
+
+class Updater:
+    def __init__(self, package, install, state, controller, *, predecessor=None, owner_uid=0):
+        self.package, self.install, self.state = map(Path, (package, install, state))
+        self.ctl, self.uid = controller, owner_uid
+        self.predecessor = PREDECESSOR if predecessor is None else predecessor
+
+    def package_check(self):
+        trusted(self.package, self.uid)
+        trusted(self.install, self.uid)
+        self.m = json.loads(read(self.package / 'manifest.json'))
+        m = self.m
+        require(set(m) == {'schema', 'head', 'tree', 'predecessor', 'payload', 'updater_sha256', 'review'}
+                and m['schema'] == 'snq-update-package/v1'
+                and all(isinstance(m[k], str) and re.fullmatch('[a-f0-9]{40}', m[k]) for k in ('head', 'tree')),
+                'PACKAGE_MANIFEST')
+        require(m['predecessor'] == self.predecessor and set(m['payload']) == PAYLOAD, 'PACKAGE_SCOPE')
+        trusted(self.package / 'manifest.json', self.uid)
+        trusted(self.package / 'update_queue.py', self.uid)
+        require(sha(read(self.package / 'update_queue.py')) == m['updater_sha256'], 'UPDATER_CHANGED')
+        review = m['review']
+        require(isinstance(review, dict) and review.get('head') == m['head'] and review.get('tree') == m['tree']
+                and review.get('independent') is True and review.get('state') == 'completed'
+                and review.get('result') == 'no_major_findings'
+                and re.fullmatch(r'https://github\.com/pupkinson/SymphonyNext/pull/103#issuecomment-[0-9]+',
+                                 str(review.get('url'))), 'INDEPENDENT_EXACT_HEAD_REVIEW_REQUIRED')
+        self.payload = {}
+        for name, expected in m['payload'].items():
+            p = self.package / 'payload' / name
+            trusted(p, self.uid)
+            raw = read(p)
+            require(sha(raw) == expected, 'PAYLOAD_CHANGED')
+            self.payload[name] = raw
+            if name.endswith('.py'):
+                ast.parse(raw.decode(), feature_version=(3, 10))
+        policy = json.loads(self.payload['executor-policy.json'])
+        require(policy == dict(schema='snq-executor-policy/v1', enabled=False, revision='not-admitted', tasks={}),
+                'EXECUTOR_MUST_BE_DISABLED')
+        new = json.loads(self.payload['installed.json'])
+        require(new.get('script_sha256') == m['payload']['queue.py']
+                and new.get('execution_schema') == 'snq-execution-install/v1'
+                and new.get('execution_sha256') == m['payload']['execution.py'], 'INSTALLATION_PINS')
+        require(self.ctl.identity() == IDENTITY, 'SERVICE_IDENTITY_CHANGED')
+        self.backup = self.install / '.rollback' / m['head']
+        return m
+
+    def matches(self, hashes):
+        return all((self.install / n).is_file() and sha(read(self.install / n)) == h for n, h in hashes.items())
+
+    def check(self):
+        self.package_check()
+        for name, expected in self.predecessor.items():
+            trusted(self.install / name, self.uid)
+            require(sha(read(self.install / name)) == expected, 'INSTALLED_PREDECESSOR_CHANGED')
+        require(not any((self.install / n).exists() or (self.install / n).is_symlink()
+                        for n in ('execution.py', 'executor-policy.json')), 'EXECUTOR_ALREADY_INSTALLED')
+        old = json.loads(read(self.install / 'installed.json'))
+        new = json.loads(self.payload['installed.json'])
+        require({k: v for k, v in new.items() if k not in ('execution_schema', 'execution_sha256')}
+                == dict(old, script_sha256=self.m['payload']['queue.py']), 'LEGACY_METADATA_CHANGED')
+        self.quiet()
+        require(self.ctl.idle(), 'QUEUE_NOT_IDLE')
+        return {'status': 'UPDATE_CHECK_PASS', 'head': self.m['head'], 'executor_enabled': False}
+
+    def quiet(self):
+        require(self.state.is_dir() and not any(p.is_symlink() for p in (self.state, *self.state.parents)),
+                'STATE_SYMLINK')
+        for name in ('jobs', 'reservations', 'accepted'):
+            root = self.state / name
+            require(not root.is_symlink() and (not root.exists() or root.is_dir()), 'STATE_SYMLINK')
+        for job in sorted((self.state / 'jobs').glob('GH-*')):
+            require(job.is_dir() and not job.is_symlink() and (job / 'label-removed.json').is_file(),
+                    'JOURNAL_NEEDS_RECONCILIATION')
+            if (job / 'execution.json').exists():
+                generation = json.loads(read(job / 'execution.json'))['generation']
+                require(type(generation) is int and 1 <= generation <= 3, 'EXECUTION_JOURNAL')
+                final = job / 'attempts' / str(generation) / 'final.json'
+                require(final.is_file() and json.loads(read(final)).get('state') in
+                        ('AcceptedSource', 'Blocked', 'Stopped', 'Rework'), 'DEVELOPER_NOT_TERMINAL')
+            for intent in job.glob('attempts/*/outbox/*-intent.json'):
+                require(intent.with_name(intent.name.replace('-intent.json', '-receipt.json')).is_file(),
+                        'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+
+    def seal(self):
+        # Hash durable control records only; never auth/config/cache/model files.
+        items = {}
+        for top in ('jobs', 'reservations', 'accepted'):
+            for p in sorted((self.state / top).rglob('*')):
+                require(not p.is_symlink(), 'STATE_SYMLINK')
+                rel = p.relative_to(self.state)
+                if p.is_file() and not set(rel.parts) & {'run', 'cache', 'config', 'data'}:
+                    require(p.name not in ('auth.json', 'credentials.json', 'runtime.env'), 'SECRET_IN_JOURNAL')
+                    items[rel.as_posix()] = sha(read(p, 8388608))
+        return sha(json.dumps(items, sort_keys=True).encode())
+
+    def record(self, value):
+        save(self.backup / 'record.json', value)
+
+    def prior(self):
+        trusted(self.backup, self.uid)
+        value = json.loads(read(self.backup / 'record.json'))
+        require(value.get('head') == self.m['head'] and value.get('tree') == self.m['tree']
+                and set(value.get('files', {})) == set(self.predecessor), 'ROLLBACK_RECORD')
+        for name, expected in self.predecessor.items():
+            require(sha(read(self.backup / name)) == expected
+                    and value['files'][name]['sha256'] == expected, 'ROLLBACK_BYTES_CHANGED')
+        return value
+
+    def make_backup(self):
+        self.backup.parent.mkdir(mode=0o700, exist_ok=True)
+        trusted(self.backup.parent, self.uid)
+        self.backup.mkdir(mode=0o700)
+        files = {}
+        for name, expected in self.predecessor.items():
+            p = self.install / name
+            raw = read(p)
+            require(sha(raw) == expected, 'INSTALLED_PREDECESSOR_CHANGED')
+            s = p.stat()
+            files[name] = dict(sha256=expected, mode=stat.S_IMODE(s.st_mode), uid=s.st_uid, gid=s.st_gid)
+            atomic(self.backup / name, raw, 0o600)
+        value = dict(head=self.m['head'], tree=self.m['tree'], phase='prepared', files=files)
+        self.record(value)
+        return value
+
+    def restore(self, value):
+        require(self.ctl.stopped(), 'SERVICE_NOT_STOPPED')
+        self.quiet()
+        for name in PAYLOAD | set(self.predecessor):
+            p = self.install / name
+            if p.exists() or p.is_symlink():
+                allowed = {v for v in (self.predecessor.get(name), self.m['payload'].get(name)) if v}
+                require(sha(read(p)) in allowed, 'UNKNOWN_INSTALLED_BYTES')
+        for name, metadata in value['files'].items():
+            atomic(self.install / name, read(self.backup / name), metadata['mode'], metadata['uid'], metadata['gid'])
+        for name in ('execution.py', 'executor-policy.json'):
+            if (self.install / name).exists():
+                (self.install / name).unlink()
+        require(self.matches(self.predecessor), 'ROLLBACK_READBACK_FAILED')
+        self.ctl.start()
+        require(self.ctl.healthy(), 'ROLLBACK_START_FAILED')
+        value.update(phase='rolled_back', status='ROLLED_BACK', state_sha256=self.seal())
+        self.record(value)
+        return dict(status='ROLLED_BACK', head=self.m['head'], state_sha256=value['state_sha256'])
+
+    def apply(self):
+        self.package_check()
+        if self.backup.exists():
+            value = self.prior()
+            require(value.get('phase') == 'applied' and self.matches(self.m['payload'])
+                    and self.matches({n: self.predecessor[n] for n in ('WORKFLOW.md', 'tmux.conf')})
+                    and self.ctl.healthy(), 'UPDATE_ALREADY_ATTEMPTED_USE_ROLLBACK')
+            return dict(status='APPLIED_EXECUTOR_DISABLED', head=self.m['head'])
+        self.check()
+        value = self.make_backup()  # Durable predecessor before the first stop.
+        self.ctl.stop()
+        try:
+            require(self.ctl.stopped(), 'SERVICE_NOT_STOPPED')
+            self.quiet()
+            before = self.seal()
+            value.update(phase='replacing', state_sha256=before)
+            self.record(value)
+            for name, raw in self.payload.items():
+                atomic(self.install / name, raw)
+            require(self.matches(self.m['payload']) and self.matches({n: self.predecessor[n]
+                    for n in ('WORKFLOW.md', 'tmux.conf')}), 'INSTALLED_READBACK_FAILED')
+            require(self.seal() == before, 'STATE_CHANGED_DURING_UPDATE')
+            self.ctl.start()
+            require(self.ctl.healthy(), 'CANDIDATE_START_FAILED')
+            require(self.seal() == before, 'STATE_CHANGED_AT_STARTUP')
+            value.update(phase='applied', status='APPLIED_EXECUTOR_DISABLED')
+            self.record(value)
+            return dict(status='APPLIED_EXECUTOR_DISABLED', head=self.m['head'], state_sha256=before)
+        except BaseException:
+            self.ctl.stop()
+            self.restore(value)
+            raise Hold('START_FAILED_ROLLED_BACK') from None
+
+    def rollback(self):
+        self.package_check()
+        value = self.prior()
+        if value.get('phase') == 'rolled_back':
+            require(self.matches(self.predecessor) and self.ctl.healthy(), 'ROLLBACK_READBACK_FAILED')
+            return dict(status='ROLLED_BACK', head=self.m['head'])
+        require(self.ctl.idle() if not self.ctl.stopped() else True, 'QUEUE_NOT_IDLE')
+        self.quiet()
+        # Refuse changed policy/static files before stopping a healthy service.
+        for name in PAYLOAD | set(self.predecessor):
+            p = self.install / name
+            if p.exists() or p.is_symlink():
+                require(sha(read(p)) in {self.m['payload'].get(name), self.predecessor.get(name)},
+                        'UNKNOWN_INSTALLED_BYTES')
+        self.ctl.stop()
+        return self.restore(value)
+
+
+def main():
+    os.umask(0o077)
+    require(os.geteuid() == 0 and socket.gethostname() == '1c-db', 'ROOT_ON_1C_DB_REQUIRED')
+    require(len(sys.argv) == 2 and sys.argv[1] in ('check', 'apply', 'rollback'), 'MODE_REQUIRED')
+    package = Path(__file__).resolve().parent
+    trusted(INSTALL, 0)
+    lock = os.open(INSTALL / '.update.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        update = Updater(package, INSTALL, STATE, Controller())
+        result = getattr(update, sys.argv[1])()
+        print(json.dumps(result, sort_keys=True))
+    finally:
+        os.close(lock)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (Hold, OSError, ValueError, KeyError, TypeError, SyntaxError) as exc:
+        print(json.dumps({'status': 'HOLD', 'reason': str(exc) if isinstance(exc, Hold) else type(exc).__name__}), file=sys.stderr)
+        raise SystemExit(2)
