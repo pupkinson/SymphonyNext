@@ -3928,3 +3928,39 @@ test delta, separate independent exact-candidate runtime qualification is still
 required. No self-acceptance, Task5, native/trusted/live/Bandit/global release
 disposition, merge/deploy/activation or DF Assistant work. Auth disabled;
 **NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.**
+
+## PR99 post-gate source audit correction — C late-ready budget, 2026-10-15T19:21:27Z
+
+**WIP_KNOWN_C_BUDGET_RISK / C_CONTRACT_NOT_ESTABLISHED / NOT_ACCEPTED / DO_NOT_MERGE.**
+This append qualifies the preceding author claims about the complete C budget.
+Observed tests and their exact results stay unchanged. No new test/product-code
+repair, gate rerun or acceptance was made; the two harness cycles remain consumed.
+
+In store_test.exs:723–750, fifo_receive computes remaining at725 BEFORE its
+blocking receive. The supervisor_ready branch at735 sends that earlier value
+minus200. A delay w before readiness can therefore overstate the current remaining
+budget by w. The outer BEAM3000 deadline still stops waiting, but fallback Port.close
+is not OS wait/reap, and the Python cancellation/reap may then extend beyond that
+original boundary. This is a concrete source scheduling risk; it was NOT observed
+as a failure in the timely/350/nonzero/over-budget/primary-assertion matrix and is
+not attributed as the historical C trigger.
+
+The earlier phrase "only original budget remainder" describes the intent and the
+normal observed runs, not an established invariant under delayed supervisor-ready.
+C's overall bounded-cleanup guarantee is therefore OPEN despite the matrix passing.
+The missing causal control is a delayed actual supervisor-ready before the budget
+is sent, with cancellation/reap/resource removal required inside the original3000.
+A future authorized repair must derive the remainder when it is sent (and avoid
+starting work after the cancellation reserve is exhausted), preserve primary
+failure and collect actual child/Port statuses. No such third repair is performed
+in this stage. Five Credo findings remain OPEN as well.
+
+This corrective appendix/README notes are the only additional tracked delta after
+initial candidate0072c9f2f3f4e92aaec84762c705a3d25b273d67. Its executable251 seal
+96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f remains identical.
+The new docs-only linear HEAD/TREE/final whole seal and corrected full readbacks
+are recorded in the existing owning handoff and PR99 checkpoint, with their old
+texts retained verbatim as history. B's prospective interpretation, A_UNKNOWN,
+historical run2 FAILED, product/source freezes and all release/process holds stay.
+Independent B/C review and separately authorized C/quality follow-up are required;
+no self-acceptance, Task5, activation or automatic next stage.

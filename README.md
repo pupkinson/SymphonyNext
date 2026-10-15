@@ -285,3 +285,8 @@ Ordinary make FAILED at five new Credo findings; coverage/Dialyzer NOT_RUN.
 This is WIP / NOT_ACCEPTED / DO_NOT_MERGE; independent B/C review is required.
 [Contract mapping and evidence](docs/engineering/authentik-project-access.md).
 Historical run2 remains FAILED, A503 remains UNKNOWN; auth remains disabled.
+
+PR99 corrective source audit (2026-10-15): C's pre-ready remaining-budget sample
+can become stale while waiting for Python startup. The observed matrix passed,
+but cleanup<=3000 is NOT_ESTABLISHED for delayed ready. A docs-only correction
+records this open risk; two code cycles are exhausted. See engineering appendix.

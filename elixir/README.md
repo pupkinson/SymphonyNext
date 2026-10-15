@@ -833,3 +833,11 @@ The ordinary make concurrency/seed/quality rules remain unchanged.
 This explicitly changes the prospective test interpretation, never the old run2
 FAILED result. A_UNKNOWN/process holds and independent review/qualification
 remain; NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.
+
+PR99 post-gate source audit correction (2026-10-15): fifo_receive samples remaining
+before waiting for supervisor_ready, then sends that stale value. Late readiness
+can move Python cancellation/reap beyond the original3000 boundary; Port.close
+cannot prove reap. Existing matrix passed but lacks delayed-supervisor-ready
+coverage. C_CONTRACT_NOT_ESTABLISHED, alongside five open Credo findings.
+Only docs/MANIFEST are appended for disclosure; no third code cycle or gate rerun.
+A future authorized C repair/control and independent review remain required.
