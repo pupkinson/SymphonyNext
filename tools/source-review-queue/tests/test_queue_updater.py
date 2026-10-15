@@ -7,6 +7,9 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+
+from test_queue_context import q
 
 UPDATER = Path(__file__).resolve().parents[1] / 'update_queue.py'
 
@@ -17,6 +20,31 @@ def sha(raw):
 
 def save(path, value):
     path.write_text(json.dumps(value, sort_keys=True) + '\n')
+
+
+class DeliveryApi:
+    """Only local delivery fixtures; production notify/deliver write the bytes."""
+    def get(self, path):
+        return {'labels': []}
+
+    def request(self, method, path, body=None):
+        if method != 'POST' or not path.endswith('/comments'):
+            raise AssertionError((method, path))
+        return {'id': 12345, 'body': body['body']}
+
+
+def complete_source(job, result=None):
+    number = int(job.name[3:])
+    result = result or dict(issue=number, head='a' * 40, status='SOURCE_REVIEW_INCOMPLETE',
+                            at=q.utc(), protocol={}, tests_by_reviewer='NOT_RUN', release_approval=False)
+    save(job / 'final.json', result)
+    with patch.object(q, 'QROOT', job.parent.parent):
+        q._finish_task(number, DeliveryApi())
+    return result
+
+
+def complete_notice(attempt, result):
+    q.execution_adapter().notify(int(attempt.parent.parent.name[3:]), attempt, DeliveryApi(), result)
 
 
 class Controller:
@@ -100,7 +128,7 @@ class UpdateTests(unittest.TestCase):
         job = self.state / 'jobs/GH-77'
         job.mkdir(parents=True)
         job.parent.chmod(0o700)
-        save(job / 'label-removed.json', {'confirmed': True})
+        complete_source(job)
         save(job / 'claim.json', {'historical': True})
         (self.state / 'reservations/2026-10-15').mkdir(parents=True)
         (self.state / 'reservations/2026-10-15/GH-77').write_bytes(b'reserved-once\n')
@@ -129,8 +157,7 @@ class UpdateTests(unittest.TestCase):
         # New terminal history must survive rollback; never restore old state.
         job = self.state / 'jobs/GH-88'
         job.mkdir()
-        save(job / 'label-removed.json', {'confirmed': True})
-        save(job / 'final.json', {'status': 'source-complete'})
+        complete_source(job)
         preserved = self.state_bytes()
         result = self.update.rollback()
         self.assertEqual(result['status'], 'ROLLED_BACK')

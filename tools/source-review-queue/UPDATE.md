@@ -2,6 +2,63 @@
 
 ## Current controlled updater — 15 October 2026
 
+### Notification-journal source stage, P1 4285700019
+
+Owner admission: #102 comment6199784094. New stage starts18:45:52UTC,
+source cutoff22:15:52UTC, final handoff22:45:52UTC on15October2026.
+All old2/2 plus additional2/2 cycles and their evidence remain history.
+This grant allows one main candidate and at most one review-driven corrective
+candidate; a cycle means a candidate handed to independent review, not a local
+commit/test. Each exact-HEAD independent review has a90minute ceiling and
+must explicitly assess4285700019 plus preservation of4281361556/4281361568.
+Installation and pilot104/105 are outside this admission.
+
+The complete before-patch contract inventory and the before-publication
+self-check matrix are in [evidence/gh102-notification-journals.md](evidence/gh102-notification-journals.md).
+`queue.py` and `execution.py` are read, never changed by this stage. No new
+journal schema, notification sender or recovery engine is introduced.
+
+`quiet` now verifies actual root legacy/linked-review delivery and every
+developer attempt1..current, including every existing historical state notice.
+Each attempt requires a terminal final and its matching complete notification.
+Superseded Review notices bind their own candidate, not the later disposition.
+A candidate alone does not prove a superseded Review notice was ever created;
+the queue has no immutable prior-final history. Every extant Review directory
+is nevertheless inspected. No missing terminal notification is compatible.
+
+Comment intent must have its actual body schema, exact source formatter or
+developer issue/generation/state/revision/result binding, and a positive integer
+readback ID. Confirmed label absence needs its own correctly typed marker and
+timezone-aware timestamp, later than any DELETE intent or delivery hold. A
+root developer marker (`confirmed:false`) is only predecessor compatibility;
+it cannot replace any nested delivery receipt. Legacy has no nested contract:
+its ROOT final and ROOT delivery proofs are mandatory. Missing/corrupt/duplicate
+or contradictory records and unknown POST/DELETE outcomes HOLD, even in old
+generations. A stale delivery-hold may remain only after confirmed recovery.
+Known `.record.json.PID` pre-replace leftovers are retained but are neither
+API intents nor outcome receipts; they cannot replace canonical records.
+
+The updater never re-POSTs comments, re-DELETEs labels, erases history or writes
+fake delivery proof. Recovery remains the existing queue's responsibility.
+Before-stop HOLD preserves a running service and releases only its verified
+owned pause, including a pause from a prior interrupted operator invocation.
+Stopped HOLD keeps the known closed gate and its receipt for explicit recovery.
+An unowned pause or changed directory identity is never reopened. `check` stays
+read-only apart from the existing exclusive updater lock.
+
+Local qualification: all244 previous regressions retained plus36 notification
+tests,280PASS/0skips. Both prepared REDs are permanent; unknown POST/DELETE
+recovery is exercised through unchanged queue notify/deliver with API doubles,
+not external writes. The complete actual-repository/video/unchanged-Git-object
+regression remains included. Independent acceptance and package hashes are
+recorded in the handoff manifest; these author tests are not a real-agent pilot.
+
+Current DF Desktop read-only connectivity returned -32603 and then UNAVAILABLE
+network timeout after three bounded attempts. Last actual installed predecessor
+attestation below remains historical, not a fresh server verification. Source
+development and offline packaging continue; server transfer/readback and root
+execution are not claimed. Preserve old702 and15ec REVIEW_BLOCKED archives.
+
 ### Additional bounded source repair of review5531017643
 
 Owner admission: #102 comment6196086808. Start 2026-10-15T15:41:29Z;

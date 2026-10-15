@@ -6,6 +6,7 @@ qualification only. Copy the reviewed package to a private root-owned directory
 and verify its outer SHA256 before running this file as root on 1c-db.
 """
 import ast
+import datetime
 import fcntl
 import hashlib
 import http.client
@@ -100,6 +101,58 @@ def atomic(path, raw, mode=0o644, uid=None, gid=None):
 
 def save(path, value):
     atomic(path, (json.dumps(value, sort_keys=True, indent=2) + '\n').encode(), 0o600)
+
+
+def journal_json(raw):
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            require(key not in value, 'NOTIFICATION_JOURNAL_DUPLICATE_KEY')
+            value[key] = item
+        return value
+    def nonfinite(_value):
+        raise Hold('NOTIFICATION_JOURNAL_NONFINITE')
+    try:
+        value = json.loads(raw, object_pairs_hook=unique, parse_constant=nonfinite)
+    except (ValueError, TypeError):
+        raise Hold('NOTIFICATION_JOURNAL_MISSING_OR_INVALID') from None
+    require(isinstance(value, dict), 'NOTIFICATION_JOURNAL_SCHEMA')
+    return value
+
+
+def journal(path, maximum=1000000):
+    try:
+        return journal_json(read(path, maximum))
+    except (OSError, ValueError, TypeError):
+        raise Hold('NOTIFICATION_JOURNAL_MISSING_OR_INVALID') from None
+
+
+def timestamp(value):
+    require(isinstance(value, str), 'NOTIFICATION_TIMESTAMP')
+    try:
+        date = datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))
+        require(date.tzinfo is not None, 'NOTIFICATION_TIMESTAMP')
+        return date
+    except ValueError:
+        raise Hold('NOTIFICATION_TIMESTAMP') from None
+
+
+def source_body(number, result):
+    """The identical formatter in pinned7fa0ee and candidate _finish_task.
+
+    Do not import/execute either service module with root's authority.
+    """
+    text = str(result.get('review_text', 'No complete source verdict. This is not release approval.'))
+    text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+    text = re.sub(r'(?i)Bearer\s+\S+', 'Bearer [REDACTED]', text)
+    text = re.sub(r'\b(?:gh[pousr]_[A-Za-z0-9_]{15,}|github_pat_[A-Za-z0-9_]{15,}|sk-[A-Za-z0-9_-]{12,})',
+                  '[REDACTED]', text)
+    text = ''.join(c for c in text if c in '\n\t' or ord(c) >= 32 and ord(c) != 127)[:65536]
+    if len(text.encode()) > 43000:
+        text = text.encode()[:43000].decode('utf-8', 'ignore') + '\n[Full report retained in the service journal.]'
+    return (f'snq-v1 GH-{number}\n## Symphony source-review result\n\n'
+            f'HEAD `{result["head"]}`\n\n**{result["status"]}**\n\n' + text
+            + '\n\nTests by this reviewer: NOT_RUN. No trusted CI, merge or deploy.')
 
 
 class Controller:
@@ -281,8 +334,17 @@ class Updater:
             root = self.state / name
             require(not root.is_symlink() and (not root.exists() or root.is_dir()), 'STATE_SYMLINK')
         for job in sorted((self.state / 'jobs').glob('GH-*')):
-            require(job.is_dir() and not job.is_symlink() and (job / 'label-removed.json').is_file(),
+            require(job.is_dir() and not job.is_symlink(),
                     'JOURNAL_NEEDS_RECONCILIATION')
+            attempts = job / 'attempts'
+            if attempts.exists() or attempts.is_symlink():
+                require(attempts.is_dir() and not attempts.is_symlink(), 'STATE_SYMLINK')
+                for attempt in attempts.iterdir():
+                    require(attempt.is_dir() and not attempt.is_symlink(), 'STATE_SYMLINK')
+                    for name in ('outbox', 'notifications'):
+                        path = attempt / name
+                        require(not path.is_symlink() and (not path.exists() or path.is_dir()),
+                                'STATE_SYMLINK')
             if (job / 'execution.json').exists():
                 generation = json.loads(read(job / 'execution.json'))['generation']
                 require(type(generation) is int and 1 <= generation <= 3, 'EXECUTION_JOURNAL')
@@ -313,10 +375,148 @@ class Updater:
                                 'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
                 except (OSError, ValueError, KeyError, TypeError, AttributeError):
                     raise Hold('UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION') from None
+            self.notifications(job)
         try:
             self.reviews_applied()
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise Hold('REVIEW_APPLICATION_INCOMPLETE:' + type(exc).__name__) from None
+
+    def delivery(self, directory, *, legacy=False):
+        """Inspect the existing delivery contract, never replay/repair it.
+
+        All four records apply to both root source and nested developer
+        delivery; only the DELETE intent is optional (label already absent).
+        A root developer compatibility marker never enters this method.
+        """
+        require(directory.is_dir() and not directory.is_symlink(), 'NOTIFICATION_DIRECTORY')
+        names = {'comment-intent.json', 'comment-readback.json', 'label-remove-intent.json',
+                 'label-removed.json'}
+        if not legacy:
+            # save()'s pre-replace files cannot trigger POST/DELETE. A crash
+            # can retain partial bytes; they never replace canonical proof.
+            temporary = r'\.(?:comment-intent|comment-readback|label-remove-intent|label-removed)\.json\.[0-9]+'
+            require(all((p.name in names or re.fullmatch(temporary, p.name))
+                        and p.is_file() and not p.is_symlink()
+                        for p in directory.iterdir()), 'NOTIFICATION_DIRECTORY')
+        intent, receipt, removed = (journal(directory / n, 100000) for n in
+                                    ('comment-intent.json', 'comment-readback.json', 'label-removed.json'))
+        require(set(intent) == {'body'} and isinstance(intent['body'], str)
+                and 0 < len(intent['body'].encode()) <= 100000, 'NOTIFICATION_COMMENT_INTENT')
+        require(set(receipt) == {'id'} and type(receipt['id']) is int
+                and 0 < receipt['id'] < 2 ** 63, 'NOTIFICATION_COMMENT_OUTCOME_UNKNOWN')
+        require(set(removed) == {'confirmed', 'at'} and removed['confirmed'] is True,
+                'NOTIFICATION_LABEL_OUTCOME_UNKNOWN')
+        confirmed_at = timestamp(removed['at'])
+        label_intent = directory / 'label-remove-intent.json'
+        if label_intent.exists() or label_intent.is_symlink():
+            deletion = journal(label_intent)
+            require(set(deletion) == {'at'} and timestamp(deletion['at']) <= confirmed_at,
+                    'NOTIFICATION_LABEL_OUTCOME_UNKNOWN')
+        hold = directory / 'delivery-hold.json'
+        if legacy and (hold.exists() or hold.is_symlink()):
+            value = journal(hold)
+            require(set(value) == {'reason', 'at'} and isinstance(value['reason'], str)
+                    and value['reason'] and timestamp(value['at']) <= confirmed_at,
+                    'NOTIFICATION_DELIVERY_UNRESOLVED')
+        return intent['body']
+
+    def notification_result(self, result, number, generation):
+        require(type(result.get('issue')) is int and result['issue'] == number
+                and result.get('release_approval') is False, 'NOTIFICATION_RESULT_BINDING')
+        if 'generation' in result:
+            require(type(result['generation']) is int and result['generation'] == generation,
+                    'NOTIFICATION_RESULT_GENERATION')
+        for key in ('head', 'base'):
+            if key in result:
+                require(isinstance(result[key], str) and re.fullmatch('[a-f0-9]{40}', result[key]),
+                        'NOTIFICATION_RESULT_REVISION')
+
+    def notifications(self, job):
+        """Every generation/final and every extant state, including history.
+
+        Legacy compatibility is explicit: pinned predecessor uses ROOT
+        delivery; developer uses nested delivery and an inert ROOT marker.
+        Neither role can substitute the other's retirement proof.
+        """
+        require(re.fullmatch(r'GH-[1-9][0-9]*', job.name), 'NOTIFICATION_ISSUE')
+        number = int(job.name[3:])
+        marker = job / 'execution.json'
+        if not (marker.exists() or marker.is_symlink()):
+            result = journal(job / 'final.json')
+            require(type(result.get('issue')) is int and result['issue'] == number
+                    and isinstance(result.get('head'), str)
+                    and (result['head'] == 'UNKNOWN' or re.fullmatch('[a-f0-9]{40}', result['head']))
+                    and isinstance(result.get('status'), str) and result['status']
+                    and result.get('release_approval') is False
+                    and result.get('tests_by_reviewer') == 'NOT_RUN'
+                    and isinstance(result.get('protocol'), dict), 'NOTIFICATION_SOURCE_RESULT')
+            timestamp(result.get('at'))
+            require(not (job / 'notifications').exists()
+                    and not any((job / 'attempts').glob('*/notifications')),
+                    'NOTIFICATION_ROLE_LAYOUT')
+            require(self.delivery(job, legacy=True) == source_body(number, result),
+                    'NOTIFICATION_SOURCE_BODY_CHANGED')
+            return
+        execution = journal(marker)
+        generation = execution.get('generation')
+        require(set(execution) == {'role', 'generation'} and execution['role'] == 'developer'
+                and type(generation) is int and 1 <= generation <= 3, 'EXECUTION_JOURNAL')
+        require(wire(journal(job / 'label-removed.json')) == wire(dict(confirmed=False,
+                scope='developer-journal-skip-for-legacy-recovery')), 'DEVELOPER_COMPATIBILITY_MARKER')
+        # These root delivery records are never created for developer jobs.
+        require(not any((job / n).exists() or (job / n).is_symlink() for n in
+                        ('comment-intent.json', 'comment-readback.json', 'label-remove-intent.json',
+                         'delivery-hold.json', 'notifications')), 'NOTIFICATION_ROLE_LAYOUT')
+        attempts = job / 'attempts'
+        require(attempts.is_dir() and not attempts.is_symlink(), 'NOTIFICATION_GENERATIONS')
+        require({p.name for p in attempts.iterdir()} == {str(g) for g in range(1, generation + 1)},
+                'NOTIFICATION_GENERATIONS')
+        for g in range(1, generation + 1):
+            attempt = attempts / str(g)
+            require(attempt.is_dir() and not attempt.is_symlink(), 'NOTIFICATION_GENERATIONS')
+            final = journal(attempt / 'final.json')
+            self.notification_result(final, number, g)
+            require(final.get('state') in ('AcceptedSource', 'Blocked', 'Stopped', 'Rework'),
+                    'DEVELOPER_NOT_TERMINAL')
+            notices = attempt / 'notifications'
+            require(notices.is_dir() and not notices.is_symlink(), 'NOTIFICATION_REQUIRED')
+            states = {p.name for p in notices.iterdir()}
+            require(final['state'] in states and states <= {'Review', 'AcceptedSource', 'Blocked', 'Stopped', 'Rework'},
+                    'NOTIFICATION_REQUIRED')
+            for state in sorted(states):
+                body = self.delivery(notices / state)
+                prefix = f'snq-v1 GH-{number}\n## Symphony developer result\n\n'
+                require(body.startswith(prefix) and len(body.encode()) <= 50000, 'NOTIFICATION_DEVELOPER_BODY')
+                result = journal_json(body[len(prefix):])
+                self.notification_result(result, number, g)
+                require(result.get('state') == state
+                        and body == prefix + json.dumps(result, ensure_ascii=False, sort_keys=True),
+                        'NOTIFICATION_DEVELOPER_BODY')
+                if state == final['state']:
+                    expected = final
+                else:
+                    require(state == 'Review', 'NOTIFICATION_HISTORICAL_RESULT')
+                    candidate = journal(attempt / 'candidate.json')
+                    require(type(candidate.get('issue')) is int and candidate['issue'] == number
+                            and type(candidate.get('generation')) is int and candidate['generation'] == g,
+                            'NOTIFICATION_HISTORICAL_RESULT')
+                    expected = dict(state='Review', issue=number, release_approval=False,
+                                    **{k: candidate[k] for k in ('head', 'base', 'artifact', 'tests')})
+                require(wire(result) == wire(expected), 'NOTIFICATION_RESULT_CHANGED')
+
+    def rollback_quiet(self):
+        try:
+            self.quiet()
+        except BaseException:
+            # A previous interrupted operator may own a closed gate while the
+            # queue is still running. A notification HOLD must let that queue
+            # recover; never reopen an unowned pause or a stopped service.
+            receipt = self.backup / 'intake.json'
+            if receipt.exists() and not self.ctl.stopped():
+                trusted(receipt, self.uid)
+                if json.loads(read(receipt)).get('phase') in ('intent', 'paused'):
+                    self.intake(release=True)
+            raise
 
     def reviews_applied(self):
         """Read-only verification of every historical linked disposition.
@@ -594,11 +794,11 @@ class Updater:
         value = self.prior()
         if value.get('phase') == 'rolled_back':
             require(self.matches(self.predecessor) and self.ctl.healthy(), 'ROLLBACK_READBACK_FAILED')
-            self.quiet()
+            self.rollback_quiet()
             if (self.backup / 'intake.json').exists():
                 self.intake(release=True)
             return dict(status='ROLLED_BACK', head=self.m['head'])
-        self.quiet()
+        self.rollback_quiet()
         # Refuse changed policy/static files before stopping a healthy service.
         for name in PAYLOAD | set(self.predecessor):
             p = self.install / name

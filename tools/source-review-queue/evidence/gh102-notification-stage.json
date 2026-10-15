@@ -1,0 +1,107 @@
+{
+  "base": "15ec685e51492f24816e18a2771a0b38f582fe57",
+  "branch": "feat/sn102-executor-profile-20261015",
+  "contract_audit": "tools/source-review-queue/evidence/gh102-notification-journals.md",
+  "issue": 102,
+  "log_sha256": {
+    "sn102-final-notification-red.log": "7ece4132c21ba6c21f081d39ee1a2c2ff57aee7a08a50de63b4b8729078752d3",
+    "sn102-final-notification-red.py": "558baabb41ce8e24e6213c707dfc41da36d8ee6ad1806ccae08649e6b515da75",
+    "sn102-notification-candidate-suite.log": "a7c1c72a7cba45e4aef176fd044c1b4b695e37e9957759df83e447fe5a068c76",
+    "sn102-notification-static.json": "6fde874ec85acf5bf025fc53fb3755584e1acd01bc04e4ba5bd1b79a43a430be",
+    "sn102-notifications-red.log": "82b86a7994be5f7bd1d24be3cbe5e6f7ed531c9206423b5bab8a8bf197a7df26",
+    "sn102-old244-before-patch.log": "e037ab3208c58596131a315fb4c9cb05981e799f69695e86bdd60f54dcfd8531"
+  },
+  "owner_admission": 6199784094,
+  "pr": 103,
+  "preserve": [
+    "4281361556",
+    "4281361568"
+  ],
+  "preserved": {
+    "critical_ast": [
+      "Controller",
+      "Updater.intake",
+      "Updater.drain",
+      "Updater.reviews_applied",
+      "Updater.disposition",
+      "Updater.seal"
+    ],
+    "old_blocked_archives": true,
+    "python310_ast": true,
+    "queue_execution_bytes": true,
+    "spec_composition_hashes": true
+  },
+  "schema": "snq-source-evidence/v1",
+  "server": {
+    "current": "UNKNOWN_READ_ONLY_DF_UNAVAILABLE_AFTER_3_ATTEMPTS",
+    "last_attestation": "HISTORICAL_NOT_FRESH",
+    "last_attested_queue_sha256": "7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1",
+    "model_turns": 0,
+    "native_rollback": "NOT_RUN",
+    "pilot104_105": "NOT_RUN",
+    "root_update": "NOT_RUN"
+  },
+  "source_sha256": {
+    "tools/source-review-queue/UPDATE.md": "aac248c0e767cc01997bd4384418982b00493a784a8e38202fda2f77f7196d35",
+    "tools/source-review-queue/candidate/execution.py": "2a4e8c8675e2a1fbd3cb28c7e289a5b33b4a633d77994512279428f57d12e0db",
+    "tools/source-review-queue/candidate/queue.py": "509681d08751e373102e0ff159ef0213545ef1b2c4162f043ee4fe7fc4144a27",
+    "tools/source-review-queue/evidence/build_sn102_update_packet.py": "85c6e8992474526d503537d5319671df93be53b44c374fdeff60c4d7eaf3437d",
+    "tools/source-review-queue/evidence/gh102-notification-journals.md": "17794532b340bdc113015c6cacc45234d53aa448d646d17e06904df35791c8b5",
+    "tools/source-review-queue/tests/test_queue_context.py": "3faf0c4126d320aa5439742fc7d21be8faf4015ca0b777e8d58a23b9784e6fb2",
+    "tools/source-review-queue/tests/test_queue_development_limits.py": "34338c1bb0e5d3adc4cdcbbca03477bd6843b6d2210e0e66d242a4e406ea442c",
+    "tools/source-review-queue/tests/test_queue_eof_ordering.py": "f662629c996cdda5b7a3c0c7fb72e985e5573e4cd80a04b381d80ba2af03f36a",
+    "tools/source-review-queue/tests/test_queue_executor.py": "2c98ba05358786075079530ee7ea0a1e7f978af167b87b891c59bcfda14219c6",
+    "tools/source-review-queue/tests/test_queue_executor_lifecycle.py": "7d1fe6fc20202e22c91df856655190521e0aaba3c6e8ed9c55c2cca89bdc3398",
+    "tools/source-review-queue/tests/test_queue_gate.py": "97bd82711de516dec748accbeee90c7bf8ca857164d2470505a1623f5137e8fa",
+    "tools/source-review-queue/tests/test_queue_negative.py": "f6bbc430af87a4fac0abb8f8038f8cdee262cc005c79a827f77156fa820def97",
+    "tools/source-review-queue/tests/test_queue_profiles.py": "2c7b2dd123582e00ff95039a1b12711cb22f3c0c94ac7e3e4bf2c230fc36acb5",
+    "tools/source-review-queue/tests/test_queue_prompt_integrity.py": "54010ec66b8ff105b28aa956b862e77614df97766ae2212518e9a6ba155e62ab",
+    "tools/source-review-queue/tests/test_queue_proxy.py": "6b719f882359ba37e68ec9cba2cd245df9233e113740789701cb886841007681",
+    "tools/source-review-queue/tests/test_queue_real_repository.py": "f17b5fd582db6d457ad090ed1d740708cecd68d628fc533792a177f7c2f9168b",
+    "tools/source-review-queue/tests/test_queue_review_findings.py": "f0ba50b915421f00661e162e0cd05a482d4612cdde98583637210c09cbd1ef06",
+    "tools/source-review-queue/tests/test_queue_schema_downgrade.py": "13afaedab2ac631a7649eaccee6c221a65469fa0dc09dc43a7622b9c5f5dbc81",
+    "tools/source-review-queue/tests/test_queue_updater.py": "443dfabaf96db942dfd13f81308cb90ed20c72c440442b3c2f658d193a390350",
+    "tools/source-review-queue/tests/test_queue_updater_admission.py": "f9cc60dedb335c81f990ff373332cd46cd82602c96cb5c8a1046230dfa4265d4",
+    "tools/source-review-queue/tests/test_queue_updater_findings.py": "254784c669e648582b32556b280ea16e78de18b18e3a963436945c591cf8e4b9",
+    "tools/source-review-queue/tests/test_queue_updater_notifications.py": "47ee5aca02dc24c7f2e8548acc5c51b73cfce24acfb7b3dfad150427562d526e",
+    "tools/source-review-queue/tests/test_queue_updater_reviews.py": "813ab8682d958dd0a22151398c7d1b6ba083f6dd756a048b3090471c547b2b18",
+    "tools/source-review-queue/update_queue.py": "0c6791c107f3d975c15138bf33184df599f63d34952f1d1e3c8070e557093cf2"
+  },
+  "stage": {
+    "cycle_definition": "candidate_handed_to_independent_review_not_local_commit_or_test",
+    "handoff_deadline": "2026-10-15T22:45:52Z",
+    "independent_review_max_seconds": 5400,
+    "new_review_candidates_max": 2,
+    "previous_cycles": [
+      2,
+      2
+    ],
+    "source_cutoff": "2026-10-15T22:15:52Z",
+    "start": "2026-10-15T18:45:52Z"
+  },
+  "status": "AUTHOR_VERIFIED_PENDING_INDEPENDENT_EXACT_HEAD_REVIEW",
+  "target": "4285700019",
+  "tests": {
+    "actual_repository": "INCLUDED_WITHOUT_SKIPS",
+    "added_tests": 36,
+    "api_model_systemd": "TEST_DOUBLES_NOT_LIVE_PILOT",
+    "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+    "errors": 0,
+    "exit_code": 0,
+    "failures": 0,
+    "old244_after_fixture_update": {
+      "exit_code": 0,
+      "tests": 244
+    },
+    "previous_tests": 244,
+    "red": {
+      "exit_code": 1,
+      "kind": "EXPECTED_RED_ON_UNCHANGED_15ec_UPDATER",
+      "subtest_failures": 72,
+      "tests": 32
+    },
+    "skips": 0,
+    "tests": 280
+  },
+  "writer": 6185510750
+}

@@ -51,8 +51,12 @@ elif op=='deny':
  except PermissionError: pass
  else: raise AssertionError('predecessor admitted a new issue')
 elif op=='finish':
- q.save(q.job_dir(104)/'final.json',{'status':'source-complete'})
- q.save(q.job_dir(104)/'label-removed.json',{'confirmed':True})
+ q.save(q.job_dir(104)/'final.json',dict(issue=104,head='a'*40,status='SOURCE_REVIEW_INCOMPLETE',
+       at=q.utc(),protocol={},tests_by_reviewer='NOT_RUN',release_approval=False))
+ class OfflineApi:
+  def get(self,path): return {'labels':[]}
+  def request(self,method,path,body): return {'id':12345,'body':body['body']}
+ q.finish_task(104,OfflineApi())
 elif op=='resume': q.claim(q.QROOT,105)
 '''
 
@@ -107,7 +111,7 @@ elif op=='resume': q.claim(q.QROOT,105)
 
         def finishing():
             self.assertEqual(stat.S_IMODE((f.state / 'jobs').stat().st_mode), 0o500)
-            fixtures.save(f.state / 'jobs/GH-99/label-removed.json', {'confirmed': True})
+            fixtures.complete_source(f.state / 'jobs/GH-99')
 
         with patch.object(f.update, 'make_backup', side_effect=arriving), \
              patch.object(f.u.time, 'sleep', side_effect=lambda seconds: finishing()):

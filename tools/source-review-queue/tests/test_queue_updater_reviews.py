@@ -30,12 +30,15 @@ class ReviewConvergenceTests(unittest.TestCase):
         fixtures.save(attempt / 'candidate.json', candidate)
         source = f.state / 'jobs' / f'GH-{number}'
         source.mkdir(exist_ok=True)
-        fixtures.save(source / 'label-removed.json', {'confirmed': True})
         result = dict(issue=number, head=head, release_approval=False,
                       status=q.SUCCESS if complete else 'SOURCE_REVIEW_INCOMPLETE',
+                      at=q.utc(), tests_by_reviewer='NOT_RUN',
                       protocol={'thread_id': 'reviewer-thread'},
                       review_text='```snq-verdict\n' + json.dumps(dict(head_sha=head, base_sha=base, verdict=verdict)) + '\n```')
-        fixtures.save(source / 'final.json', result)
+        # Reusing GH77 replaces the base fixture's delivery; not a replay.
+        for name in ('comment-intent.json', 'comment-readback.json', 'label-removed.json'):
+            (source / name).unlink(missing_ok=True)
+        fixtures.complete_source(source, result)
         links = f.state / 'review-links'
         links.mkdir(exist_ok=True)
         link = links / f'GH-{number}.json'
@@ -53,6 +56,7 @@ class ReviewConvergenceTests(unittest.TestCase):
         disposition.update(issue=104, generation=generation)
         for name in ('final.json', 'acceptance.json'):
             fixtures.save(attempt / name, disposition)
+        fixtures.complete_notice(attempt, disposition)
         if disposition['state'] == 'AcceptedSource':
             (f.state / 'accepted').mkdir(exist_ok=True)
             fixtures.save(f.state / 'accepted/GH-104.json', disposition)
