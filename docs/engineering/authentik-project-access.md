@@ -3964,3 +3964,264 @@ texts retained verbatim as history. B's prospective interpretation, A_UNKNOWN,
 historical run2 FAILED, product/source freezes and all release/process holds stay.
 Independent B/C review and separately authorized C/quality follow-up are required;
 no self-acceptance, Task5, activation or automatic next stage.
+
+
+### PR99 C/quality — 2026-10-15T20:03:26Z
+
+Owner-dispatched IMPLEMENTER follow-up to `025f45f5400979f89dc1ea35cbd404741072a157`,
+not a repeat of the completed B/C stage and not independent acceptance.
+Admission/full readback: https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6201262455 .
+Initial TREE `3b2824b597c53b64f8f016263b6f77644f390828`, sole parent
+`0072c9f2f3f4e92aaec84762c705a3d25b273d67`, PR BASE
+`097d64ada3138d49c6797001d02ab113c15ccb6e`. The existing head/base branches and
+open/draft/unmerged PR99 are retained. The published successor tuple belongs in
+the final #33/PR99 handoff; no circular self-hash is embedded in this appendix.
+
+The previous CURRENT CORRECTION remains historical: the025f C claim was not
+established. This appendix supplies the new prospective protocol and measured
+controls. It does not convert old run2 or its assertion into PASS. B remains the
+previously explicitly approved EARLY_DEADLINE_NO_POST / FULL_TLS_STAGE_CONTROL
+interpretation, with independent sufficiency review still required.
+
+#### New C endpoint and receipt contract
+
+T0h is sampled in owner nanoseconds before Port.open; D=T0h+3_000_000_000 exactly once. Python emits actual supervisor_started timestamp S; owner records its actual receipt R. It forms E=S+max(D-R-200_000_000,0). fifo_command checks fresh owner time<D immediately before Port.command. In the positive-remainder branch, E is no later than D minus200ms in Python scale because S emission precedes R receipt. In the clipped branch E=S: a transmitted E is still no later than D, since receipt and fresh send precede D; it provides no new quota and is already expired on Python receipt. If owner time reached D no command is sent. This proof transfers durations, never assumes equal clock origins. No changing clock, timestamp fabrication, repeated synchronization or new relative budget at launch receipt.
+
+Python installs E before the real supervisor-ready gate. Ready delay and absent readiness stop at E-350ms. Launch authorization retains the same E, is formed only with original-owner remaining>=1000ms, and a controlled2200ms delay holds its delivery/processing before readline. Python requires its fresh remaining>=800ms before Popen. Work stops at E-400ms; TERM wait<=150ms and final actual subprocess.wait uses current remainder minus100ms, all inside original D. Missing reap/nonzero supervisor status cannot qualify; no-child has distinct child_launched=false, child_exit=null, child_reaped=false and no fabricated writer-ready. Normal child PID/starttime, actual writer-ready, wait_return_ns, terminal event, Port exit/DOWN and final owned FIFO removal are separate facts.
+
+Owner never turns an elapsed source deadline into a new Python quota. Waits use current original D. Removal is nested-finally even after failed await/assertion. Final measured completion is sampled after File.rm AND File.lstat of the actual owned path, after terminal Port cleanup/demonitor. Receipt qualification requires terminal/Port0/DOWN, known actual child wait (or confirmed no-child), real removal and elapsed<=3000ms. Writer success additionally requires classification=completed/child_exit0/actual ready. Budget cancellation and nonzero exit are lifecycle controls, not successful writers. Primary exception and original stack win over cleanup errors.
+
+This is a finite protocol with measured schedules, not a hard-real-time promise under arbitrary OS/VM suspension. Deliberate Port loss removes terminal transport: scoped receipt elapsed3001ms/terminal_unknown/NONQUALIFIED. Its test passes by rejecting qualification and preserving the primary assertion/removal, not by claiming in-budget reap or borrowing a later outer collector. Python EOF cancellation exists, but an unavailable owner-side receipt remains UNKNOWN. Outer subreaper containment/reaps are separate evidence.
+
+
+Real FIFO creation remains `mkfifo -m600`; writer delay850ms and ENXIO window400ms
+remain literal real operations. The three timely product schedules execute the
+unchanged `assert_fifo_product`: real Store750 budget / elapsed<800 and both real
+TokenVault refusals. Key bytes/full writer argv are not logged. PID/starttime,
+writer-ready, child wait, supervisor terminal, Port exit/DOWN, removal/absence
+and final measurement remain separate evidence. No product/lib clock, SQL,
+authorization, endpoint, timeout or readiness behavior changes.
+
+#### Primary delayed-supervisor RED and causal cycles
+
+Baseline source is the exact025f Git blob, with a separately saved diagnostic
+overlay: renamed external test modules, one explicit metadata-selected test,
+real2600ms delay BEFORE supervisor_ready, and safe observation. No diagnostic
+overlay was copied wholesale into the candidate. Both baseline executions are
+new experiments, not historical run2 reproductions.
+
+First RED1/1 exit2 at20:12:13.623110–20:12:25.964267Z, output
+`3dc093d2f658760d6fa1561ce9604739348a434d95a39af877c20d0a09bbdab1`.
+The first T0 observer accidentally landed in excluded neighboring code; that
+metadata gap is retained. A changed observer, with no protocol change, produced
+RED1/1 exit2 at20:12:58.059322–20:13:10.712925Z, output
+`a2d35ba9c0c55e71cbf617e126d72373192799f7cb38014c3a31363fbb7e55d3`.
+It measured owner T0=-576460742458ms, D=-576460739458ms,
+supervisor_ready receipt=-576460739827ms: actual remaining369ms, but the old
+pre-receive value2998 sent duration2798ms. A real writer launched and became
+ready (PID22776/start554654); report/Port-exit/DOWN were absent at the3001ms
+receipt. Actual FIFO removal was D+1ms. The new no-child assertion failed
+semantically, rather than merely observing a trace-line order.
+
+The separate Python side channel recorded child wait/reap with exit-15 and
+owner_lost after fallback Port closure, plus supervisor atexit. That late
+containment is not in-budget cleanup. Supervisor OS exit status was not delivered
+through the closed Port and remains UNKNOWN; atexit/process absence is not wait.
+Both exact baseline files match their PRE-RUN hashes; the first was reconstructed
+post-run from its retained original blob/diff and verified, not newly pre-sealed.
+
+Cycle1 scoped17/1 exit2: the ready-with-insufficient-reserve control actually
+launched a real child under the then500ms minimum and cancelled/reaped it; the
+expected no-child classification failed. Raw output
+`f9a193f62cad25259f45bdfed42e56c61e21849ddf03fe5acf16dc472dcac9b1` retained.
+Cycle2 uses conservative800ms Python /1000ms owner launch reserves, holds launch
+delivery2200ms BEFORE Python readline, adds after-D and explicit Port-loss
+classification controls, and validates the final post-removal receipt.
+The2200ms control schedule replaced an unrun2400ms draft to give scheduling
+margin within the same second cycle; D/850/400 remain unchanged.
+Final scoped19/0 follows format/specs/strict lint0. New C/quality cycles2/2;
+no third functional cycle, product repair0/additional agents0.
+
+#### Exact selected cases and observed matrix
+
+ExUnit metadata selected exactly6 old B +5 old C +8 added C cases before the
+final scoped run (`--only bc_harness`); no file:line or neighboring module
+selection. Original case names/counts and all other F1–F5 bodies remain intact.
+Broad T1/T2 use the exact sealed file/directory argv; their completed trace
+indexes contain98/511 actual names. The default make run retains its ordinary
+seed267130 / max_cases8 and6 skips, with no T1/T2 serialization flags.
+
+- `SymphonyControl.Auth.OidcTest` — `test staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `test longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `test full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `test staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `test owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `test owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 primary assertion failure survives cleanup with FIFO removed`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor800 still runs the real writer and product assertions`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor2600 cannot launch after spending the original reserve`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 ready supervisor with insufficient reserve confirms no child`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launch delivery delay consumes the fixed Python endpoint`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 absent supervisor readiness terminates without fabricated writer receipts`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launched writer without readiness is cancelled and actually reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 supervisor readiness scheduled beyond endpoint is bounded before child launch`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 lost Port remains nonqualified and cannot hide the primary assertion`.
+
+| Exact C test name (StoreRepairTest) | Classification | Post-removal elapsed ms | Bounded lifecycle receipt |
+|---|---|---|---|
+|F5 helper budget cancels and reaps an over-budget real writer|budget_exceeded|2407|true|
+|F5 delayed supervisor800 still runs the real writer and product assertions|completed|2119|true|
+|F5 lost Port remains nonqualified and cannot hide the primary assertion|:terminal_unknown|3001|false — NONQUALIFIED, wait/reap UNKNOWN|
+|F5 delayed supervisor2600 cannot launch after spending the original reserve|readiness_deadline|2458|true|
+|F5 ready supervisor with insufficient reserve confirms no child|insufficient_reserve|2282|true|
+|F5 writer350 preserves product assertions and completes within one cleanup budget|completed|1668|true|
+|F5 own stalled key resource cannot precede the operation deadline|completed|1320|true|
+|F5 launched writer without readiness is cancelled and actually reaped|budget_exceeded|2407|true|
+|F5 supervisor readiness scheduled beyond endpoint is bounded before child launch|readiness_deadline|2457|true|
+|F5 intentional nonzero writer is classified and reaped|nonzero_exit|1315|true|
+|F5 absent supervisor readiness terminates without fabricated writer receipts|readiness_absent|2458|true|
+|F5 launch delivery delay consumes the fixed Python endpoint|insufficient_reserve|2231|true|
+|F5 primary assertion failure survives cleanup with FIFO removed|completed|1322|true|
+
+
+The helper's `qualified` field concerns only its bounded terminal receipt; it is
+not PR/runtime/release qualification. Seven real-child schedules recorded actual
+wait, five no-child schedules explicitly reported no child/reap, and deliberate
+Port loss remained NONQUALIFIED/UNKNOWN. Thus19/0 is not a blanket C PASS. The
+nonzero/budget rows are expected writer failures with observed cleanup, not
+successful writers. Independent review must judge the complete endpoint and
+lifecycle argument, not accept a test count.
+
+#### Five quality dispositions and equivalence
+
+| Prior025f finding | Authorized disposition | Fresh check |
+|---|---|---|
+|store636,146>120|C launch arguments moved into small fifo_start/options protocol|strict lint0|
+|store640,127>120|C helper map split into explicit fields|strict lint0|
+|oidc759,121>120|only equivalent multiline if/assert at current760|strict lint0|
+|store629 with_fifo_writer complexity14>9|small local private start/assert/result/finalize/wait helpers|strict lint0|
+|fixture167 delayed_token_endpoint complexity11>9|equivalent staged_accept/staged_handshake extraction|strict lint0|
+
+The C functional diff and B quality-only extraction diff are retained separately.
+An independent author-side static checker expands both B helpers and compares
+normalized quoted AST with025f: MATCH. Full OIDC AST also MATCH; Store/TokenVault
+assertion AST and bytes MATCH. This is style-equivalence evidence, not an
+independent review. The checker's first run had a Git relative-path error and
+exit1; corrected checker exit0 output
+`4fec2941621cdfedc1288d20cec76c046e8258f19ad26c65fe7a656924bfd5e6`.
+No lint ignores/thresholds/exclusions/concurrency/quality configuration changed.
+
+#### Actual gates, seals and wide cleanup HOLD
+
+| Gate | Result | Supervisor UTC start | Supervisor UTC end | Main exit / forced | Raw output SHA256 |
+|---|---|---|---|---|---|
+|format-final|PASS|2026-10-15T20:23:03.987729+00:00|2026-10-15T20:23:04.699589+00:00|0 / False|`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`|
+|lint-final|specs/strict lint0|2026-10-15T20:23:04.947437+00:00|2026-10-15T20:23:10.004689+00:00|0 / False|`ffdebfc4cdfea5d4fd3038e7302804a994ce06fef487779e4353bf78f1476011`|
+|scoped-final|19/0; expected Port-loss UNKNOWN included|2026-10-15T20:24:13.639997+00:00|2026-10-15T20:25:01.031933+00:00|0 / False|`4278cea4f5db1d7419e1ad1b6398b0532f6c29abb5d0e652ad38e5234e69179d`|
+|T1|98/0|2026-10-15T20:25:19.806269+00:00|2026-10-15T20:25:44.773948+00:00|0 / False|`3dbe7daadbbc4dc37e74254f47a9c2d8c32f69ea2a2abb5fbdabde1478d5eb6b`|
+|T2|511/0|2026-10-15T20:26:15.462909+00:00|2026-10-15T20:29:45.999955+00:00|0 / False|`b098acc2811c305d77cd9ba8aa873415b8f9ef4468189a4298f656f1895456da`|
+|T3|main0; 877/0,6 skips,100% coverage,Dialyzer0/0/0; CLEANUP_HOLD|2026-10-15T20:30:09.144095+00:00|2026-10-15T20:37:06.619230+00:00|0 / True|`ae8d2b03365ea27c79ed71dd147d7282f13c16f099d26f7d7e38de60085c6c39`|
+|T4-bootstrap|12/0|2026-10-15T20:38:50.878066+00:00|2026-10-15T20:38:50.981035+00:00|0 / False|`d5987f0d73b4533bcaa00cefadc1d12c2ec3cc6bf89a78c4641d38cd5b565320`|
+|T4-mcp|11/0|2026-10-15T20:38:51.245163+00:00|2026-10-15T20:38:51.450121+00:00|0 / False|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+
+UTC windows are enclosing supervisor measurements; T3 end includes outer
+containment, not a separately captured exact main-exit timestamp. All broad
+commands ran once in the required order on the same final executable bytes.
+T4 is independent Python validation after runtime. Exact actual argv:
+
+- `format-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "format", "--check-formatted"]`.
+- `lint-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "lint"]`.
+- `scoped-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- `T1`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- `T2`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- `T3`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["make", "-C", "elixir", "all"]`.
+- `T4-bootstrap`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- `T4-mcp`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+T3 make main passed every ordinary subgate, including877 tests/0 failures/6
+skips,100% coverage and Dialyzer errors0/skipped0/unnecessary0. However, two
+own live `sh` descendants survived the command and3s natural outer collection:
+PID34536/start668250 and34541/start668253, initially under own erl_child_setup
+PID32484, later adopted by own subreaper. Both were SIGKILL-contained and actually
+waited with status-9. No corresponding PID appears in the resource ledger or
+FIFO receipts; cause is UNKNOWN, no causal attribution to C or a frozen test is
+made. T3 is COMMAND_PASS / CLEANUP_HOLD, not an all-axis PASS. No repeated make,
+unrequested repair or dependent runtime gate followed. No foreign/old/PID1 signal.
+
+Initial255 actual Git blobs and checkout matched; baseline executable251
+`96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f`
+and whole255
+`d577d666de9ad4b4f2176ef2666cda2d85e84a7d1e8084e0bbc76907588ba92c`
+were recomputed from blobs, not transcribed. Final tested executable251:
+`3d77637fb9db761a3d29d1e21cb768aa086e73669b8850293fb781dd72cc4b49`.
+Pre-gate whole255:
+`61cbe44a9dd86c1c20353b48f40a14397f8c2691e5f4fef2cb10450ca342c692`.
+External runner/env/fixture inventory:
+`d009b96051e667bd5e6e3f974a45d8062f5e2bb4866813766b99783a03865ba8`.
+All verified unchanged after scoped/T1/T2/T3/T4; these documentation appends and
+their MANIFEST digests are later separate inputs. The earlier2c01 intermediate
+whole inventory predates the final delivery-control schedule, not a gate seal.
+
+Only the seven allowed paths change; all255 Git modes and84 product libs are
+frozen (libs also compared directly with7e6fb49), as are A/other suites, locks,
+mix/Makefile, migrations, quality/policy/CI and canonical documents. MANIFEST90
+names/order/digests, composition8, design49f4a2eda5c56b83b355f26aa69c92de4c84e549afad13b9c1c885dc9ea31c41
+and planf5285de9b65b40cacfa6b8a8ed57b15695807d894ef254e331f94941cc7acb9f
+remain pinned. Final diff/secret/scope/body checks and published tuple are recorded
+in the final handoff; no unrun check is represented here as completed.
+
+#### Environment, containment and limits
+
+Same installed Elixir1.19.5/OTP28.5/ERTS16.4/PG17.11, +S4:4, Python3.13.5,
+Rebar3.25.1; launcher chain/env.sh read only, never executed. Own fresh
+HOME/Mix/Hex/deps/build/XDG/core and project PLTs and0700 new evidence root.
+All45 lock archives passed inner/outer hash checks; fresh own dependency builds
+and own Hex2.5.3 bootstrap, no old/shared compiled copy or reinstall. Complete
+Unix-only55474/sn004_fixture/sn004_test/sn005_test/postgres fixture passed
+connectivity/ownership/DDL rollback/no public tables/key-root/actual BEAM env
+before any tests. DSM=mmap retained. Env frontend, ordinary child and nested
+make matched own selectors and excluded Git credentials.
+
+Preparation limits are explicit: initial read-only filesystem commands and a
+failed bootstrap (int argv TypeError, no child launched) preceded own supervision.
+Mix/erl/PG/Rebar hashes were read before builds; complete5-file toolchain readback,
+including elixir/beam, occurred20:27:35 after T1 and MATCHED prior pins. It is not
+claimed as a full fresh pre-probe seal. Standard make produced own ignored
+coverage HTML inside checkout; it was retained outside afterward. No retroactive
+claim that every generated evidence byte began outside checkout.
+
+Own PG stop0, actual direct postmaster wait0, status3; own synthetic PGDATA/key/
+tmp/socket contents removed, source/build/evidence/coverage retained. Runtime
+audit at2026-10-15T20:40:34.127156+00:00: 77 completed supervised command
+receipts/2950 recorded PID/start identities, remaining=[],
+identity_unknown=[], 639 recorded roots absent and
+1003 recorded listener ports not listening. HOME observed
+62885, mismatches0, unavailable211215
+UNKNOWN. Empty private directories can be recreated by later runner/body checks;
+terminal cleanup/readback follows publication. T3 forced containment remains a
+fact; absence after containment is not natural-cleanup or in-budget C proof.
+Sampling is not a total I/O/global process attestation. No old cache/HOME/PG/
+zombie/evidence cleanup or re-attestation.
+
+Historical run1 T1 98/14 FAILED; run2 T1 98/0,T2 496/3 FAILED,T3 NOT_RUN;
+diagnostic5invocations DIAGNOSTIC_INCOMPLETE. A_UNKNOWN, pre-JWKS1129 cause and
+historical C trigger UNKNOWN. Original R6/R6-TIME/N1/N2/R1–R5 source conclusions
+remain independent on unchanged product bytes. PROCESS_HOLD_PREPARED_CACHE /
+PRE_BYTES_UNKNOWN / HOME004 / initial visibility / old A148/B020/transport/cleanup
+UNKNOWN and previous costs/windows/errors remain. New T0=20:03:26Z15October,
+deadline00:03:26Z16October, included reserve23:33:26Z15October; cycles2/2,
+product0/extra agents0. No renewed prior B/C2/2 window or automatic extension.
+
+Next: separate independent review of the combined B/C test delta, preserved
+assertions and style equivalence, then independently authorized runtime
+qualification after accepted test delta. The author does not accept this work.
+Coordinator owns#95. Original specification/PR79/82/84/autonomy/multi-server
+requirements and release/mvp-1 remain unchanged. No Task5/native/trusted/live/
+Bandit/global release disposition, CI statuses/Actions/mentions/labels,
+merge/deploy/activation/production/DF Assistant changes. Auth disabled.
+NOT_ACCEPTED / NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

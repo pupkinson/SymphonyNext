@@ -290,3 +290,27 @@ PR99 corrective source audit (2026-10-15): C's pre-ready remaining-budget sample
 can become stale while waiting for Python startup. The observed matrix passed,
 but cleanup<=3000 is NOT_ESTABLISHED for delayed ready. A docs-only correction
 records this open risk; two code cycles are exhausted. See engineering appendix.
+
+
+### PR99 C/quality — 2026-10-15T20:03:26Z
+
+Owner-authorized test-only follow-up to025f45f: one immutable3000ms FIFO helper
+endpoint covers real supervisor readiness, launch delivery, child cancellation/
+wait, Port terminal receipts and final FIFO removal. Eight added C controls join
+the old5 C/6 B cases. B changes are only equivalent helper extraction/line wrap;
+Store/TokenVault assertions and every product byte remain frozen. Five known
+Credo findings are cleared (fresh strict lint0).
+
+Observed: scoped19/0, T1 98/0, T2 511/0; standard make main0 with877/0,6 skips,
+100% coverage,Dialyzer0/0/0; Python12/0 and11/0. **T3 CLEANUP_HOLD:** outer
+supervisor SIGKILL-contained and waited two own residual shells; cause UNKNOWN.
+The deliberate C Port-loss case is NONQUALIFIED/terminal_unknown at3001ms,
+not a successful in-budget writer/reap. No blanket C acceptance from test count.
+
+Tested executable seal `3d77637fb9db761a3d29d1e21cb768aa086e73669b8850293fb781dd72cc4b49`. Detailed protocol, delayed-supervisor RED,
+matrix, exact argv/UTC/exits/hashes and limits are appended to
+[engineering evidence](docs/engineering/authentik-project-access.md).
+A_UNKNOWN/historical run2 FAILED and prior process/cache/source conclusions
+remain. Independent combined B/C/style review and later separate runtime
+qualification required. Auth disabled;
+NOT_ACCEPTED / NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

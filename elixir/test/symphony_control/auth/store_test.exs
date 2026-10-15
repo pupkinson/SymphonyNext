@@ -616,6 +616,92 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     assert_fifo_completed(Process.get(:last_fifo_cleanup))
   end
 
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 delayed supervisor800 still runs the real writer and product assertions", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 800], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 delayed supervisor2600 cannot launch after spending the original reserve", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 2_600, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_deadline")
+    refute Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 ready supervisor with insufficient reserve confirms no child", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 2_250, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "insufficient_reserve")
+    assert Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 launch delivery delay consumes the fixed Python endpoint", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [launch_delay_ms: 2_200, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "insufficient_reserve")
+    launch = Enum.find(receipt.events, &(&1.message["event"] == "launch_received"))
+    assert launch.message["command"] == "launch"
+    sent = Enum.find(receipt.commands, &(&1.command.event == "launch"))
+    assert sent.result == true
+    assert sent.command.end_ns == receipt.helper.python_deadline
+    ready = Enum.find(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+    assert launch.message["at_ns"] - ready.message["at_ns"] >= 2_200_000_000
+    assert launch.message["end_ns"] == receipt.helper.python_deadline
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 absent supervisor readiness terminates without fabricated writer receipts", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [suppress_ready: true, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_absent")
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 launched writer without readiness is cancelled and actually reaped", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [writer_ready_delay_ms: 3_500, writer_required: false], fn _ -> :ok end)
+    assert receipt.ready == nil
+    assert receipt.report["classification"] == "budget_exceeded"
+    assert receipt.report["child_exit"] != 0
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 supervisor readiness scheduled beyond endpoint is bounded before child launch", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 3_500, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_deadline")
+    refute Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 lost Port remains nonqualified and cannot hide the primary assertion", %{cfg: cfg} do
+    assert_raise ExUnit.AssertionError, "\n\nprimary assertion after Port loss\n", fn ->
+      with_fifo_writer(cfg, [hold_ms: 3_500], fn path ->
+        state = Process.get({:fifo_helper, path})
+        assert Port.close(state.helper.port)
+        flunk("primary assertion after Port loss")
+      end)
+    end
+
+    receipt = Process.get(:last_fifo_cleanup)
+    refute receipt.qualified
+    assert receipt.classification == :terminal_unknown
+    assert receipt.report == nil
+    assert receipt.port_exit == nil
+    assert receipt.down == :normal
+    assert receipt.removal == {:returned, {:ok, {:error, :enoent}}}
+    refute File.exists?(receipt.helper.path)
+    # Lost terminal transport cannot prove the child's actual wait/reap. This
+    # expected UNKNOWN is never counted as a normally completed writer/helper.
+  end
+
   defp assert_fifo_product(f, cfg, path) do
     start = System.monotonic_time(:millisecond)
     result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
@@ -631,74 +717,127 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     assert {_, 0} = System.cmd("mkfifo", ["-m", "600", path])
     key = {:fifo_helper, path}
 
-    try do
-      started = System.monotonic_time(:millisecond)
-      args = ["-u", "-c", fifo_supervisor_script(), path, cfg.session_key_ref, to_string(opts[:hold_ms] || 0), to_string(opts[:exit_status] || 0)]
-      port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, {:line, 4096}, args: args])
-      monitor = :erlang.monitor(:port, port)
-      {:os_pid, supervisor} = Port.info(port, :os_pid)
-      helper = %{port: port, monitor: monitor, started: started, deadline: started + 3_000, path: path, supervisor: supervisor}
-      Process.put(key, %{helper: helper, ready: nil, report: nil, port_exit: nil, down: nil})
-
-      primary =
-        fifo_capture(fn ->
-          state = fifo_wait(key, :ready)
-          assert is_map(state.ready), "writer protocol did not confirm real Python startup"
-          assertion.(path)
-        end)
-
-      # Cleanup failures are values until the original assertion has been
-      # re-raised. A failed cleanup must never replace that primary failure.
-      cleanup =
-        fifo_capture(fn ->
-          state = fifo_wait(key, :done)
-          Map.merge(state, %{elapsed_ms: System.monotonic_time(:millisecond) - started})
-        end)
-
-      Process.put(
-        :last_fifo_cleanup,
-        case cleanup do
-          {:returned, state} -> state
-          other -> other
+    outcome =
+      fifo_capture(fn ->
+        try do
+          fifo_start(key, path, cfg, opts)
+          primary = fifo_capture(fn -> fifo_assertion(key, opts, assertion) end)
+          cleanup = fifo_capture(fn -> fifo_wait(key, :done) end)
+          {primary, cleanup}
+        after
+          fifo_finalize(key, path)
         end
-      )
+      end)
 
-      IO.puts("FIFO bounded cleanup " <> inspect(fifo_safe_receipt(Process.get(:last_fifo_cleanup))))
-
-      case primary do
-        {:failed, kind, reason, stack} ->
-          :erlang.raise(kind, reason, stack)
-
-        {:returned, _} ->
-          case cleanup do
-            {:returned, state} -> state
-            {:failed, kind, reason, stack} -> :erlang.raise(kind, reason, stack)
-          end
-      end
-    after
-      try do
-        if state = Process.delete(key) do
-          # Closing a Port is fallback containment, never a wait/reap receipt.
-          try do
-            if Port.info(state.helper.port), do: Port.close(state.helper.port)
-          catch
-            # The Port may terminate between info and close. The recorded
-            # missing wait/reap still fails; fallback cannot hide a primary.
-            :error, :badarg -> Process.put(:fifo_fallback_close, :terminated_during_close)
-          end
-
-          Process.demonitor(state.helper.monitor, [:flush])
-        end
-      after
-        File.rm(path)
-      end
-    end
+    receipt = Process.get(:last_fifo_cleanup)
+    IO.puts("FIFO bounded cleanup " <> inspect(fifo_safe_receipt(receipt), limit: :infinity))
+    fifo_result(outcome, receipt)
   end
+
+  defp fifo_start(key, path, cfg, opts) do
+    args = ["-u", "-c", fifo_supervisor_script(), path, cfg.session_key_ref, Jason.encode!(Map.new(opts))]
+    started = System.monotonic_time(:nanosecond)
+    port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, {:line, 4096}, args: args])
+    monitor = :erlang.monitor(:port, port)
+
+    helper = %{
+      port: port,
+      monitor: monitor,
+      started: started,
+      deadline: started + 3_000_000_000,
+      python_deadline: nil,
+      path: path,
+      supervisor: nil
+    }
+
+    state = %{helper: helper, ready: nil, child: nil, report: nil, port_exit: nil, down: nil, events: [], commands: []}
+    Process.put(key, state)
+    {:os_pid, supervisor} = Port.info(port, :os_pid)
+    Process.put(key, put_in(state.helper.supervisor, supervisor))
+  end
+
+  defp fifo_assertion(key, opts, assertion) do
+    state = fifo_wait(key, :ready)
+    if Keyword.get(opts, :writer_required, true), do: assert(is_map(state.ready), "writer startup not confirmed")
+    assert fifo_remaining(state.helper) > 0, "helper deadline expired before assertion dispatch"
+    assertion.(state.helper.path)
+  end
+
+  # Cleanup errors remain values until the primary exception and its original
+  # stack have been selected. Finalization itself cannot replace that exception.
+  defp fifo_result({:returned, {{:failed, kind, reason, stack}, _}}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:returned, {_, {:failed, kind, reason, stack}}}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:failed, kind, reason, stack}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:returned, _}, receipt), do: receipt
 
   defp fifo_capture(fun) do
     {:returned, fun.()}
   catch
     kind, reason -> {:failed, kind, reason, __STACKTRACE__}
+  end
+
+  defp fifo_finalize(key, path) do
+    state = Process.delete(key)
+
+    close =
+      try do
+        fifo_capture(fn -> fifo_close(state) end)
+      after
+        # This owned path is removed even when Port cleanup raises. File.rm and
+        # the absence check precede the final elapsed sample, including failures.
+        Process.put({key, :removal}, fifo_capture(fn -> {File.rm(path), File.lstat(path)} end))
+      end
+
+    removal = Process.delete({key, :removal})
+    finished = System.monotonic_time(:nanosecond)
+    receipt = fifo_receipt(state, close, removal, finished)
+    Process.put(:last_fifo_cleanup, receipt)
+  end
+
+  defp fifo_close(nil), do: :not_started
+
+  defp fifo_close(state) do
+    port = state.helper.port
+
+    try do
+      # Port.close is containment only. It supplies neither child wait/reap nor
+      # the missing supervisor exit status; such a receipt is nonqualified.
+      if Port.info(port), do: Port.close(port), else: :already_closed
+    after
+      Process.demonitor(state.helper.monitor, [:flush])
+    end
+  end
+
+  defp fifo_receipt(nil, close, removal, finished) do
+    %{classification: :launch_unknown, close: close, removal: removal, finished: finished, qualified: false}
+  end
+
+  defp fifo_receipt(state, close, removal, finished) do
+    elapsed = div(finished - state.helper.started + 999_999, 1_000_000)
+    terminal = fifo_terminal_known?(state)
+    removed = removal == {:returned, {:ok, {:error, :enoent}}}
+    qualified = terminal and removed and close == {:returned, :already_closed} and elapsed <= 3_000
+
+    classification = if state.report, do: state.report["classification"], else: :terminal_unknown
+    Map.merge(state, %{elapsed_ms: elapsed, finished: finished, close: close, removal: removal, qualified: qualified, classification: classification})
+  end
+
+  defp fifo_terminal_known?(%{report: nil}), do: false
+
+  defp fifo_terminal_known?(state) do
+    state.port_exit == 0 and state.down == :normal and
+      state.report["end_ns"] == state.helper.python_deadline and
+      state.report["at_ns"] <= state.helper.python_deadline and fifo_child_known?(state)
+  end
+
+  defp fifo_child_known?(%{report: %{"child_launched" => false}} = state) do
+    state.child == nil and state.ready == nil and state.report["child_exit"] == nil and
+      state.report["child_reaped"] == false
+  end
+
+  defp fifo_child_known?(state) do
+    state.report["child_reaped"] == true and is_integer(state.report["wait_return_ns"]) and
+      state.report["wait_return_ns"] <= state.helper.python_deadline
   end
 
   defp fifo_wait(key, phase) do
@@ -708,10 +847,10 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
       phase == :ready and is_map(state.ready) ->
         state
 
-      not is_nil(state.port_exit) and not is_nil(state.down) ->
+      not is_nil(state.down) and not is_nil(state.port_exit) ->
         state
 
-      System.monotonic_time(:millisecond) >= state.helper.deadline ->
+      fifo_remaining(state.helper) == 0 ->
         state
 
       true ->
@@ -720,26 +859,20 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     end
   end
 
+  defp fifo_remaining(helper) do
+    max(div(helper.deadline - System.monotonic_time(:nanosecond), 1_000_000), 0)
+  end
+
   defp fifo_receive(key, state) do
-    %{port: port, monitor: monitor, deadline: deadline} = state.helper
-    remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+    %{port: port, monitor: monitor} = state.helper
 
     receive do
       {^port, {:data, {:eol, line}}} ->
         message = Jason.decode!(line)
-
-        case message["event"] do
-          "supervisor_ready" ->
-            # The OS supervisor receives only the original budget's remainder,
-            # including its own cancellation/wait reserve, never a new1800ms.
-            Port.command(port, "#{max(remaining - 200, 0)}\n")
-
-          "writer_ready" ->
-            Process.put(key, %{state | ready: message})
-
-          "writer_reaped" ->
-            Process.put(key, %{state | report: message})
-        end
+        received = System.monotonic_time(:nanosecond)
+        event = %{message: message, received: received}
+        state = %{state | events: state.events ++ [event]}
+        Process.put(key, fifo_event(state, message, received))
 
       {^port, {:exit_status, status}} ->
         Process.put(key, %{state | port_exit: status})
@@ -747,51 +880,161 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
       {:DOWN, ^monitor, :port, ^port, reason} ->
         Process.put(key, %{state | down: reason})
     after
-      remaining -> :ok
+      fifo_remaining(state.helper) -> :ok
     end
+  end
+
+  defp fifo_event(state, %{"event" => "supervisor_started", "at_ns" => anchor}, received) do
+    # The anchor was emitted BEFORE owner receipt R. In Python's scale,
+    # anchor + (D-R-200ms) is no later than D-200ms. Monotonic origins need not
+    # agree; only elapsed nanoseconds are transferred. Delivery consumes this
+    # fixed endpoint, never adds a duration at receipt. The reserve is inside D.
+    endpoint = anchor + max(state.helper.deadline - received - 200_000_000, 0)
+    state = put_in(state.helper.python_deadline, endpoint)
+    command = fifo_command(state.helper, %{event: "deadline", end_ns: endpoint})
+    %{state | commands: state.commands ++ [command]}
+  end
+
+  defp fifo_event(state, %{"event" => "supervisor_ready"}, _received) do
+    event = if fifo_remaining(state.helper) >= 1_000, do: "launch", else: "cancel"
+    command = fifo_command(state.helper, %{event: event, end_ns: state.helper.python_deadline})
+    %{state | commands: state.commands ++ [command]}
+  end
+
+  defp fifo_event(state, %{"event" => "writer_started"} = message, _), do: %{state | child: message}
+  defp fifo_event(state, %{"event" => "writer_ready"} = message, _), do: %{state | ready: message}
+  defp fifo_event(state, %{"event" => "supervisor_terminal"} = message, _), do: %{state | report: message}
+  defp fifo_event(state, _message, _received), do: state
+
+  defp fifo_command(helper, command) do
+    # Fresh check after every receive and immediately before external dispatch.
+    payload = Jason.encode!(command) <> "\n"
+    sent = System.monotonic_time(:nanosecond)
+    result = if sent < helper.deadline, do: Port.command(helper.port, payload), else: :deadline_expired
+    %{command: command, sent: sent, result: result}
   end
 
   defp assert_fifo_completed(receipt) do
     assert receipt.report["classification"] == "completed"
     assert receipt.report["child_exit"] == 0
+    assert is_map(receipt.ready)
     assert_fifo_terminated(receipt)
   end
 
   defp assert_fifo_terminated(receipt) do
-    assert receipt.elapsed_ms <= 3_000
+    assert_fifo_terminal(receipt)
+    assert receipt.report["child_launched"] == true
     assert receipt.report["child_reaped"] == true
+    assert receipt.report["wait_return_ns"] <= receipt.helper.python_deadline
+    refute fifo_pid_current?(receipt.child["pid"], receipt.child["start_ticks"])
+  end
+
+  defp assert_fifo_no_child(receipt, classification) do
+    assert_fifo_terminal(receipt)
+    assert receipt.report["classification"] == classification
+    assert receipt.report["child_launched"] == false
+    assert receipt.report["child_reaped"] == false
+    assert receipt.report["child_exit"] == nil
+    assert receipt.child == nil
+    assert receipt.ready == nil
+  end
+
+  defp assert_fifo_terminal(receipt) do
+    assert receipt.qualified
+    assert receipt.elapsed_ms <= 3_000
+    assert receipt.report["at_ns"] <= receipt.helper.python_deadline
+    assert receipt.report["end_ns"] == receipt.helper.python_deadline
     assert receipt.port_exit == 0
     assert receipt.down == :normal
     assert Port.info(receipt.helper.port) == nil
     refute File.exists?(receipt.helper.path)
-    refute fifo_pid_current?(receipt.ready["pid"], receipt.ready["start_ticks"])
     refute File.exists?("/proc/#{receipt.helper.supervisor}")
   end
 
   defp fifo_pid_current?(pid, ticks) do
     case File.read("/proc/#{pid}/stat") do
-      {:ok, stat} -> stat |> String.split(") ", parts: 2) |> List.last() |> String.split() |> Enum.at(19) == ticks
-      {:error, :enoent} -> false
+      {:ok, stat} ->
+        fields = stat |> String.split(") ", parts: 2) |> List.last() |> String.split()
+        actual = Enum.at(fields, 19)
+        assert is_binary(actual) and actual != "", "owned process identity UNKNOWN"
+        actual == ticks
+
+      {:error, :enoent} ->
+        false
     end
   end
 
-  defp fifo_safe_receipt(%{report: report, port_exit: status, down: down, elapsed_ms: elapsed}), do: %{report: report, port_exit: status, down: down, elapsed_ms: elapsed}
-  defp fifo_safe_receipt(_), do: :cleanup_failed_or_unobserved
+  defp fifo_safe_receipt(%{helper: _} = receipt) do
+    Map.take(receipt, [:events, :commands, :ready, :child, :report, :port_exit, :down, :elapsed_ms, :finished, :removal, :qualified, :classification])
+    |> Map.put(:bounds, Map.take(receipt.helper, [:started, :deadline, :python_deadline]))
+  end
+
+  defp fifo_safe_receipt(receipt), do: receipt
 
   defp fifo_supervisor_script do
-    """
+    ~S"""
     import errno,json,os,pathlib,select,subprocess,sys,time
-    def emit(data):
-        try: print(json.dumps(data),flush=True)
+    opts=json.loads(sys.argv[3])
+    def emit(event,**data):
+        try: print(json.dumps(dict(data,event=event,at_ns=time.monotonic_ns())),flush=True)
         except BrokenPipeError: pass
-    emit({"event":"supervisor_ready"})
-    launch=sys.stdin.readline()
-    if not launch: sys.exit(0)
-    end=time.monotonic()+max(int(launch),0)/1000
+    def remaining(end,reserve=0):
+        return max((end-time.monotonic_ns())/1e9-reserve,0)
+    def command(end):
+        left=remaining(end)
+        if not left: return {'event':'budget_exceeded'}
+        readable,_,_=select.select([sys.stdin],[],[],left)
+        if not readable: return {'event':'budget_exceeded'}
+        line=sys.stdin.readline()
+        return json.loads(line) if line else {'event':'owner_lost'}
+    def gate(delay_ms,end):
+        target=time.monotonic_ns()+delay_ms*1_000_000
+        while time.monotonic_ns()<target:
+            left=remaining(min(target,end-350_000_000))
+            if not left: return 'budget_exceeded'
+            readable,_,_=select.select([sys.stdin],[],[],left)
+            if readable:
+                return 'owner_lost' if not sys.stdin.readline() else 'cancelled'
+        return None
+    def delivery_gate(delay_ms,end):
+        target=time.monotonic_ns()+delay_ms*1_000_000
+        while time.monotonic_ns()<target:
+            left=remaining(min(target,end-350_000_000))
+            if not left: return 'launch_deadline'
+            select.select([],[],[],left)
+        return None
+    def no_child(classification,end):
+        emit('supervisor_terminal',classification=classification,end_ns=end,
+             child_launched=False,child_exit=None,child_reaped=False)
+    # No child is possible before a fixed, owner-derived endpoint arrives.
+    emit('supervisor_started')
+    initial=command(time.monotonic_ns()+500_000_000)
+    if initial.get('event')!='deadline':
+        no_child('deadline_unconfirmed',None);sys.exit(0)
+    end=initial['end_ns']
+    emit('deadline_received',end_ns=end)
+    delay=3_500 if opts.get('suppress_ready') else opts.get('supervisor_ready_delay_ms',0)
+    stopped=gate(delay,end)
+    if not stopped and not remaining(end,0.35): stopped='budget_exceeded'
+    if stopped:
+        classification='readiness_absent' if opts.get('suppress_ready') else 'readiness_deadline'
+        no_child(stopped if stopped!='budget_exceeded' else classification,end);sys.exit(0)
+    emit('supervisor_ready',end_ns=end)
+    stopped=delivery_gate(opts.get('launch_delay_ms',0),end)
+    if stopped:
+        no_child(stopped,end);sys.exit(0)
+    launch=command(end-350_000_000)
+    emit('launch_received',command=launch['event'],end_ns=end)
+    if launch.get('event')!='launch' or launch.get('end_ns')!=end:
+        no_child('insufficient_reserve' if launch['event']=='cancel' else launch['event'],end);sys.exit(0)
+    if remaining(end)<0.8:
+        no_child('insufficient_reserve',end);sys.exit(0)
     writer='''import errno,json,os,pathlib,sys,time
+    opts=json.loads(sys.argv[3])
+    time.sleep(opts.get('writer_ready_delay_ms',0)/1000)
     ticks=pathlib.Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()[19]
     print(json.dumps({'event':'writer_ready','pid':os.getpid(),'start_ticks':ticks}),flush=True)
-    time.sleep(int(sys.argv[3])/1000)
+    time.sleep(opts.get('hold_ms',0)/1000)
     time.sleep(0.85)
     end=time.monotonic()+0.4
     while time.monotonic()<end:
@@ -803,35 +1046,49 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
         except OSError as e:
             if e.errno!=errno.ENXIO: raise
             time.sleep(0.005)
-    sys.exit(int(sys.argv[4]))
+    sys.exit(opts.get('exit_status',0))
     '''
     child=subprocess.Popen([sys.executable,'-u','-c',writer,*sys.argv[1:]],stdout=subprocess.PIPE,text=True)
+    ticks=pathlib.Path(f'/proc/{child.pid}/stat').read_text().rsplit(') ',1)[1].split()[19]
+    emit('writer_started',pid=child.pid,start_ticks=ticks,end_ns=end)
     classification=None
     ready=False
+    status=None
+    waited=None
     try:
         while child.poll() is None:
-            remaining=end-time.monotonic()-0.25
-            if remaining<=0:
+            left=remaining(end,0.4)
+            if not left:
                 classification='budget_exceeded';break
             readers=[sys.stdin]+([] if ready else [child.stdout])
-            readable,_,_=select.select(readers,[],[],min(0.02,remaining))
+            readable,_,_=select.select(readers,[],[],min(0.02,left))
             if child.stdout in readable:
                 line=child.stdout.readline()
                 if line:
                     message=json.loads(line)
-                    if message.get('event')!='writer_ready': raise RuntimeError('protocol')
-                    emit(message);ready=True
+                    if message.pop('event')!='writer_ready': raise RuntimeError('protocol')
+                    emit('writer_ready',**message);ready=True
             if sys.stdin in readable:
                 classification='owner_lost' if not sys.stdin.readline() else 'cancelled';break
     finally:
-        if child.poll() is None:
-            child.terminate()
-            try: child.wait(timeout=max(min(0.15,end-time.monotonic()-0.05),0.001))
-            except subprocess.TimeoutExpired: child.kill()
-        status=child.wait(timeout=max(end-time.monotonic(),0.001))
-        child.stdout.close()
-    classification=classification or ('completed' if status==0 else 'nonzero_exit')
-    emit({'event':'writer_reaped','classification':classification,'child_exit':status,'child_reaped':True})
+        try:
+            if child.poll() is None:
+                child.terminate()
+                try: child.wait(timeout=min(0.15,remaining(end,0.15)))
+                except subprocess.TimeoutExpired:
+                    if remaining(end,0.1): child.kill()
+            # An actual wait return is separate from Port close/process absence.
+            status=child.wait(timeout=remaining(end,0.1))
+            waited=time.monotonic_ns()
+            emit('writer_reaped',child_exit=status,wait_return_ns=waited,end_ns=end)
+        except subprocess.TimeoutExpired:
+            classification='reap_unknown'
+        finally:
+            child.stdout.close()
+    classification=classification or ('completed' if status==0 and ready else 'nonzero_exit')
+    emit('supervisor_terminal',classification=classification,end_ns=end,
+         child_launched=True,child_exit=status,child_reaped=waited is not None,wait_return_ns=waited)
+    sys.exit(0 if waited is not None else 73)
     """
   end
 

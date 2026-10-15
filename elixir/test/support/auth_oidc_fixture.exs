@@ -205,41 +205,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
              # Opt-in gate is before accept as well as dispatch. A real client
              # can connect to the listener, but no synthetic accept/SNI occurs.
              if staged_dispatch_gate(f, gate) == :ok do
-               case :ssl.transport_accept(listener, 5_000) do
-                 {:ok, socket} ->
-                   Agent.update(f.state, &Map.put(&1, :staged_socket, socket))
-                   stage(f, :tls_accept)
-
-                   try do
-                     Process.sleep(connection_delay)
-                     stage(f, :handshake_dispatch)
-                     result = :ssl.handshake(socket, 2_000)
-
-                     outcome =
-                       case result do
-                         {:ok, _} -> :ok
-                         {:error, :closed} -> :closed
-                         {:error, :timeout} -> :timeout
-                         {:error, _} -> :tls_error
-                       end
-
-                     Agent.update(f.state, &Map.put(&1, :staged_handshake_result, outcome))
-                     stage(f, :handshake_return)
-
-                     with {:ok, socket} <- result,
-                          {:ok, request} <- :ssl.recv(socket, 0, 1_000),
-                          true <- String.starts_with?(request, "POST ") do
-                       stage(f, :token)
-                       body = ~s|{"error":"invalid_grant"}|
-                       :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
-                     end
-                   after
-                     :ssl.close(socket)
-                   end
-
-                 {:error, :timeout} ->
-                   :ok
-               end
+               staged_accept(f, listener, connection_delay)
              end
            after
              :ssl.close(listener)
@@ -255,6 +221,48 @@ defmodule SymphonyControl.Auth.OidcFixture do
       {:staged_endpoint_ready, ^ready} -> Map.put(config(f), :token_url, url)
     after
       1_000 -> raise "staged endpoint readiness missing"
+    end
+  end
+
+  defp staged_accept(f, listener, connection_delay) do
+    case :ssl.transport_accept(listener, 5_000) do
+      {:ok, socket} ->
+        Agent.update(f.state, &Map.put(&1, :staged_socket, socket))
+        stage(f, :tls_accept)
+
+        try do
+          staged_handshake(f, socket, connection_delay)
+        after
+          :ssl.close(socket)
+        end
+
+      {:error, :timeout} ->
+        :ok
+    end
+  end
+
+  defp staged_handshake(f, socket, connection_delay) do
+    Process.sleep(connection_delay)
+    stage(f, :handshake_dispatch)
+    result = :ssl.handshake(socket, 2_000)
+
+    outcome =
+      case result do
+        {:ok, _} -> :ok
+        {:error, :closed} -> :closed
+        {:error, :timeout} -> :timeout
+        {:error, _} -> :tls_error
+      end
+
+    Agent.update(f.state, &Map.put(&1, :staged_handshake_result, outcome))
+    stage(f, :handshake_return)
+
+    with {:ok, socket} <- result,
+         {:ok, request} <- :ssl.recv(socket, 0, 1_000),
+         true <- String.starts_with?(request, "POST ") do
+      stage(f, :token)
+      body = ~s|{"error":"invalid_grant"}|
+      :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
     end
   end
 

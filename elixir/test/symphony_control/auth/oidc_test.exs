@@ -756,7 +756,10 @@ defmodule SymphonyControl.Auth.OidcTest do
     if complete, do: assert(List.last(names) == :fixture_done)
     times = Map.new(snapshot.events)
     if times[:handshake_dispatch], do: assert(times.handshake_dispatch - times.tls_accept >= 600)
-    if times[:tls_handshake] && times[:handshake_return], do: assert(times.handshake_return - times.tls_handshake >= 700)
+
+    if times[:tls_handshake] && times[:handshake_return] do
+      assert times.handshake_return - times.tls_handshake >= 700
+    end
   end
 
   @tag :bc_harness
