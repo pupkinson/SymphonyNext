@@ -12,7 +12,9 @@ import http.client
 import json
 import os
 from pathlib import Path
+import pwd
 import re
+import signal
 import socket
 import stat
 import subprocess
@@ -31,6 +33,12 @@ PAYLOAD = {'queue.py', 'execution.py', 'installed.json', 'executor-policy.json'}
 IDENTITY = dict(User='symphony-next', Group='symphony-next',
                 WorkingDirectory=str(STATE), ProtectSystem='strict',
                 KillMode='control-group', Restart='no')
+SUCCESS = 'SOURCE_REVIEW_COMPLETED_NOT_RELEASE_APPROVAL'
+
+
+def wire(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                      separators=(',', ':'), allow_nan=False).encode('utf-8')
 
 
 class Hold(Exception):
@@ -95,6 +103,50 @@ def save(path, value):
 
 
 class Controller:
+    def admission_identity(self, jobs):
+        """The pinned predecessor admits by mkdir, before auth/model/reserve.
+
+        Check the real service's credentials, not root's os.access result.
+        This reads only credential metadata, never process arguments/env.
+        """
+        account = pwd.getpwnam(IDENTITY['User'])
+        s = jobs.stat()
+        require(s.st_uid == account.pw_uid and s.st_gid == account.pw_gid,
+                'ADMISSION_DIRECTORY_OWNER')
+        data = self.properties()
+        if data.get('ActiveState') == 'inactive' and data.get('MainPID') == '0':
+            require(data.get('ControlGroup') in ('', '/system.slice/' + UNIT), 'SERVICE_CGROUP_CHANGED')
+            return account
+        require(data.get('ControlGroup') == '/system.slice/' + UNIT, 'SERVICE_CGROUP_CHANGED')
+        pids = read(Path('/sys/fs/cgroup/system.slice') / UNIT / 'cgroup.procs', 65536).split()
+        require(pids and data.get('MainPID', '').encode() in pids, 'SERVICE_PROCESS_UNKNOWN')
+        for pid in pids:
+            require(pid.isdigit(), 'SERVICE_PROCESS_UNKNOWN')
+            status = dict(line.split(':', 1) for line in
+                          read(Path('/proc') / pid.decode() / 'status', 65536).decode().splitlines()
+                          if ':' in line)
+            require(status.get('Uid', '').split() == [str(account.pw_uid)] * 4
+                    and int(status.get('CapEff', '-1'), 16) == 0, 'ADMISSION_CREDENTIALS_CHANGED')
+        return account
+
+    def admission_probe(self, jobs):
+        account = self.admission_identity(jobs)
+        def demote():
+            os.setgroups([])
+            os.setgid(account.pw_gid)
+            os.setuid(account.pw_uid)
+        # An actual mkdir denial is the pause acknowledgement. No issue is
+        # claimed, no model is called, and no service capability is added.
+        script = ("import errno,os,sys\n"
+                  "p=sys.argv[1]+'/.update-admission-probe-'+str(os.getpid())\n"
+                  "try: os.mkdir(p,0o700)\n"
+                  "except OSError as e: sys.exit(0 if e.errno==errno.EACCES else 3)\n"
+                  "else: os.rmdir(p); sys.exit(4)\n")
+        result = subprocess.run(['/usr/bin/python3', '-I', '-B', '-c', script, str(jobs)],
+                                preexec_fn=demote, capture_output=True, timeout=5,
+                                env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'})
+        require(result.returncode == 0, 'ADMISSION_PAUSE_UNCONFIRMED')
+
     def command(self, *args):
         p = subprocess.run(['/usr/bin/systemctl', *args, UNIT], capture_output=True, text=True,
                            timeout=55, env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'SYSTEMD_PAGER': ''})
@@ -156,10 +208,12 @@ class Controller:
 
 
 class Updater:
-    def __init__(self, package, install, state, controller, *, predecessor=None, owner_uid=0):
+    def __init__(self, package, install, state, controller, *, predecessor=None, owner_uid=0,
+                 drain_seconds=30):
         self.package, self.install, self.state = map(Path, (package, install, state))
         self.ctl, self.uid = controller, owner_uid
         self.predecessor = PREDECESSOR if predecessor is None else predecessor
+        self.drain_seconds = drain_seconds
 
     def package_check(self):
         trusted(self.package, self.uid)
@@ -203,7 +257,7 @@ class Updater:
     def matches(self, hashes):
         return all((self.install / n).is_file() and sha(read(self.install / n)) == h for n, h in hashes.items())
 
-    def check(self):
+    def check(self, *, idle=True):
         self.package_check()
         for name, expected in self.predecessor.items():
             trusted(self.install / name, self.uid)
@@ -214,14 +268,15 @@ class Updater:
         new = json.loads(self.payload['installed.json'])
         require({k: v for k, v in new.items() if k not in ('execution_schema', 'execution_sha256')}
                 == dict(old, script_sha256=self.m['payload']['queue.py']), 'LEGACY_METADATA_CHANGED')
-        self.quiet()
-        require(self.ctl.idle(), 'QUEUE_NOT_IDLE')
+        if idle:
+            self.quiet()
+            require(self.ctl.idle(), 'QUEUE_NOT_IDLE')
         return {'status': 'UPDATE_CHECK_PASS', 'head': self.m['head'], 'executor_enabled': False}
 
     def quiet(self):
         require(self.state.is_dir() and not any(p.is_symlink() for p in (self.state, *self.state.parents)),
                 'STATE_SYMLINK')
-        for name in ('jobs', 'reservations', 'accepted'):
+        for name in ('jobs', 'reservations', 'accepted', 'review-links'):
             root = self.state / name
             require(not root.is_symlink() and (not root.exists() or root.is_dir()), 'STATE_SYMLINK')
         for job in sorted((self.state / 'jobs').glob('GH-*')):
@@ -234,13 +289,120 @@ class Updater:
                 require(final.is_file() and json.loads(read(final)).get('state') in
                         ('AcceptedSource', 'Blocked', 'Stopped', 'Rework'), 'DEVELOPER_NOT_TERMINAL')
             for intent in job.glob('attempts/*/outbox/*-intent.json'):
-                require(intent.with_name(intent.name.replace('-intent.json', '-receipt.json')).is_file(),
+                receipt = intent.with_name(intent.name.replace('-intent.json', '-receipt.json'))
+                require(receipt.is_file(),
                         'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                try:
+                    outcome = json.loads(read(receipt))
+                    require(isinstance(outcome, dict) and outcome, 'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                except (OSError, ValueError):
+                    raise Hold('UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION') from None
+        try:
+            self.reviews_applied()
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise Hold('REVIEW_APPLICATION_INCOMPLETE:' + type(exc).__name__) from None
+
+    def reviews_applied(self):
+        """Read-only verification of every historical linked disposition.
+
+        Retirement of the source label precedes downstream application. A
+        marker alone is also insufficient: its exact inputs and every sink
+        must agree. Reconciliation remains the queue's job, never root's.
+        """
+        accepted, linked, applications = {}, set(), set()
+        for path in sorted((self.state / 'review-links').glob('*')):
+            link_raw = read(path)
+            link = json.loads(link_raw)
+            require(isinstance(link, dict) and set(link) ==
+                    {'issue', 'generation', 'review_issue', 'head', 'base'}, 'REVIEW_LINK')
+            issue, generation, review = (link[k] for k in ('issue', 'generation', 'review_issue'))
+            require(type(issue) is int and 0 < issue < 2147483647 and type(review) is int
+                    and 0 < review < 2147483647 and issue != review and type(generation) is int
+                    and 1 <= generation <= 3 and path.name == f'GH-{review}.json'
+                    and all(re.fullmatch('[a-f0-9]{40}', str(link[k])) for k in ('head', 'base')),
+                    'REVIEW_LINK')
+            linked.add(review)
+            require((issue, generation) not in applications, 'DUPLICATE_REVIEW_APPLICATION')
+            applications.add((issue, generation))
+            source = self.state / 'jobs' / f'GH-{review}'
+            result = json.loads(read(source / 'final.json'))
+            marker = json.loads(read(source / 'linked-review-applied.json'))
+            require(type(result.get('issue')) is int and result['issue'] == review
+                    and result.get('head') == link['head'] and result.get('release_approval') is False
+                    and marker == dict(source_result_sha256=sha(wire(result)), link_sha256=sha(link_raw)),
+                    'LINKED_REVIEW_NOT_APPLIED')
+            job = self.state / 'jobs' / f'GH-{issue}'
+            execution = json.loads(read(job / 'execution.json'))
+            require(execution.get('role') == 'developer' and type(execution.get('generation')) is int
+                    and generation <= execution['generation'] <= 3, 'REVIEW_GENERATION')
+            attempt = job / 'attempts' / str(generation)
+            candidate = json.loads(read(attempt / 'candidate.json'))
+            require(type(candidate.get('issue')) is int and candidate['issue'] == issue
+                    and type(candidate.get('generation')) is int and candidate['generation'] == generation
+                    and isinstance(candidate.get('author_thread'), str) and candidate['author_thread']
+                    and all(candidate.get(k) == link[k] for k in ('head', 'base')), 'REVIEW_CANDIDATE')
+            disposition = json.loads(read(attempt / 'acceptance.json'))
+            final = json.loads(read(attempt / 'final.json'))
+            require(disposition == final and type(disposition.get('issue')) is int
+                    and disposition['issue'] == issue and type(disposition.get('generation')) is int
+                    and disposition['generation'] == generation
+                    and all(disposition.get(k) == link[k] for k in ('head', 'base'))
+                    and disposition.get('release_approval') is False, 'ACCEPTANCE_NOT_CONVERGED')
+            expected = self.disposition(candidate, result, review)
+            require(disposition == dict(expected, issue=issue, generation=generation),
+                    'ACCEPTANCE_NOT_CONVERGED')
+            if disposition['state'] == 'AcceptedSource':
+                accepted.setdefault(issue, {})[generation] = disposition
+        # Every acceptance needs the originating applied review; every current
+        # artifact must be exactly the newest *accepted* generation. A later
+        # Rework legitimately retains an earlier accepted artifact.
+        for job in sorted((self.state / 'jobs').glob('GH-*')):
+            if (job / 'linked-review-applied.json').exists():
+                require(int(job.name[3:]) in linked, 'ORPHAN_REVIEW_APPLICATION')
+            for attempt in job.glob('attempts/*'):
+                if (attempt / 'acceptance.json').exists():
+                    require((int(job.name[3:]), int(attempt.name)) in applications, 'ORPHAN_ACCEPTANCE')
+                elif (attempt / 'final.json').exists():
+                    require(json.loads(read(attempt / 'final.json')).get('state') != 'AcceptedSource',
+                            'ACCEPTANCE_NOT_CONVERGED')
+        expected_pointers = {f'GH-{issue}.json': values[max(values)] for issue, values in accepted.items()}
+        actual_pointers = {p.name: json.loads(read(p)) for p in (self.state / 'accepted').glob('*')}
+        require(actual_pointers == expected_pointers, 'ACCEPTED_ARTIFACT_NOT_CONVERGED')
+
+    def disposition(self, candidate, source, number):
+        head, base = candidate['head'], candidate['base']
+        if source.get('status') != SUCCESS:
+            return dict(state='Blocked', head=head, base=base, release_approval=False,
+                        reason='INDEPENDENT_REVIEW_INCOMPLETE')
+        matches = re.findall(r'^```snq-verdict\s*\n(.*?)\n```\s*$', source.get('review_text', ''), re.M | re.S)
+        verdict = json.loads(matches[0]) if len(matches) == 1 else {}
+        if verdict:
+            require(isinstance(verdict, dict) and set(verdict) == {'head_sha', 'base_sha', 'verdict'},
+                    'REVIEW_VERDICT')
+        review = dict(issue=number, head=verdict.get('head_sha', head if not verdict else None),
+                      base=verdict.get('base_sha', base if not verdict else None),
+                      verdict=verdict.get('verdict', 'blocked'),
+                      reviewer_thread=source.get('protocol', {}).get('thread_id'), source_status=source['status'])
+        require(review['head'] == head and review['base'] == base
+                and isinstance(review['reviewer_thread'], str) and review['reviewer_thread']
+                and review['reviewer_thread'] != candidate.get('author_thread'), 'REVIEW_STALE_OR_SELF')
+        state = 'Rework' if review['verdict'] == 'rework' else 'Blocked'
+        artifact, tests, required = (candidate.get(k, {}) for k in ('artifact', 'tests', 'required_tests'))
+        if (review['verdict'] == 'accepted' and required
+                and all(tests.get(t, {}).get('exit_code') == 0 for t in required)
+                and artifact.get('repo') == 'pupkinson/SymphonyNext' and artifact.get('head') == head
+                and re.fullmatch('[a-f0-9]{40}', str(artifact.get('tree')))
+                and type(artifact.get('pr')) is int and 0 < artifact['pr'] < 2147483647):
+            state = 'AcceptedSource'
+        value = dict(state=state, head=head, base=base, release_approval=False, review=review)
+        if state == 'AcceptedSource':
+            value['artifact'] = artifact
+        return value
 
     def seal(self):
         # Hash durable control records only; never auth/config/cache/model files.
         items = {}
-        for top in ('jobs', 'reservations', 'accepted'):
+        for top in ('jobs', 'reservations', 'accepted', 'review-links'):
             for p in sorted((self.state / top).rglob('*')):
                 require(not p.is_symlink(), 'STATE_SYMLINK')
                 rel = p.relative_to(self.state)
@@ -251,6 +413,68 @@ class Updater:
 
     def record(self, value):
         save(self.backup / 'record.json', value)
+
+    def intake(self, release=False):
+        """Revoke only new mkdir admission; existing job directories drain.
+
+        The actual 7fa0ee predecessor and candidate both claim a new source
+        job with mkdir under jobs, before any auth/model/budget. Rollback
+        separately pins the disabled developer policy (including generations).
+        No dispatcher-specific pause API or ignored lock is assumed.
+        """
+        jobs = self.state / 'jobs'
+        require(not any(p.is_symlink() for p in (jobs, *jobs.parents)), 'STATE_SYMLINK')
+        receipt = self.backup / 'intake.json'
+        fd = os.open(jobs, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            s = os.fstat(fd)
+            identity = dict(device=s.st_dev, inode=s.st_ino, uid=s.st_uid, gid=s.st_gid, mode=0o700)
+            mode = stat.S_IMODE(s.st_mode)
+            if receipt.exists():
+                trusted(receipt, self.uid)
+                value = json.loads(read(receipt))
+                require(value.get('head') == self.m['head'] and value.get('jobs') == identity
+                        and value.get('phase') in ('intent', 'paused', 'released'), 'INTAKE_RECEIPT_CHANGED')
+            else:
+                require(not release and mode == 0o700, 'INTAKE_PAUSE_UNOWNED')
+                value = dict(head=self.m['head'], jobs=identity, phase='released', events=[])
+            require(mode in (0o500, 0o700) and jobs.stat().st_ino == s.st_ino, 'INTAKE_DIRECTORY_CHANGED')
+            if release:
+                require(value['phase'] != 'released' or mode == 0o700, 'INTAKE_PAUSE_UNOWNED')
+                os.fchmod(fd, 0o700)
+                os.fsync(fd)
+                value['phase'] = 'released'
+            else:
+                self.ctl.admission_identity(jobs)
+                value['phase'] = 'intent'
+                value['events'].append(dict(phase='intent', at=time.time()))
+                save(receipt, value)  # Recovery owns the gate even if killed next.
+                os.fchmod(fd, 0o500)  # No permissions added; children stay writable.
+                os.fsync(fd)
+                self.ctl.admission_probe(jobs)
+                require(stat.S_IMODE(os.fstat(fd).st_mode) == 0o500
+                        and jobs.stat().st_ino == s.st_ino, 'ADMISSION_PAUSE_UNCONFIRMED')
+                value['phase'] = 'paused'
+            value['events'].append(dict(phase=value['phase'], at=time.time()))
+            save(receipt, value)
+        finally:
+            os.close(fd)
+
+    def drain(self):
+        deadline = time.monotonic() + self.drain_seconds
+        while True:
+            try:
+                self.quiet()
+                require(self.ctl.idle(), 'QUEUE_NOT_DRAINED')
+                self.ctl.admission_probe(self.state / 'jobs')
+                require(stat.S_IMODE((self.state / 'jobs').stat().st_mode) == 0o500,
+                        'ADMISSION_PAUSE_UNCONFIRMED')
+                return
+            except (Hold, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+                if time.monotonic() >= deadline:
+                    reason = str(exc) if isinstance(exc, Hold) else type(exc).__name__
+                    raise Hold('INTAKE_PAUSED_WORK_NOT_DRAINED:' + reason) from None
+                time.sleep(0.2)
 
     def prior(self):
         trusted(self.backup, self.uid)
@@ -296,6 +520,8 @@ class Updater:
         require(self.ctl.healthy(), 'ROLLBACK_START_FAILED')
         value.update(phase='rolled_back', status='ROLLED_BACK', state_sha256=self.seal())
         self.record(value)
+        if (self.backup / 'intake.json').exists():
+            self.intake(release=True)
         return dict(status='ROLLED_BACK', head=self.m['head'], state_sha256=value['state_sha256'])
 
     def apply(self):
@@ -305,11 +531,21 @@ class Updater:
             require(value.get('phase') == 'applied' and self.matches(self.m['payload'])
                     and self.matches({n: self.predecessor[n] for n in ('WORKFLOW.md', 'tmux.conf')})
                     and self.ctl.healthy(), 'UPDATE_ALREADY_ATTEMPTED_USE_ROLLBACK')
+            self.quiet()
+            if (self.backup / 'intake.json').exists():
+                self.intake(release=True)
             return dict(status='APPLIED_EXECUTOR_DISABLED', head=self.m['head'])
-        self.check()
+        self.check(idle=False)
         value = self.make_backup()  # Durable predecessor before the first stop.
-        self.ctl.stop()
         try:
+            self.intake()
+            self.drain()
+        except BaseException:
+            if (self.backup / 'intake.json').exists() and not self.ctl.stopped():
+                self.intake(release=True)
+            raise
+        try:
+            self.ctl.stop()  # The real predecessor's mkdir gate is still closed.
             require(self.ctl.stopped(), 'SERVICE_NOT_STOPPED')
             self.quiet()
             before = self.seal()
@@ -325,9 +561,15 @@ class Updater:
             require(self.seal() == before, 'STATE_CHANGED_AT_STARTUP')
             value.update(phase='applied', status='APPLIED_EXECUTOR_DISABLED')
             self.record(value)
+            self.intake(release=True)
             return dict(status='APPLIED_EXECUTOR_DISABLED', head=self.m['head'], state_sha256=before)
         except BaseException:
-            self.ctl.stop()
+            # Candidate startup/recovery is allowed to finish, never killed
+            # because a preceding dashboard read happened to be idle.
+            if not self.ctl.stopped():
+                self.intake()
+                self.drain()
+                self.ctl.stop()
             self.restore(value)
             raise Hold('START_FAILED_ROLLED_BACK') from None
 
@@ -336,8 +578,10 @@ class Updater:
         value = self.prior()
         if value.get('phase') == 'rolled_back':
             require(self.matches(self.predecessor) and self.ctl.healthy(), 'ROLLBACK_READBACK_FAILED')
+            self.quiet()
+            if (self.backup / 'intake.json').exists():
+                self.intake(release=True)
             return dict(status='ROLLED_BACK', head=self.m['head'])
-        require(self.ctl.idle() if not self.ctl.stopped() else True, 'QUEUE_NOT_IDLE')
         self.quiet()
         # Refuse changed policy/static files before stopping a healthy service.
         for name in PAYLOAD | set(self.predecessor):
@@ -345,7 +589,16 @@ class Updater:
             if p.exists() or p.is_symlink():
                 require(sha(read(p)) in {self.m['payload'].get(name), self.predecessor.get(name)},
                         'UNKNOWN_INSTALLED_BYTES')
-        self.ctl.stop()
+        was_stopped = self.ctl.stopped()
+        try:
+            self.intake()
+            if not was_stopped:
+                self.drain()
+                self.ctl.stop()
+        except BaseException:
+            if not self.ctl.stopped() and (self.backup / 'intake.json').exists():
+                self.intake(release=True)
+            raise
         return self.restore(value)
 
 
@@ -353,6 +606,9 @@ def main():
     os.umask(0o077)
     require(os.geteuid() == 0 and socket.gethostname() == '1c-db', 'ROOT_ON_1C_DB_REQUIRED')
     require(len(sys.argv) == 2 and sys.argv[1] in ('check', 'apply', 'rollback'), 'MODE_REQUIRED')
+    def interrupted(_signum, _frame):
+        raise KeyboardInterrupt('UPDATE_INTERRUPTED')
+    signal.signal(signal.SIGTERM, interrupted)
     package = Path(__file__).resolve().parent
     trusted(INSTALL, 0)
     lock = os.open(INSTALL / '.update.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
@@ -368,6 +624,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (Hold, OSError, ValueError, KeyError, TypeError, SyntaxError) as exc:
+    except (Hold, OSError, ValueError, KeyError, TypeError, AttributeError, SyntaxError, KeyboardInterrupt) as exc:
         print(json.dumps({'status': 'HOLD', 'reason': str(exc) if isinstance(exc, Hold) else type(exc).__name__}), file=sys.stderr)
         raise SystemExit(2)

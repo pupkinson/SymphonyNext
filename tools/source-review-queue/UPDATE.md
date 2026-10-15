@@ -2,6 +2,16 @@
 
 ## Current controlled updater — 15 October 2026
 
+### Additional bounded source repair of review5531017643
+
+Owner admission: #102 comment6196086808. Start 2026-10-15T15:41:29Z;
+source cutoff19:11:29Z, handoff deadline19:41:29Z. At most two additional
+repair cycles; this candidate uses cycle1. The previous two cycles and all
+earlier results remain history. Independent review has its own 90-minute
+window starting with the new exact-HEAD request. Installation and #104/#105
+are outside this source admission. The old7020615 review-blocked archive is
+retained unchanged; its manifest must continue to refuse installation.
+
 `update_queue.py` is now the owner-run updater, with commands `check`, `apply`
 and `rollback`. CLI host, unit and installation/state paths are fixed. It does
 not install dependencies, widen systemd/OS/API access, read credentials, label
@@ -43,7 +53,29 @@ The CLI takes only a local exclusive updater lock in the installation directory.
 
 `apply` saves a verified root-private predecessor under
 `/opt/symphony-next-queue-v1/.rollback/<exact-head>/` before stopping the same
-service. After confirmed stop/quiescence it replaces only queue.py,
+service. **Admission is actually revoked before draining or stopping.**
+The installed7fa0ee predecessor's `prepare_task` first calls `claim`, whose
+atomic `mkdir(jobs/GH-issue)` precedes API/auth/model/budget operations.
+The updater requires the ordinary service-owned0700 `jobs` directory and
+temporarily removes its write bit (0500). Existing job directories and their
+contents retain all their original permissions. Thus accepted workers can
+finish; a newly dispatched issue cannot become an accepted task. No ignored
+pause-file/dispatcher lock or unsupported runtime API is assumed. Pending
+outer Symphony dispatches do not bypass this durable admission boundary.
+
+The service UID/GID and all current cgroup process UIDs/zero effective
+capabilities are checked. A real mkdir attempt after dropping to that UID/GID
+must receive EACCES; a missing acknowledgement refuses the transition. The
+gate remains held while the updater waits up to30s for empty dashboard arrays
+and terminal, fully reconciled journals, and through confirmed service stop.
+A task admitted during backup either finishes before stop or causes HOLD;
+no accepted worker is killed to make the queue idle. A task arriving later
+is denied before a model turn. These filesystem permissions only revoke
+admission temporarily; root/sudo/API/capability/unit permissions never expand.
+The candidate's developer policy must remain the exact disabled package
+policy, so a new generation in an existing developer root is also not admitted.
+
+Only after that handshake and confirmed stop does it replace queue.py,
 execution.py, installed.json and an inert executor-policy.json. Workflow,
 tmux, unit, service identity, credentials and state are retained. Payload and
 durable control-record hashes are read back before start; dashboard and state
@@ -52,8 +84,29 @@ quiescence/known bytes cannot be established, it holds stopped rather than
 overwriting unknown data. The backup record enables explicit rollback after
 an interrupted static replacement. Repeated completed apply does not restart.
 
+The durable, root-private `intake.json` receipt is written before chmod and
+binds the exact head and original directory device/inode/UID/GID/mode; its
+phase events are retained. A caught pre-stop interruption restores only that
+owned gate and leaves the original service running. SIGKILL/power loss may
+leave admission closed. Re-run the same package's `rollback` to adopt that
+receipt, verify/drain, restore known static bytes and reopen admission after
+healthy startup. It never reopens an unowned0500 directory or changed inode.
+An interrupted/unknown static state remains HOLD with admission closed until
+reconciled. Neither a kill signal nor an ordinary stop is used as a drain.
+
 `rollback` requires idle/reconciled jobs and unchanged approved static bytes,
-then restores the exact predecessor static files and removes the two previously
+then uses the same effective admission gate/drain before stopping. Before
+restoring7fa0ee it checks **every** historical `review-links/GH-*.json`:
+exact source final and link hashes in `linked-review-applied.json`, matching
+issue/generation/HEAD/base candidate, and identical expected acceptance/final.
+The latest accepted-artifact pointer must equal the entire newest accepted
+disposition for that issue. Later Rework may legitimately retain an older
+accepted artifact; an old review cannot accept a new generation or HEAD.
+Missing application, missing artifact, self review, duplicate/orphan linkage,
+malformed receipt or unknown write all block rollback without deleting or
+repairing journals. `review-links` is included in the transition seal.
+
+It then restores the exact predecessor static files and removes the two previously
 absent developer files. It never restores an old copy of state. If pilot policy
 was enabled or jobs/outboxes remain pending, reconcile/revoke them first under
 their existing admission; this script will not silently terminate paid work or
@@ -65,6 +118,13 @@ active work, symlinks and repeated calls. Actual7fa0ee predecessor recovery was
 also exercised on owned retired/developer journals: no API/model call or state
 change; it skips the preserved developer roots. These checks are not a real
 service update or live rollback. Their exact logs/seals accompany the package.
+The permanent suite contains the two unchanged original P1 reproductions and
+the exact installed predecessor source (SHA pinned above). A separate real
+kernel test executes that predecessor under an unprivileged process against
+owned temporary journals: new admission is denied while an existing job
+finishes. Local Work's single-UID namespace uses a child with all capabilities
+dropped after exec; 1c-db uses ordinary rdc. No extra UID mapping, sandbox
+relaxation, native model turn or live service change is used for qualification.
 
 After owner-authorized apply, independently read back installed hashes, service,
 policy and dashboard. Then update the existing #104/#105 base bindings and

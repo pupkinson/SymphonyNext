@@ -26,6 +26,13 @@ class Controller:
         self.busy = False
         self.fail_next_health = False
 
+    def admission_identity(self, jobs):
+        return jobs.stat().st_uid
+
+    def admission_probe(self, jobs):
+        if jobs.stat().st_mode & 0o222:
+            raise AssertionError('admission was not paused')
+
     def identity(self):
         return dict(User='symphony-next', Group='symphony-next',
                     WorkingDirectory='/var/lib/symphony-next-bootstrap/queue-v1',
@@ -92,6 +99,7 @@ class UpdateTests(unittest.TestCase):
         save(self.package / 'manifest.json', self.manifest)
         job = self.state / 'jobs/GH-77'
         job.mkdir(parents=True)
+        job.parent.chmod(0o700)
         save(job / 'label-removed.json', {'confirmed': True})
         save(job / 'claim.json', {'historical': True})
         (self.state / 'reservations/2026-10-15').mkdir(parents=True)
@@ -99,7 +107,7 @@ class UpdateTests(unittest.TestCase):
         self.before = self.state_bytes()
         self.ctl = Controller()
         self.update = self.u.Updater(self.package, self.install, self.state, self.ctl,
-                                     predecessor=self.predecessor, owner_uid=os.geteuid())
+                                     predecessor=self.predecessor, owner_uid=os.geteuid(), drain_seconds=0)
 
     def state_bytes(self):
         return {p.relative_to(self.state).as_posix(): p.read_bytes()
