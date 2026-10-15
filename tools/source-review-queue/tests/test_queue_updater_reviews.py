@@ -155,6 +155,38 @@ class ReviewConvergenceTests(unittest.TestCase):
         fixtures.save(outbox / 'review-receipt.json', {})
         self.assert_rollback_holds()
 
+    def test_boolean_generation_cannot_match_integer_generation(self):
+        for name in ('final', 'artifact'):
+            with self.subTest(name=name):
+                self.setUp()
+                attempt, _, _ = self.linked()
+                path = attempt / 'final.json' if name == 'final' else self.f.state / 'accepted/GH-104.json'
+                result = json.loads(path.read_bytes())
+                result['generation'] = True
+                fixtures.save(path, result)
+                self.assert_rollback_holds()
+
+    def test_nonempty_unknown_receipt_is_not_an_authoritative_write_outcome(self):
+        outbox = self.f.state / 'jobs/GH-77/attempts/1/outbox'
+        outbox.mkdir(parents=True)
+        fixtures.save(outbox / 'review-intent.json', {'payload': {'title': 'review'}})
+        fixtures.save(outbox / 'review-receipt.json', {'unknown': True})
+        self.assert_rollback_holds()
+
+    def test_all_known_authoritative_outbox_receipt_shapes_are_preserved(self):
+        outbox = self.f.state / 'jobs/GH-77/attempts/1/outbox'
+        outbox.mkdir(parents=True)
+        shapes = dict(branch={'sha': 'a' * 40}, tree={'sha': 'b' * 40}, commit={'sha': 'c' * 40},
+                      pr={'number': 103}, review={'number': 104})
+        shapes.update({'blob-0': {'sha': 'd' * 40}, 'publish-ref': {'sha': 'a' * 40},
+                       'review-label': {'admitted': True}})
+        for key, value in shapes.items():
+            fixtures.save(outbox / (key + '-intent.json'), {'payload': {'sha': 'a' * 40, 'head': 'a' * 40}})
+            fixtures.save(outbox / (key + '-receipt.json'), value)
+        before = self.f.state_bytes()
+        self.assertEqual(self.f.update.rollback()['status'], 'ROLLED_BACK')
+        self.assertEqual(self.f.state_bytes(), before)
+
 
 if __name__ == '__main__':
     unittest.main()

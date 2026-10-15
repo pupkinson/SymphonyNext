@@ -6,7 +6,11 @@
 
 Owner admission: #102 comment6196086808. Start 2026-10-15T15:41:29Z;
 source cutoff19:11:29Z, handoff deadline19:41:29Z. At most two additional
-repair cycles; this candidate uses cycle1. The previous two cycles and all
+repair cycles; d7fd134 used cycle1; this final candidate uses cycle2/2. Its
+ordinary-rdc fixture avoids invoking root-only demotion, JSON generations are
+type-exact, and outbox receipts must have their actual known outcome schema.
+The production gate pins the existing995 UID/GID; no permissions are added.
+The previous two cycles and all
 earlier results remain history. Independent review has its own 90-minute
 window starting with the new exact-HEAD request. Installation and #104/#105
 are outside this source admission. The old7020615 review-blocked archive is

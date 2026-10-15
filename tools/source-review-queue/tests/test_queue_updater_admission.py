@@ -30,7 +30,6 @@ class AdmissionTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(raw).hexdigest(), f.u.PREDECESSOR['queue.py'])
         predecessor = f.root / 'predecessor.py'
         predecessor.write_bytes(raw)
-        uid, gid = os.geteuid(), os.getegid()
         predecessor.chmod(0o644)
 
         # Work's single-UID namespace cannot chown/setuid to an unmapped UID.
@@ -67,11 +66,10 @@ elif op=='resume': q.claim(q.QROOT,105)
         f.update.check()
         f.update.make_backup()
         child('claim')
-        real = f.u.Controller()
-        account = SimpleNamespace(pw_uid=uid, pw_gid=gid)
-        probe = (lambda jobs: child('deny')) if uid == 0 else real.admission_probe
-        with patch.object(real, 'admission_identity', return_value=account), \
-             patch.object(f.ctl, 'admission_probe', side_effect=probe):
+        # This fixture already has unprivileged credentials. Do not invoke
+        # production root's setgroups/setuid preexec from ordinary rdc.
+        # Use the stronger ACK: actual predecessor prepare_task must be denied.
+        with patch.object(f.ctl, 'admission_probe', side_effect=lambda jobs: child('deny')):
             f.update.intake()
             self.assertEqual(stat.S_IMODE((f.state / 'jobs').stat().st_mode), 0o500)
             child('deny')
@@ -184,6 +182,52 @@ elif op=='resume': q.claim(q.QROOT,105)
         self.assertTrue(f.ctl.running)
         self.assertEqual(stat.S_IMODE((f.state / 'jobs').stat().st_mode), 0o500)
         self.assertTrue((f.state / 'jobs/GH-77/recovery.json').is_file())
+
+    def test_service_uid_or_effective_capability_change_cannot_ack_pause(self):
+        f = self.f
+        ctl = f.u.Controller()
+        jobs = unittest.mock.Mock()
+        jobs.stat.return_value = SimpleNamespace(st_uid=995, st_gid=995)
+        account = SimpleNamespace(pw_uid=995, pw_gid=995)
+        properties = dict(ControlGroup='/system.slice/' + f.u.UNIT, MainPID='123', ActiveState='active')
+        status = b'Uid:\t995 995 995 995\nCapEff:\t0000000000000000\n'
+
+        def reads(path, maximum):
+            return b'123\n' if path.name == 'cgroup.procs' else status
+
+        with patch.object(f.u.pwd, 'getpwnam', return_value=account), \
+             patch.object(ctl, 'properties', return_value=properties), patch.object(f.u, 'read', side_effect=reads):
+            self.assertIs(ctl.admission_identity(jobs), account)
+            for bad in (b'Uid:\t995 995 995 995\nCapEff:\t1\n',
+                        b'Uid:\t0 0 0 0\nCapEff:\t0\n'):
+                status = bad
+                with self.assertRaises(f.u.Hold):
+                    ctl.admission_identity(jobs)
+            account.pw_uid = 0
+            with self.assertRaises(f.u.Hold):
+                ctl.admission_identity(jobs)
+
+    def test_root_ack_probe_drops_groups_then_gid_then_uid_and_rejects_non_eacces(self):
+        f = self.f
+        ctl = f.u.Controller()
+        account = SimpleNamespace(pw_uid=995, pw_gid=995)
+        jobs = f.state / 'jobs'
+        with patch.object(ctl, 'admission_identity', return_value=account), \
+             patch.object(f.u.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+            ctl.admission_probe(jobs)
+            args, kwargs = run.call_args
+            self.assertEqual(args[0][:4], ['/usr/bin/python3', '-I', '-B', '-c'])
+            self.assertEqual(args[0][-1], str(jobs))
+            calls = []
+            with patch.object(f.u.os, 'setgroups', side_effect=lambda v: calls.append(('groups', v))), \
+                 patch.object(f.u.os, 'setgid', side_effect=lambda v: calls.append(('gid', v))), \
+                 patch.object(f.u.os, 'setuid', side_effect=lambda v: calls.append(('uid', v))):
+                kwargs['preexec_fn']()
+            self.assertEqual(calls, [('groups', []), ('gid', 995), ('uid', 995)])
+            for code in (3, 4):
+                run.return_value = SimpleNamespace(returncode=code)
+                with self.assertRaisesRegex(f.u.Hold, 'ADMISSION_PAUSE_UNCONFIRMED'):
+                    ctl.admission_probe(jobs)
 
 
 if __name__ == '__main__':

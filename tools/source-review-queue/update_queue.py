@@ -110,6 +110,7 @@ class Controller:
         This reads only credential metadata, never process arguments/env.
         """
         account = pwd.getpwnam(IDENTITY['User'])
+        require(account.pw_uid == 995 and account.pw_gid == 995, 'ADMISSION_CREDENTIALS_CHANGED')
         s = jobs.stat()
         require(s.st_uid == account.pw_uid and s.st_gid == account.pw_gid,
                 'ADMISSION_DIRECTORY_OWNER')
@@ -294,8 +295,23 @@ class Updater:
                         'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
                 try:
                     outcome = json.loads(read(receipt))
-                    require(isinstance(outcome, dict) and outcome, 'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
-                except (OSError, ValueError):
+                    payload = json.loads(read(intent))['payload']
+                    key = intent.name[:-len('-intent.json')]
+                    require(isinstance(outcome, dict) and isinstance(payload, dict),
+                            'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                    if key in ('branch', 'tree', 'commit', 'publish-ref') or re.fullmatch('blob-[0-9]+', key):
+                        require(set(outcome) == {'sha'} and re.fullmatch('[a-f0-9]{40}', str(outcome['sha']))
+                                and (key != 'branch' or outcome['sha'] == payload.get('sha'))
+                                and (key != 'publish-ref' or outcome['sha'] == payload.get('head')),
+                                'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                    elif key in ('pr', 'review'):
+                        require(set(outcome) == {'number'} and type(outcome['number']) is int
+                                and 0 < outcome['number'] < 2147483647, 'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                    else:
+                        require(key == 'review-label' and set(outcome) == {'admitted'}
+                                and outcome['admitted'] is True,
+                                'UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION')
+                except (OSError, ValueError, KeyError, TypeError, AttributeError):
                     raise Hold('UNKNOWN_OUTBOX_REQUIRES_RECONCILIATION') from None
         try:
             self.reviews_applied()
@@ -343,13 +359,13 @@ class Updater:
                     and all(candidate.get(k) == link[k] for k in ('head', 'base')), 'REVIEW_CANDIDATE')
             disposition = json.loads(read(attempt / 'acceptance.json'))
             final = json.loads(read(attempt / 'final.json'))
-            require(disposition == final and type(disposition.get('issue')) is int
+            require(wire(disposition) == wire(final) and type(disposition.get('issue')) is int
                     and disposition['issue'] == issue and type(disposition.get('generation')) is int
                     and disposition['generation'] == generation
                     and all(disposition.get(k) == link[k] for k in ('head', 'base'))
                     and disposition.get('release_approval') is False, 'ACCEPTANCE_NOT_CONVERGED')
             expected = self.disposition(candidate, result, review)
-            require(disposition == dict(expected, issue=issue, generation=generation),
+            require(wire(disposition) == wire(dict(expected, issue=issue, generation=generation)),
                     'ACCEPTANCE_NOT_CONVERGED')
             if disposition['state'] == 'AcceptedSource':
                 accepted.setdefault(issue, {})[generation] = disposition
@@ -367,7 +383,7 @@ class Updater:
                             'ACCEPTANCE_NOT_CONVERGED')
         expected_pointers = {f'GH-{issue}.json': values[max(values)] for issue, values in accepted.items()}
         actual_pointers = {p.name: json.loads(read(p)) for p in (self.state / 'accepted').glob('*')}
-        require(actual_pointers == expected_pointers, 'ACCEPTED_ARTIFACT_NOT_CONVERGED')
+        require(wire(actual_pointers) == wire(expected_pointers), 'ACCEPTED_ARTIFACT_NOT_CONVERGED')
 
     def disposition(self, candidate, source, number):
         head, base = candidate['head'], candidate['base']
@@ -624,6 +640,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (Hold, OSError, ValueError, KeyError, TypeError, AttributeError, SyntaxError, KeyboardInterrupt) as exc:
+    except (Hold, OSError, ValueError, KeyError, TypeError, AttributeError, SyntaxError,
+            subprocess.SubprocessError, KeyboardInterrupt) as exc:
         print(json.dumps({'status': 'HOLD', 'reason': str(exc) if isinstance(exc, Hold) else type(exc).__name__}), file=sys.stderr)
         raise SystemExit(2)
