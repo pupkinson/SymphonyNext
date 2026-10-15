@@ -806,3 +806,30 @@ and first failures are appended to docs/engineering/authentik-project-access.md.
 Prior prepared-cache process hold and UNKNOWN remain; current preparation004
 also had inherited HOME despite own cache paths, then corrected/rechecked.
 This is not independent acceptance or Task5/release approval. DO_NOT_MERGE.
+
+### PR99 B/C harness, 2026-10-15 — WIP / STYLE_HOLD
+
+The owner-approved staged TLS expectation separates EARLY_DEADLINE_NO_POST from
+FULL_TLS_STAGE_CONTROL. Both original1500/<1700 negatives retain delay200,
+dispatch600, SNI700 and adverse setup800; early absent SNI is recorded explicitly.
+Separate real5000 positives for setup0/800 require accept1/SNI1/POST1 and600/700
+measured gaps. The opt-in causal gate precedes accept/dispatch; no fake stage
+or warmup client supplies missing coverage. Default fixture delays remain intact.
+F5 retains real FIFO850/ENXIO400, both Vault refusals and Store750/elapsed<800.
+Its local Python supervisor confirms child startup, shares one3000ms cleanup
+budget, classifies nonzero/cancellation, actually waits/reaps and removes FIFO
+through nested finally without replacing a primary failure.
+
+Scoped selection (all six OidcTest and five StoreRepairTest cases are enumerated
+in the engineering evidence):
+`mix test test/symphony_control/auth/oidc_test.exs test/symphony_control/auth/store_test.exs --only bc_harness --trace --seed 381068 --max-cases 1`.
+Author final scoped11/0, T1 98/0 and T2 503/0; Python12/0 and11/0 after runtime.
+Ordinary `make -C elixir all` was run once and FAILED at strict Credo: three
+long lines and two complexity findings in the new harness. Build/format/specs
+passed; coverage, ordinary full tests/skips and Dialyzer were NOT_RUN.
+Two harness cycles were used; no further code change or make rerun was made.
+The ordinary make concurrency/seed/quality rules remain unchanged.
+[Exact contract, commands, UTC/exits/seals and cleanup](../docs/engineering/authentik-project-access.md).
+This explicitly changes the prospective test interpretation, never the old run2
+FAILED result. A_UNKNOWN/process holds and independent review/qualification
+remain; NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

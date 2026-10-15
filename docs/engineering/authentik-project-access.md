@@ -3688,3 +3688,243 @@ old shared cache/HOME preservation. PROCESS_HOLD_PREPARED_CACHE/PRE_BYTES_UNKNOW
 NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE. No next stage starts
 from this documentation. Original autonomy/multi-server/product requirements,
 activation=false and native/trusted/live/production boundaries remain unchanged.
+
+## PR99 B/C harness — 2026-10-15
+
+**WIP_TEST_HARNESS_CANDIDATE / STYLE_HOLD / NOT_ACCEPTED / DO_NOT_MERGE.**
+This appendix is an append-only owner-authorized prospective test interpretation,
+not independent acceptance, qualification restart, retrospective old assertion PASS,
+or product repair. Author acts IMPLEMENTER only; additional agents0/product changes0.
+Admission fully read back EXACT MATCH:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6199634452
+Owner proposal6198824272 and Denis's dispatched contract govern this bounded stage.
+
+Starting published object: HEAD7e6fb491a39bc8af4ef10d56732045635330c156,
+TREE57361b0f166139d853bc3142e4ddbc5720745210,
+PARENT5845695a1929dc13528a6ba9c0ec297303cf8c0a,
+BASE097d64ada3138d49c6797001d02ab113c15ccb6e.
+Same existing draft PR99, feat/sn005-current-access-logout-20261013 ->
+feat/sn005-browser-login-20261011. Published candidate HEAD/TREE and final
+docs/MANIFEST seal belong to the owning handoff; a document cannot contain its
+own commit hash. No rebase/amend/force/merge/new PR/ref-base change is authorized.
+
+T0 first action2026-10-15T18:40:22Z, deadline22:40:22Z, included finalization
+reserve22:10:22Z (client UTC+3:21:40:22–01:40:22 on16October; reserve01:10:22).
+Fresh accessible #33/#95/PR99 claims showed coordinator NOT_STARTED before
+admission; scoped dedup is not global VM attestation. Previous10:00–14:00
+qualification and16:11–18:11 diagnostic budgets/history are not reset.
+
+### B: old expectation, new guarantees and observations
+
+Old two1500ms staged negatives required early accept1/SNI1 regardless of earlier
+discovery/JWKS/accept duration. Published diagnostic6197252034 observed deadline
+~1499.381, refusal1501.146, dispatch1867.566 and SNI1868.472ms; early SNI0 was
+true and FAILED. Late1 never changes that failure. Pre-JWKS1129ms cause remains
+UNKNOWN; a product guarantee to progress TLS after its expired budget is not added.
+
+| Property | Owner-approved prospective assertion |
+| --- | --- |
+| EARLY_DEADLINE_NO_POST | Real Oidc.exchange, same original1500, return<1700; delay200/dispatch600/SNI700, setup800 in adverse case. |
+| Refusal snapshot | Atomic fixture events/counts/timestamp in actual caller immediately after return, before caller/worker termination checks. Explicit NOT_EXERCISED_AT_REFUSAL if SNI absent. |
+| Causal history | Only real permitted event prefixes, singleton counts consistent with events, monotonic times, token0; no unqualified count-in-[0,1]. |
+| Natural cleanup | Separate final snapshot retains exact early prefix, token0, fixture task dead, SSL handles invalid and real contained inet Ports absent. Original accept5000 preserved; only negative cleanup may wait6000, common await default2000 unchanged. |
+| FULL_TLS_STAGE_CONTROL | Original5000 positive and added setup800 positive: actual accept1/SNI1/POST1, exact full history; dispatch-accept>=600 and handshake-return-SNI>=700. |
+| Deterministic pre-dispatch refusal | Own real listener gate is already waiting before the request. It deliberately precedes accept too: no accept/SNI is fabricated. Original deadline crossed, real caller/worker terminate, token0 before/after explicit cleanup. |
+| Gate lifecycle | Opt-in only, owner monitor, explicit cancel or2500ms finite timeout closes own listener. Separate owner-loss control. Normal600/700 and TLS verification unchanged. |
+
+The full TLS positive is mandatory and independent of early negative coverage.
+No missing stage or NOT_EXERCISED counts as full-path PASS. Final scoped positives
+measured setup0 dispatch601/SNI704ms and setup800 dispatch601/SNI703ms, with
+handshake_result:ok and one real POST each. The two ordinary negatives happened
+to reach SNI in this new run; each separate final result was TLS error/token0.
+The controlled gate retained real early accept0/SNI0/POST0 and ended cancel/done.
+These are new measurements, not historical run2 reproduction.
+
+Coverage mapping: removing the request deadline violates1500/<1700 in the full
+path or gated control; late token violates both early/final token0; missing full
+positive stage or shorter600/700 violates counts/order/measured gaps; duplicate
+stages/POST violate singleton counts/history. The unchanged explicit second-POST
+transport guard also ran in T2. Leaked caller/worker/fixture task/inet Port fails
+terminal checks. All other TLS, POST650/<850, validation and owner-down cases are
+byte-preserved. Canonical hash-pinned design/plan are not rewritten.
+
+### C: bounded-cleanup matrix, no Store change
+
+F5 product assertions are preserved statement-for-statement in a local helper:
+real FIFO, Store.put_login refuses within elapsed<800 under unchanged Store750,
+and both actual TokenVault seal/open FIFO refusals. Writer keeps850ms before
+open and400ms ENXIO retry window. Neither resource nor result is faked.
+
+Writer-ready is a line from the actual running Python child (PID/start_ticks),
+after its interpreter/protocol starts. Parent Port creation alone is insufficient.
+The local Python supervisor receives only the original3000ms launch-budget
+remainder, with200ms BEAM reserve and250ms internal cancellation/wait reserve.
+It terminates/kills only its direct child if necessary and uses actual wait to
+reap it. Child exit status, supervisor Port exit and Port DOWN are distinct facts.
+Nonzero/cancellation cannot count successful writer; Port.close is fallback
+containment only, never OS wait/reap evidence. Nested finally removes FIFO after
+failed assertion/await. Primary exception is re-raised after cleanup observation;
+the final review guard also covers Port termination between info and close.
+
+| Final scoped case | Helper elapsed ms | Real child exit / class | Port / resource outcome |
+| --- | ---: | --- | --- |
+| timely, original product assertions |1324|0/completed|Port0, DOWN normal, child reaped, FIFO absent|
+| controlled350, same product assertions |1662|0/completed|same|
+| deliberate nonzero |1311|7/nonzero_exit|same, never successful writer|
+| over-budget3500 hold |2576|-15/budget_exceeded|actual terminated child reaped; Port0 is supervisor success only|
+| early primary assertion failure |1309|0/completed|exact primary ExUnit failure preserved; FIFO absent|
+
+Historical C trigger remains UNKNOWN. New old-code+350 control first failed at
+outer1500 after successful product assertions. Its initial diagnostic catch used
+Task.yield after timeout and could not observe future alias delivery. A distinct
+changed-input C-only control logged actual Port exit_status0 and releaser DOWN
+normal after outer timeout, with original FIFO removal point not reached; its
+extra finally removed own FIFO. This supports the controlled mismatch, not a
+historical replay or a claim that old cleanup passed.
+
+### Exact selection, cycles and final quality hold
+
+Before execution ExUnit metadata enumerated actual module/test names; no file:line
+selection was used. Baseline selected exactly old positive/adverse OidcTest and
+StoreRepairTest F5 (3tests); the later observed C selected exactly1test. Final
+`--only bc_harness` selected six OidcTest cases and five StoreRepairTest cases:
+
+- `SymphonyControl.Auth.OidcTest` — `staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 primary assertion failure survives cleanup with FIFO removed`.
+
+Two harness cycles, product cycles0, agents0. First candidate scoped11/7 exit2:
+six B assertions expected :closed but OTP28 closed listener returned :einval;
+one C check expected unformatted primary error text. Cycle2 accepted the actual
+closed-handle classes AND required all real contained inet Ports absent; corrected
+the exact ExUnit error formatting. Scoped11/0 followed. Final author-side review
+added only the fallback-close race guard in that second cycle; the exact final
+revision got a fresh scoped11/0 and was sealed before broad gates.
+
+**Ordinary make was run ONCE and FAILED, exit2.** Setup/build/escript/format/specs
+passed. Strict Credo returned12 with five NEW owning-harness findings:
+- store_test.exs:640 line127>120; :636 line146>120;
+- oidc_test.exs:759 line121>120;
+- store_test.exs:629 with_fifo_writer complexity14>9;
+- auth_oidc_fixture.exs:167 delayed_token_endpoint complexity11>9.
+No quality configuration/exclusion/threshold was changed. Two cycles are consumed;
+no further source fix or make rerun was made. Coverage, ordinary full tests/skips
+and Dialyzer are NOT_RUN, not GREEN. T1/T2 positives do not replace this quality
+failure. The candidate is intentionally published WIP under the owner's allowance.
+
+### Commands, UTC, exits and sealed inputs
+
+Own root `/workspace/work/pr99-bc-20261015T184022`, fresh source `/source`.
+Private paths are VM evidence, not exported attachments. Raw outputs stay private;
+only fixed safe observations/hashes are published. Each command uses own run.py
+subreaper and restricted own environment, including env frontends and nested make.
+All final executable/test/config inputs were sealed before gates. Only the three
+allowed documentary appends and corresponding MANIFEST digests follow runtime.
+
+| Invocation | UTC start–end,15Oct2026 | Exit/result | Raw-output SHA256 |
+| --- | --- | --- | --- |
+|baseline-bc|18:47:58.572–18:48:14.336Z|2; 3/1 RED|`9af0a6edefe9282b4cc1b83a91213b3bbe15545169ab6f91292380058359d0d0`|
+|baseline-c-observed|18:50:18.400–18:50:28.351Z|2; 1/1 RED, actual later writer exit0|`7bb75e1448ea9ff9089402401f323c7de6928f85658cf70724ea9a52299bc643`|
+|scoped-cycle1|18:55:43.887–18:56:12.448Z|2; 11/7 FAILED|`c1b1c0a614357ff93268b9971dc03691d82ab1083765a9cf44073e9fcffe4d43`|
+|scoped-cycle2|18:57:46.210–18:58:15.981Z|0; 11/0|`09dbd679895e5dc26ed69fece7b9893bf3b6c7c91d47e6119ca1898a1c6b881a`|
+|scoped-final|19:02:09.118–19:02:36.771Z|0; 11/0 final|`6bd60c4f5da38f3c1ff5b65a1d8f9ea87f8db0967eff276eac1cb714bc8673b6`|
+|T1|19:03:09.444–19:03:33.583Z|0; 98/0|`39b064c4a1c4e130ea0ff89fc1460f6d56b0080a4a25799550117ea83db6dceb`|
+|T2|19:03:36.311–19:06:45.321Z|0; 503/0|`872eccadc838b0cbc98c69f38d4db28e6f09c1586c11b9ce48867a7ee85096cc`|
+|T3|19:06:48.000–19:06:59.916Z|2; FAILED lint; coverage/Dialyzer NOT_RUN|`e4434745caa99fe250933e29dfe1400746a2de37003cac49d01a263e9daecf37`|
+|T4-bootstrap|19:07:02.613–19:07:02.716Z|0; 12/0|`d44f94a892b77183bc0e0de4c49edf60231c8feebdce5a228026bd43a92f4457`|
+|T4-mcp|19:07:05.401–19:07:05.605Z|0; 11/0|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+Exact actual argv (cwd `/source/elixir` unless noted; env frontend retained):
+
+- scoped-final: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T1: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- T2: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T3 (cwd `/source`): `["make", "-C", "elixir", "all"]`.
+- T4-bootstrap (cwd `/source`): `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- T4-mcp (cwd `/source`): `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+T3 uses normal make seed/concurrency/coverage/skips; T1/T2 serialization is never
+transferred into it. T4 ran strictly after runtime; no identical failed-suite
+retry-to-green, no independent qualification or full-make PASS is claimed.
+
+- Final executable251 SHA256 `96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f`.
+- Pre-gate whole255 SHA256 `a77790af45a6bcbafc8b328135ff3f3002cfd9c03a824f89f1dc30160da33f13`.
+- External executable/runner/fixture-input inventory SHA256 `eebc923ac424f67ffbe43b825f58594e34c6539c0ede5f7093300c416f7a19d3`.
+- Fixture manifest before tests SHA256 `42fedab215ad681f7c9af23f0816d656cebe05efd8173f3ace214cfb5febc222`.
+- Original baseline overlay SHA256 `f33d5a59b45e4ed493944a954cd903fd9033e9758129b8a9f384334ee1e3274f`.
+- Observed C-only overlay SHA256 `a8e2a237381fecb64a44aacc4fe6b3a091238646d88e1b517e85688239784cdd`.
+- Final whole255 after documentary appends is separately recorded in handoff;
+  it must not be represented as the pre-gate whole inventory.
+
+84 product libs/all other protected sources and every tracked mode are frozen.
+90 MANIFEST names/order preserved; all actual digests, composition8, approved
+design49f4a2eda5c56b83b355f26aa69c92de4c84e549afad13b9c1c885dc9ea31c41 /
+planf5285de9b65b40cacfa6b8a8ed57b15695807d894ef254e331f94941cc7acb9f,
+owning-range prefixes/suffixes, product-assertion equivalence, diff and secret
+patterns are checked separately. Actual PR-body checker/readback follow publication.
+
+### Fixture, isolation, preparation failures and cleanup
+
+Real launcher was read, never executed. Direct installed Elixir1.19.5/OTP28.5/
+ERTS16.4/PG17.11 reused; +S4:4 as prepared profile. Own Hex2.5.3 bootstrap,
+installed Rebar3.25.1; all45 newly downloaded archive inner/outer digests match
+unchanged mix.lock. No old/shared compiled artifacts, deps/build/PLT copy or
+reinstallation. Actual writer Python3.13.5 is recorded; no exact historical Python
+runtime reproduction claim. Own HOME/Mix/Hex/deps/build/XDG/tmp/keys/PG paths are
+outside checkout; Git credential HOME/tokens are not inherited by tests.
+
+Before tests, real BEAM manifest connected to own Unix-only cluster55474 as
+sn004_fixture, separate sn004_test/sn005_test and postgres; ownership/SELECT1/
+DDL/INSERT/SELECT/ROLLBACK/no public product tables/private key-root confirmed.
+Both SN004 and complete SN005 env contracts propagate through frontend, child
+and nested make. Missing SN004 negative exits78 before SQL/tests. DSM=mmap remains
+in own PGDATA/pg_dynshmem; no profile change to obtain GREEN. Actual dev Dialyxir
+probe confirmed own `/mix/dialyxir_*` core and `/build/dev/*deps-dev.plt` paths;
+it is not PLT creation or Dialyzer qualification.
+
+Preparation failures retained: empty /dev/stdin make had no recipe; first direct
+Postgrex probe used invalid log:false callback and uncast regnamespace (rollback
+had completed); first metadata selection used unsupported __ex_unit__(:tests)
+rather than __ex_unit__().tests; extra Rebar version probe initially used an
+unexported binary name rather than installed absolute path. Only own probe code/
+argv changed; no tests ran before full corrected fixture preflight PASS. Every
+BEAM/version/syntax/dev probe was under own subreaper; no uncovered zombie probe.
+Read-only cloud skill snapshots/hashes retained as process guidance, no repository
+skill import/runtime activation/new hook/agent; owner scope overrides defaults.
+
+Own PG stop0 at19:08:22Z, actual postmaster wait/reap0; status3/no server;
+supervisor remaining descendants empty. Runtime cleanup audit19:08:51Z:
+39 supervised command receipts,1514 known PID/start-time identities absent,
+353 recorded fixture roots absent,573 recorded listener ports absent,
+outer forced cancellations0 and observed nonempty HOME mismatches0. Own synthetic
+PGDATA/keys/tmp/socket removed; source/evidence retained. Missing/empty process
+environ samples remain UNKNOWN, not total I/O attestation. Body-checker VMs are
+separately supervised after this runtime cleanup and checked in terminal handoff.
+No PID1/foreign/old zombie signal, old cache/evidence cleanup or re-attestation.
+
+### Preserved history and next bounded disposition
+
+Run1 T1 98/14 FAILED; run2 T1 98/0, T2 496/3 FAILED, T3 NOT_RUN_T2_FAILED;
+five-invocation diagnostic DIAGNOSTIC_INCOMPLETE. A_UNKNOWN stays open even
+though unchanged A passed current T1/T2. B's new causal diagnostic and C's
+controlled writer mismatch are not asserted as the complete historical causes.
+R6/R6-TIME/N1/N2/R1–R5 and other original-HEAD source conclusions are preserved.
+PROCESS_HOLD_PREPARED_CACHE / PRE_BYTES_UNKNOWN / HOME004 and old A148/B020/
+transport/cleanup UNKNOWN remain separate. Original v0.5, PR79/82/84/autonomy and
+multi-project requirements are unchanged; main/release/PR75/97/98 untouched.
+
+Independent reviewer must judge the new B coverage and C lifecycle, including
+real-path positives and child/Port ownership, not only test counts. Five strict
+Credo findings remain open; no automatic repair stage. After acceptance of a
+test delta, separate independent exact-candidate runtime qualification is still
+required. No self-acceptance, Task5, native/trusted/live/Bandit/global release
+disposition, merge/deploy/activation or DF Assistant work. Auth disabled;
+**NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.**

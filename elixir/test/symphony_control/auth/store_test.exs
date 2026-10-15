@@ -579,57 +579,260 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     assert {:ok, _} = Store.consume_login(cfg, flow.state, "browser", Clock.now())
   end
 
+  @tag :bc_harness
   test "F5 own stalled key resource cannot precede the operation deadline", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 writer350 preserves product assertions and completes within one cleanup budget", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [hold_ms: 350], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 intentional nonzero writer is classified and reaped", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [exit_status: 7], fn _ -> :ok end)
+    assert receipt.report["classification"] == "nonzero_exit"
+    assert receipt.report["child_exit"] == 7
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 helper budget cancels and reaps an over-budget real writer", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [hold_ms: 3_500], fn _ -> :ok end)
+    assert receipt.report["classification"] == "budget_exceeded"
+    assert receipt.report["child_exit"] != 0
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 primary assertion failure survives cleanup with FIFO removed", %{cfg: cfg} do
+    assert_raise ExUnit.AssertionError, "\n\nintentional primary assertion\n", fn ->
+      with_fifo_writer(cfg, [], fn _ -> flunk("intentional primary assertion") end)
+    end
+
+    assert_fifo_completed(Process.get(:last_fifo_cleanup))
+  end
+
+  defp assert_fifo_product(f, cfg, path) do
+    start = System.monotonic_time(:millisecond)
+    result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
+    elapsed = System.monotonic_time(:millisecond) - start
+    assert result in [{:error, :dependency_unavailable}, {:error, :unknown_outcome}]
+    assert elapsed < 800
+    assert {:error, :dependency_unavailable} = TokenVault.seal(%{cfg | session_key_ref: path}, "synthetic-fifo-canary", "AAD")
+    assert {:error, :dependency_unavailable} = TokenVault.open(%{cfg | session_key_ref: path}, "invalid", "AAD")
+  end
+
+  defp with_fifo_writer(cfg, opts, assertion) do
     path = cfg.session_key_ref <> "-fifo"
     assert {_, 0} = System.cmd("mkfifo", ["-m", "600", path])
-    owner = self()
-    writer_ref = make_ref()
-
-    releaser =
-      Task.async(fn ->
-        # An external owned writer can release even a blocking BEAM file open.
-        # Nonblocking open and a finite end also clean up when Vault rejects FIFO.
-        script = """
-        import errno,os,pathlib,sys,time
-        time.sleep(0.85)
-        end=time.monotonic()+0.4
-        while time.monotonic()<end:
-            try:
-                fd=os.open(sys.argv[1],os.O_WRONLY|os.O_NONBLOCK)
-                os.write(fd,pathlib.Path(sys.argv[2]).read_bytes())
-                os.close(fd)
-                break
-            except OSError as e:
-                if e.errno!=errno.ENXIO: raise
-                time.sleep(0.005)
-        """
-
-        port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, args: ["-c", script, path, cfg.session_key_ref]])
-        send(owner, {:writer_started, writer_ref})
-
-        receive do
-          {^port, {:exit_status, 0}} -> :ok
-        after
-          1800 ->
-            Port.close(port)
-            :abandoned
-        end
-      end)
-
-    assert_receive {:writer_started, ^writer_ref}, 1000
+    key = {:fifo_helper, path}
 
     try do
-      start = System.monotonic_time(:millisecond)
-      result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
-      elapsed = System.monotonic_time(:millisecond) - start
-      assert result in [{:error, :dependency_unavailable}, {:error, :unknown_outcome}]
-      assert elapsed < 800
-      assert {:error, :dependency_unavailable} = TokenVault.seal(%{cfg | session_key_ref: path}, "synthetic-fifo-canary", "AAD")
-      assert {:error, :dependency_unavailable} = TokenVault.open(%{cfg | session_key_ref: path}, "invalid", "AAD")
+      started = System.monotonic_time(:millisecond)
+      args = ["-u", "-c", fifo_supervisor_script(), path, cfg.session_key_ref, to_string(opts[:hold_ms] || 0), to_string(opts[:exit_status] || 0)]
+      port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, {:line, 4096}, args: args])
+      monitor = :erlang.monitor(:port, port)
+      {:os_pid, supervisor} = Port.info(port, :os_pid)
+      helper = %{port: port, monitor: monitor, started: started, deadline: started + 3_000, path: path, supervisor: supervisor}
+      Process.put(key, %{helper: helper, ready: nil, report: nil, port_exit: nil, down: nil})
+
+      primary =
+        fifo_capture(fn ->
+          state = fifo_wait(key, :ready)
+          assert is_map(state.ready), "writer protocol did not confirm real Python startup"
+          assertion.(path)
+        end)
+
+      # Cleanup failures are values until the original assertion has been
+      # re-raised. A failed cleanup must never replace that primary failure.
+      cleanup =
+        fifo_capture(fn ->
+          state = fifo_wait(key, :done)
+          Map.merge(state, %{elapsed_ms: System.monotonic_time(:millisecond) - started})
+        end)
+
+      Process.put(
+        :last_fifo_cleanup,
+        case cleanup do
+          {:returned, state} -> state
+          other -> other
+        end
+      )
+
+      IO.puts("FIFO bounded cleanup " <> inspect(fifo_safe_receipt(Process.get(:last_fifo_cleanup))))
+
+      case primary do
+        {:failed, kind, reason, stack} ->
+          :erlang.raise(kind, reason, stack)
+
+        {:returned, _} ->
+          case cleanup do
+            {:returned, state} -> state
+            {:failed, kind, reason, stack} -> :erlang.raise(kind, reason, stack)
+          end
+      end
     after
-      Task.await(releaser, 1500)
-      File.rm(path)
+      try do
+        if state = Process.delete(key) do
+          # Closing a Port is fallback containment, never a wait/reap receipt.
+          try do
+            if Port.info(state.helper.port), do: Port.close(state.helper.port)
+          catch
+            # The Port may terminate between info and close. The recorded
+            # missing wait/reap still fails; fallback cannot hide a primary.
+            :error, :badarg -> Process.put(:fifo_fallback_close, :terminated_during_close)
+          end
+
+          Process.demonitor(state.helper.monitor, [:flush])
+        end
+      after
+        File.rm(path)
+      end
     end
+  end
+
+  defp fifo_capture(fun) do
+    {:returned, fun.()}
+  catch
+    kind, reason -> {:failed, kind, reason, __STACKTRACE__}
+  end
+
+  defp fifo_wait(key, phase) do
+    state = Process.get(key)
+
+    cond do
+      phase == :ready and is_map(state.ready) ->
+        state
+
+      not is_nil(state.port_exit) and not is_nil(state.down) ->
+        state
+
+      System.monotonic_time(:millisecond) >= state.helper.deadline ->
+        state
+
+      true ->
+        fifo_receive(key, state)
+        fifo_wait(key, phase)
+    end
+  end
+
+  defp fifo_receive(key, state) do
+    %{port: port, monitor: monitor, deadline: deadline} = state.helper
+    remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+
+    receive do
+      {^port, {:data, {:eol, line}}} ->
+        message = Jason.decode!(line)
+
+        case message["event"] do
+          "supervisor_ready" ->
+            # The OS supervisor receives only the original budget's remainder,
+            # including its own cancellation/wait reserve, never a new1800ms.
+            Port.command(port, "#{max(remaining - 200, 0)}\n")
+
+          "writer_ready" ->
+            Process.put(key, %{state | ready: message})
+
+          "writer_reaped" ->
+            Process.put(key, %{state | report: message})
+        end
+
+      {^port, {:exit_status, status}} ->
+        Process.put(key, %{state | port_exit: status})
+
+      {:DOWN, ^monitor, :port, ^port, reason} ->
+        Process.put(key, %{state | down: reason})
+    after
+      remaining -> :ok
+    end
+  end
+
+  defp assert_fifo_completed(receipt) do
+    assert receipt.report["classification"] == "completed"
+    assert receipt.report["child_exit"] == 0
+    assert_fifo_terminated(receipt)
+  end
+
+  defp assert_fifo_terminated(receipt) do
+    assert receipt.elapsed_ms <= 3_000
+    assert receipt.report["child_reaped"] == true
+    assert receipt.port_exit == 0
+    assert receipt.down == :normal
+    assert Port.info(receipt.helper.port) == nil
+    refute File.exists?(receipt.helper.path)
+    refute fifo_pid_current?(receipt.ready["pid"], receipt.ready["start_ticks"])
+    refute File.exists?("/proc/#{receipt.helper.supervisor}")
+  end
+
+  defp fifo_pid_current?(pid, ticks) do
+    case File.read("/proc/#{pid}/stat") do
+      {:ok, stat} -> stat |> String.split(") ", parts: 2) |> List.last() |> String.split() |> Enum.at(19) == ticks
+      {:error, :enoent} -> false
+    end
+  end
+
+  defp fifo_safe_receipt(%{report: report, port_exit: status, down: down, elapsed_ms: elapsed}), do: %{report: report, port_exit: status, down: down, elapsed_ms: elapsed}
+  defp fifo_safe_receipt(_), do: :cleanup_failed_or_unobserved
+
+  defp fifo_supervisor_script do
+    """
+    import errno,json,os,pathlib,select,subprocess,sys,time
+    def emit(data):
+        try: print(json.dumps(data),flush=True)
+        except BrokenPipeError: pass
+    emit({"event":"supervisor_ready"})
+    launch=sys.stdin.readline()
+    if not launch: sys.exit(0)
+    end=time.monotonic()+max(int(launch),0)/1000
+    writer='''import errno,json,os,pathlib,sys,time
+    ticks=pathlib.Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()[19]
+    print(json.dumps({'event':'writer_ready','pid':os.getpid(),'start_ticks':ticks}),flush=True)
+    time.sleep(int(sys.argv[3])/1000)
+    time.sleep(0.85)
+    end=time.monotonic()+0.4
+    while time.monotonic()<end:
+        try:
+            fd=os.open(sys.argv[1],os.O_WRONLY|os.O_NONBLOCK)
+            try: os.write(fd,pathlib.Path(sys.argv[2]).read_bytes())
+            finally: os.close(fd)
+            break
+        except OSError as e:
+            if e.errno!=errno.ENXIO: raise
+            time.sleep(0.005)
+    sys.exit(int(sys.argv[4]))
+    '''
+    child=subprocess.Popen([sys.executable,'-u','-c',writer,*sys.argv[1:]],stdout=subprocess.PIPE,text=True)
+    classification=None
+    ready=False
+    try:
+        while child.poll() is None:
+            remaining=end-time.monotonic()-0.25
+            if remaining<=0:
+                classification='budget_exceeded';break
+            readers=[sys.stdin]+([] if ready else [child.stdout])
+            readable,_,_=select.select(readers,[],[],min(0.02,remaining))
+            if child.stdout in readable:
+                line=child.stdout.readline()
+                if line:
+                    message=json.loads(line)
+                    if message.get('event')!='writer_ready': raise RuntimeError('protocol')
+                    emit(message);ready=True
+            if sys.stdin in readable:
+                classification='owner_lost' if not sys.stdin.readline() else 'cancelled';break
+    finally:
+        if child.poll() is None:
+            child.terminate()
+            try: child.wait(timeout=max(min(0.15,end-time.monotonic()-0.05),0.001))
+            except subprocess.TimeoutExpired: child.kill()
+        status=child.wait(timeout=max(end-time.monotonic(),0.001))
+        child.stdout.close()
+    classification=classification or ('completed' if status==0 else 'nonzero_exit')
+    emit({'event':'writer_reaped','classification':classification,'child_exit':status,'child_reaped':True})
+    """
   end
 
   test "F2 independent session limit expires while credentials remain valid", %{f: f, cfg: cfg} do

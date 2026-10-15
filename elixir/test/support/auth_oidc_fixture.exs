@@ -164,10 +164,11 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
   def calls(f, endpoint), do: Agent.get(f.state, &Map.get(&1.counts, endpoint, 0))
 
-  def delayed_token_endpoint(f, connection_delay, handshake_delay) do
+  def delayed_token_endpoint(f, connection_delay, handshake_delay, opts \\ []) do
     root = Agent.get(f.state, & &1.root)
     owner = self()
     ready = make_ref()
+    gate = Keyword.get(opts, :dispatch_gate)
 
     opts = [
       ip: {127, 0, 0, 1},
@@ -176,8 +177,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
       certfile: Path.join(root, "cert.pem"),
       keyfile: Path.join(root, "key.pem"),
       sni_fun: fn _ ->
-        # OTP may invoke SNI again for a TLS 1.3 HelloRetryRequest. This is
-        # one handshake, not another connection or another delay budget.
+        # A TLS 1.3 HelloRetryRequest remains the same handshake/delay.
         unless Process.get(ready) do
           Process.put(ready, true)
           stage(f, :tls_handshake)
@@ -191,7 +191,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
     {:ok, listener} = :ssl.listen(0, opts)
     {:ok, {_, port}} = :ssl.sockname(listener)
     url = "https://localhost:#{port}/token"
-    Agent.update(f.state, &Map.put(&1, :token_url, url))
+    Agent.update(f.state, &Map.merge(&1, %{token_url: url, staged_listener: listener}))
     ExUnit.Callbacks.on_exit(fn -> :ssl.close(listener) end)
 
     server =
@@ -202,24 +202,44 @@ defmodule SymphonyControl.Auth.OidcFixture do
            send(owner, {:staged_endpoint_ready, ready})
 
            try do
-             {:ok, socket} = :ssl.transport_accept(listener, 5_000)
-             stage(f, :tls_accept)
+             # Opt-in gate is before accept as well as dispatch. A real client
+             # can connect to the listener, but no synthetic accept/SNI occurs.
+             if staged_dispatch_gate(f, gate) == :ok do
+               case :ssl.transport_accept(listener, 5_000) do
+                 {:ok, socket} ->
+                   Agent.update(f.state, &Map.put(&1, :staged_socket, socket))
+                   stage(f, :tls_accept)
 
-             try do
-               # Dispatch starts at the real client accept, never at fixture
-               # setup; no filler connection or operating-system backlog race.
-               Process.sleep(connection_delay)
-               stage(f, :handshake_dispatch)
+                   try do
+                     Process.sleep(connection_delay)
+                     stage(f, :handshake_dispatch)
+                     result = :ssl.handshake(socket, 2_000)
 
-               with {:ok, socket} <- :ssl.handshake(socket, 2_000),
-                    {:ok, request} <- :ssl.recv(socket, 0, 1_000),
-                    true <- String.starts_with?(request, "POST ") do
-                 stage(f, :token)
-                 body = ~s|{"error":"invalid_grant"}|
-                 :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
+                     outcome =
+                       case result do
+                         {:ok, _} -> :ok
+                         {:error, :closed} -> :closed
+                         {:error, :timeout} -> :timeout
+                         {:error, _} -> :tls_error
+                       end
+
+                     Agent.update(f.state, &Map.put(&1, :staged_handshake_result, outcome))
+                     stage(f, :handshake_return)
+
+                     with {:ok, socket} <- result,
+                          {:ok, request} <- :ssl.recv(socket, 0, 1_000),
+                          true <- String.starts_with?(request, "POST ") do
+                       stage(f, :token)
+                       body = ~s|{"error":"invalid_grant"}|
+                       :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
+                     end
+                   after
+                     :ssl.close(socket)
+                   end
+
+                 {:error, :timeout} ->
+                   :ok
                end
-             after
-               :ssl.close(socket)
              end
            after
              :ssl.close(listener)
@@ -238,9 +258,41 @@ defmodule SymphonyControl.Auth.OidcFixture do
     end
   end
 
-  def staged_events(f), do: Agent.get(f.state, &Enum.reverse(Map.get(&1, :staged_events, [])))
+  defp staged_dispatch_gate(_f, nil), do: :ok
 
-  def await_staged_done(f) do
+  defp staged_dispatch_gate(f, {owner, ref}) do
+    monitor = Process.monitor(owner)
+    stage(f, :dispatch_waiting)
+    send(owner, {:staged_dispatch_waiting, ref, self()})
+
+    try do
+      receive do
+        {:cancel_staged_dispatch, ^ref} ->
+          stage(f, :dispatch_cancelled)
+          :cancelled
+
+        {:DOWN, ^monitor, :process, ^owner, _} ->
+          stage(f, :dispatch_owner_down)
+          :cancelled
+      after
+        2_500 ->
+          stage(f, :dispatch_gate_timeout)
+          :cancelled
+      end
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+  end
+
+  def staged_events(f), do: staged_snapshot(f).events
+
+  def staged_snapshot(f) do
+    Agent.get(f.state, fn data ->
+      %{events: Enum.reverse(Map.get(data, :staged_events, [])), counts: data.counts, at: System.monotonic_time(:millisecond), handshake_result: data[:staged_handshake_result]}
+    end)
+  end
+
+  def await_staged_done(f, timeout \\ 2_000) do
     server = Agent.get(f.state, &Map.fetch!(&1, :staged_server))
     monitor = Process.monitor(server)
 
@@ -249,11 +301,28 @@ defmodule SymphonyControl.Auth.OidcFixture do
         ExUnit.Assertions.assert(reason in [:normal, :noproc])
         ExUnit.Assertions.assert(Enum.any?(staged_events(f), &(elem(&1, 0) == :fixture_done)))
         ExUnit.Assertions.refute(Process.alive?(server))
+        resources = Agent.get(f.state, &Map.take(&1, [:staged_listener, :staged_socket]))
+
+        for key <- [:staged_listener, :staged_socket], socket = resources[key] do
+          # OTP28 reports EINVAL for a closed listener. Also verify the real
+          # underlying inet Ports are gone; an error alone is not cleanup.
+          ExUnit.Assertions.assert(:ssl.sockname(socket) in [{:error, :closed}, {:error, :einval}])
+          ports = staged_socket_ports(socket) |> Enum.uniq()
+          ExUnit.Assertions.assert(ports != [])
+          for port <- ports, do: ExUnit.Assertions.assert(Port.info(port) == nil)
+        end
+
         :ok
     after
-      2_000 -> raise "staged endpoint termination missing"
+      timeout -> raise "staged endpoint termination missing"
     end
   end
+
+  defp staged_socket_ports(port) when is_port(port), do: [port]
+  defp staged_socket_ports(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> Enum.flat_map(&staged_socket_ports/1)
+  defp staged_socket_ports(list) when is_list(list), do: Enum.flat_map(list, &staged_socket_ports/1)
+  defp staged_socket_ports(map) when is_map(map), do: map |> Map.values() |> Enum.flat_map(&staged_socket_ports/1)
+  defp staged_socket_ports(_), do: []
 
   defp stage(f, name) do
     at = System.monotonic_time(:millisecond)

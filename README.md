@@ -273,3 +273,15 @@ and first failures are appended to docs/engineering/authentik-project-access.md.
 Prior prepared-cache process hold and UNKNOWN remain; current preparation004
 also had inherited HOME despite own cache paths, then corrected/rechecked.
 This is not independent acceptance or Task5/release approval. DO_NOT_MERGE.
+
+### PR99: B/C test-harness candidate, 2026-10-15
+
+Denis explicitly authorized a prospective split of the staged TLS test contract:
+original1500ms deadline/no late POST and independent full real TLS5000ms controls,
+including setup800. FIFO helper cleanup now uses real Python readiness, one3000ms
+cleanup budget and explicit child wait/reap. Product code remains unchanged.
+Author results: scoped11/0, T1 98/0, T2 503/0, Python12/0 and11/0.
+Ordinary make FAILED at five new Credo findings; coverage/Dialyzer NOT_RUN.
+This is WIP / NOT_ACCEPTED / DO_NOT_MERGE; independent B/C review is required.
+[Contract mapping and evidence](docs/engineering/authentik-project-access.md).
+Historical run2 remains FAILED, A503 remains UNKNOWN; auth remains disabled.
