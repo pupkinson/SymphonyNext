@@ -417,6 +417,11 @@ class Adapter:
                      and re.fullmatch('[a-f0-9]{40}',str(value.get('object',{}).get('sha'))),'BRANCH_READBACK')
         return {'sha':value['object']['sha']}
 
+    def prepared_branch(self,api,task):
+        result=self.ref(api,task['branch'])
+        self.require(result is None or result=={'sha':task['manifest']['base_sha']},'BRANCH_CHANGED')
+        return result
+
     def prepare(self,number,api,row=None):
         row=api.get(f'/issues/{number}') if row is None else row
         m=self.q.parse_task(row);grant=self.admit(row,m)
@@ -461,7 +466,7 @@ class Adapter:
             self.q.reserve(self.q.QROOT,f'{number}-g{grant["generation"]}')
             payload={'ref':'refs/heads/'+task['branch'],'sha':m['base_sha']}
             self.publish_once(directory/'outbox','branch',payload,
-                lambda:self._create_branch(api,payload),lambda:self.ref(api,task['branch']))
+                lambda:self._create_branch(api,payload),lambda:self.prepared_branch(api,task))
             self.q.once(directory/'ready',self.q.utc().encode())
         except Exception as exc:
             self.q.save(directory/'preparation-error.json',{'status':str(exc) if isinstance(exc,self.q.Hold)
@@ -630,12 +635,30 @@ class Adapter:
         directory=self.current(number)
         with self.lock(self.journal(number)),self.worker_lock(directory):
             final=directory/'final.json'
+            if (directory/'acceptance.json').exists():
+                result=self.q.decode(self.q.read(directory/'acceptance.json'))
+                self.settle_acceptance(number,directory,result,api)
+                self.notify(number,directory,api,result)
+                return result
             if final.exists():
-                result=self.q.decode(self.q.read(final));self.notify(number,directory,api,result)
+                result=self.q.decode(self.q.read(final))
+                if result.get('state')=='AcceptedSource':
+                    self.settle_acceptance(number,directory,result,api)
+                self.notify(number,directory,api,result)
                 return result
             result={'state':'Blocked','issue':number,'release_approval':False}
             try:
                 worker=self.worker(number,api);task=worker.task;api=worker.api
+                branch_intent=directory/'outbox/branch-intent.json'
+                if (branch_intent.exists() and not (directory/'ready').exists()
+                        and not (directory/'run/model-session.claim').exists()):
+                    payload={'ref':'refs/heads/'+task['branch'],'sha':task['manifest']['base_sha']}
+                    def no_repost():raise self.q.Hold('BRANCH_REPLAY_REFUSED')
+                    receipt=self.publish_once(directory/'outbox','branch',payload,no_repost,
+                        lambda:self.prepared_branch(api,task))
+                    self.q.save(directory/'preparation-reconciled.json',{'branch':task['branch'],**receipt})
+                    result['reconciled_branch']={'branch':task['branch'],**receipt}
+                    raise self.q.Hold('PREPARATION_INTERRUPTED_NO_MODEL_REPLAY')
                 if (directory/'preparation-error.json').exists():
                     raise self.q.Hold(self.q.decode(self.q.read(directory/'preparation-error.json'))['status'])
                 protocol=self.q.decode(self.q.read(directory/'run/protocol.json'))
@@ -665,6 +688,34 @@ class Adapter:
         body=f'snq-v1 GH-{number}\n## Symphony developer result\n\n'+json.dumps(result,ensure_ascii=False,sort_keys=True)
         self.require(len(body.encode())<=50000,'RESULT_LIMIT')
         self.q.deliver(api,number,notice,body)
+
+    def settle_acceptance(self,number,directory,result,api):
+        """A durable disposition converges both its status and artifact sinks."""
+        self.require(result.get('issue')==number and result.get('generation')==int(directory.name),
+                     'ACCEPTANCE_BINDING_CHANGED')
+        if result.get('state')=='AcceptedSource':
+            candidate=self.q.decode(self.q.read(directory/'candidate.json'))
+            verified=self.acceptance(candidate,result.get('review',{}))
+            self.require(verified.get('state')=='AcceptedSource'
+                         and verified['artifact']==result.get('artifact')
+                         and result.get('head')==candidate['head'] and result.get('base')==candidate['base'],
+                         'ACCEPTANCE_BINDING_CHANGED')
+        record=directory/'acceptance.json'
+        if record.exists():self.require(self.q.decode(self.q.read(record))==result,'ACCEPTANCE_BINDING_CHANGED')
+        else:self.q.once(record,self.q.wire_json(result))
+        self.q.save(directory/'final.json',result)
+        if result.get('state')=='AcceptedSource':
+            root=self.q.QROOT/'accepted';root.mkdir(mode=0o700,exist_ok=True)
+            pointer=root/f'GH-{number}.json'
+            previous=self.q.decode(self.q.read(pointer)) if pointer.exists() else None
+            if previous is not None and previous.get('generation')==result['generation']:
+                self.require(previous==result,'ACCEPTED_ARTIFACT_CHANGED')
+            else:
+                self.require(previous is None or previous.get('generation',0)<result['generation'],'REVIEW_STALE')
+                pr=api.get(f'/pulls/{result["artifact"]["pr"]}')
+                self.require(pr.get('head',{}).get('sha')==result['head']
+                             and pr.get('base',{}).get('sha')==result['base'],'REVIEW_STALE')
+                self.q.save(pointer,result)
 
     def review_finished(self,number,result,api):
         link=self.q.decode(self.q.read(self.q.QROOT/'review-links'/f'GH-{number}.json'))
@@ -697,10 +748,7 @@ class Adapter:
             else:accepted=self.acceptance(candidate,review)
             accepted['generation']=link['generation']
             accepted['issue']=original
-            self.q.save(directory/'final.json',accepted)
-            if accepted['state']=='AcceptedSource':
-                root=self.q.QROOT/'accepted';root.mkdir(mode=0o700,exist_ok=True)
-                self.q.save(root/f'GH-{original}.json',accepted)
+            self.settle_acceptance(original,directory,accepted,api)
             self.notify(original,directory,api,accepted)
             return accepted
 

@@ -1473,8 +1473,15 @@ def finish_task(number,api):
     if profile not in (LEGACY_LIMITS,DEVELOPMENT_LIMITS):profile=LEGACY_LIMITS
     with limits_scope(profile):
         result=_finish_task(number,api)
-        if (QROOT/'review-links'/f'GH-{number}.json').exists():
-            execution_adapter().review_finished(number,result,api)
+        link=QROOT/'review-links'/f'GH-{number}.json'
+        if link.exists():
+            marker=directory/'linked-review-applied.json'
+            binding={'source_result_sha256':sha(wire_json(result)),
+                     'link_sha256':sha(read(link))}
+            if marker.exists():require(decode(read(marker))==binding,'REVIEW_HANDOFF_CHANGED')
+            else:
+                execution_adapter().review_finished(number,result,api)
+                once(marker,wire_json(binding))
         return result
 
 
@@ -1659,6 +1666,11 @@ def recover_jobs():
         if (directory/'execution.json').exists():
             try:execution_adapter().finish(number,Api(os.environ.get('GITHUB_TOKEN'),number))
             except Hold as exc:print('SNQ developer recovery hold GH-'+str(number)+': '+str(exc),flush=True)
+            continue
+        if ((QROOT/'review-links'/f'GH-{number}.json').exists()
+                and not (directory/'linked-review-applied.json').exists()):
+            try:finish_task(number,Api(os.environ.get('GITHUB_TOKEN'),number))
+            except Hold as exc:print('SNQ linked review recovery hold GH-'+str(number)+': '+str(exc),flush=True)
             continue
         if (directory/'label-removed.json').exists():continue
         try:finish_task(number,Api(os.environ.get('GITHUB_TOKEN'),number))

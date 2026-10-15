@@ -7,17 +7,22 @@ installation. No service, installed file, root permission or credential changed.
 
 ## Currently blocked evidence
 
-DF Desktop 1c-db returned `Connection timed out` for hostname/id/pwd and
-get_config, then `-32603 Internal error` for a second minimal host check. Host,
-allowed directories, current service identity, installed code/workflow and
-rollback predecessor are UNKNOWN. Earlier denied `/opt`, native dependency and
-compound-source operations are not retried through another route.
+Initial DF Desktop 1c-db reads failed with timeout/-32603. Connectivity then
+recovered: fresh hostname=1c-db, uid/gid=997(rdc), cwd=/srv/rdc-workspace and
+allowedDirectories=[/srv/rdc-workspace]. Source checkout is clean at60e4a6d.
+Service metadata confirms active/running/enabled, MainPID854, NRestarts0,
+User/Group=symphony-next and the expected queue WorkingDirectory/ExecStart.
+This supersedes the initial connectivity blocker, not the installed-version
+gate. Installed /opt and /var/lib are outside permitted filesystem access;
+their code/workflow hashes and rollback predecessor remain UNKNOWN.
 
-The minimal next owner action is to restore the existing DF Desktop 1c-db
-connection. Verification is a successful hostname/id/pwd read identifying
-`1c-db`/`rdc`, followed by allowedDirectories and permitted service/source
-metadata reads. No command is supplied for an unverified path. A restored
-connection is not permission to replay an earlier denied operation.
+The missing input is an authorized, non-secret attestation of the actual
+installed predecessor, bound to the running service. An existing permitted
+attestation/export mechanism can provide it in the allowed workspace. No such
+fresh receipt was obtained, and no unverified owner command or expanded scope
+is proposed. Earlier denied /opt, native dependency and compound-source
+operations are not retried or delegated through another route. Restored
+connectivity alone does not authorize them.
 
 ## Candidate package after independent exact-HEAD source review
 
@@ -79,6 +84,13 @@ Tests verify this ordering and immutable legacy behavior; this is not proof
 that an unknown installed predecessor implements the same recovery contract.
 If that predecessor cannot safely ignore preserved developer journals, rollback
 must remain stopped until a reviewed compatibility route is available.
+
+Linked reviews have a separate downstream-applied marker: retirement of their
+queue label is not proof that the developer disposition was applied. Recovery
+reconciles a missing marker first. An immutable acceptance record converges the
+terminal result and accepted-artifact pointer, including a crash between those
+writes. An uncertain preparation branch is authoritatively read back without
+another POST; the interrupted attempt then stops without replaying a model.
 
 Actual service update/rollback, 90-minute native capacity and independent
 runtime readback are **NOT_RUN**. Installed-predecessor compatibility is UNKNOWN.

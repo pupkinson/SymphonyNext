@@ -88,10 +88,12 @@ class DeveloperGit(FakeGit):
         if method=='POST' and path=='/issues/124/labels':
             self.issues[0]['labels']=[{'name':x} for x in body['labels']]
             return self.issues[0]['labels']
-        if method=='POST' and path=='/issues/123/comments':
+        if method=='POST' and path in ('/issues/123/comments','/issues/124/comments'):
             comment=dict(id=len(self.comments)+1,**body);self.comments.append(comment);return comment
         if method=='DELETE' and path==f'/issues/123/labels/{q.LABEL}':
             self.row['labels']=[];return None
+        if method=='DELETE' and path==f'/issues/124/labels/{q.LABEL}':
+            self.issues[0]['labels']=[];return None
         raise AssertionError('unexpected write '+method+' '+path)
 
 
@@ -429,6 +431,72 @@ assert sys.stdin.read()==''
         with self.assertRaisesRegex(q.Hold,'WORKER_TIMEOUT'):
             worker.call('snq_dev_write',dict(path='change.py',text='too late\n',old_sha256=q.sha(b'value = 1\n')))
         self.assertEqual((worker.repo/'change.py').read_bytes(),b'value = 1\n')
+
+    def independent_result(self):
+        return dict(issue=124,head=H,status=q.SUCCESS,protocol={'thread_id':'independent-reviewer'},
+                    review_text='```snq-verdict\n'+json.dumps(dict(head_sha=H,base_sha=B,verdict='accepted'))+'\n```')
+
+    def test_recovery_applies_review_after_its_delivery_was_retired(self):
+        api,d,candidate=self.completed_candidate()
+        review=self.queue/'jobs/GH-124';review.mkdir()
+        q.save(review/'final.json',self.independent_result())
+        q.once(review/'label-removed.json',b'{"confirmed":true}')
+        with patch.object(q,'Api',return_value=api):q.recover_jobs()
+        self.assertEqual(q.decode(q.read(d/'final.json'))['state'],'AcceptedSource')
+        self.assertTrue((review/'linked-review-applied.json').is_file())
+        before=list(api.writes)
+        with patch.object(q,'Api',return_value=api):q.recover_jobs()
+        self.assertEqual(api.writes,before,'second recovery must not republish results')
+
+    def test_recovery_rebuilds_accepted_artifact_after_terminal_record(self):
+        api,d,candidate=self.completed_candidate();save=q.save
+        artifact=self.queue/'accepted/GH-123.json'
+        def crash(path,value):
+            if Path(path)==artifact:raise OSError('synthetic crash after final.json')
+            return save(path,value)
+        with patch.object(q,'save',side_effect=crash):
+            with self.assertRaises(OSError):self.a.review_finished(124,self.independent_result(),api)
+        self.assertEqual(q.decode(q.read(d/'final.json'))['state'],'AcceptedSource')
+        self.assertFalse(artifact.exists())
+        self.a.finish(123,api)
+        self.assertTrue(artifact.is_file(),'recovery must converge accepted artifact with its terminal record')
+        self.assertEqual(q.decode(q.read(artifact))['artifact'],candidate['artifact'])
+
+    def test_uncertain_preparation_branch_is_read_back_without_repost(self):
+        api=DeveloperGit(developer_row());request=api.request
+        def lose_reply(method,path,body=None):
+            result=request(method,path,body)
+            if path=='/git/refs':raise q.Hold('WRITE_OUTCOME_UNKNOWN')
+            return result
+        api.request=lose_reply
+        with patch.object(self.a,'preflight',return_value={'status':'PASS','fixture':True}),\
+             patch.object(q,'probe',side_effect=lambda *a,**kw:account_result(q.review_profile())):
+            with self.assertRaisesRegex(q.Hold,'WRITE_OUTCOME_UNKNOWN'):self.a.prepare(123,api)
+        d=self.a.current(123)
+        self.assertEqual(api.refs['snq/gh-123/g1'],B)
+        with patch.object(q,'proxy') as proxy:
+            result=self.a.finish(123,api)
+        self.assertEqual(result['state'],'Blocked')
+        self.assertTrue((d/'outbox/branch-receipt.json').exists())
+        self.assertEqual(sum(path=='/git/refs' for _,path,_ in api.writes),1)
+        proxy.assert_not_called()
+
+    def test_unknown_branch_readback_refuses_a_different_remote_revision(self):
+        api=DeveloperGit(developer_row());request=api.request
+        def wrong_remote(method,path,body=None):
+            result=request(method,path,body)
+            if path=='/git/refs':
+                api.refs['snq/gh-123/g1']='f'*40
+                raise q.Hold('WRITE_OUTCOME_UNKNOWN')
+            return result
+        api.request=wrong_remote
+        with patch.object(self.a,'preflight',return_value={'status':'PASS','fixture':True}),\
+             patch.object(q,'probe',side_effect=lambda *a,**kw:account_result(q.review_profile())):
+            with self.assertRaises(q.Hold):self.a.prepare(123,api)
+        d=self.a.current(123)
+        self.assertFalse((d/'outbox/branch-receipt.json').exists())
+        self.assertEqual(q.decode(q.read(d/'final.json'))['state'],'Blocked')
+        self.assertEqual(sum(path=='/git/refs' for _,path,_ in api.writes),1)
 
 
 for name in list(executor_tests.ExecutorTests.__dict__):

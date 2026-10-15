@@ -119,6 +119,13 @@ readback it holds rather than repeating POST. Unlocatable orphan tree/commit
 outcomes require reconciliation, not another commit. Recovery only reconciles
 publication/results and never launches a replacement model.
 
+Review delivery and downstream acceptance have separate durable completion
+markers. An immutable acceptance record can rebuild a missing accepted-artifact
+pointer after a crash. A preparation branch with an uncertain POST outcome is
+read back against its exact expected revision; a confirmed interrupted
+preparation stops without a model replay. An absent/mismatched branch never
+permits a second blind POST or a fabricated receipt.
+
 The developer issue loses dispatch admission when its result is published.
 Only the newly created review issue receives the existing reviewer label, after
 its owner/body/link are verified. Coordinator maps #95/#101 receive no labels.
