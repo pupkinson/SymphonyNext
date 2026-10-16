@@ -458,6 +458,8 @@ class Updater:
                     'NOTIFICATION_DELIVERY_UNRESOLVED')
             require(held.st_mtime_ns < received.st_mtime_ns
                     and held.st_ctime_ns < received.st_ctime_ns
+                    and held.st_mtime_ns < retired.st_mtime_ns
+                    and held.st_ctime_ns < retired.st_ctime_ns
                     and timestamp(value['at']) <= wall_now,
                     'NOTIFICATION_COMMENT_RECONCILIATION_UNCONFIRMED')
         return intent['body']

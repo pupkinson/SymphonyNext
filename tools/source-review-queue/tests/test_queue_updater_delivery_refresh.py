@@ -194,6 +194,59 @@ class DeliveryRefreshTests(unittest.TestCase):
         self.assertEqual((api.posts, api.deletes), (0, 0))
         self.holds()
 
+    def retained_equal_clock(self, module, recover):
+        job = self.f.state / 'jobs/GH-60'
+        job.mkdir()
+        stamp = module.utc()
+        result = dict(issue=60, head='a'*40, status='SOURCE_REVIEW_INCOMPLETE',
+                      at=stamp, protocol={}, tests_by_reviewer='NOT_RUN', release_approval=False)
+        module.save(job / 'final.json', result)
+        api = Api(True)
+        with patch.object(module, 'QROOT', self.f.state), patch.object(module, 'utc', return_value=stamp):
+            module.finish_task(60, api)
+            old = (job / 'label-removed.json').stat()
+            comments, api.comments = api.comments, []
+            time.sleep(0.02)
+            with self.assertRaises(module.Hold):
+                module.finish_task(60, api)
+            held = (job / 'delivery-hold.json').stat()
+            self.assertLess(old.st_ctime_ns, held.st_ctime_ns)
+            api.comments = comments
+            api.interrupt_label_get = not recover
+            time.sleep(0.02)
+            if recover:
+                module.finish_task(60, api)
+            else:
+                with self.assertRaises(KeyboardInterrupt):
+                    module.finish_task(60, api)
+                self.assertEqual((job / 'label-removed.json').stat().st_ino, old.st_ino)
+        self.assertEqual((api.posts, api.deletes), (1, 1))
+        before = self.f.state_bytes()
+        if recover:
+            self.f.update.check()
+            journal = self.f.u.journal
+            def coarse(path, *args, **kwargs):
+                value = journal(path, *args, **kwargs)
+                if Path(path) == job / 'label-removed.json' and kwargs.get('observed'):
+                    return value[0], SimpleNamespace(st_dev=held.st_dev, st_nlink=1,
+                        st_mtime_ns=held.st_mtime_ns - reversed_order,
+                        st_ctime_ns=(held.st_ctime_ns - reversed_order
+                                     if field == 'ctime' else value[1].st_ctime_ns))
+                if Path(path) == job / 'delivery-hold.json' and field == 'ctime':
+                    return value[0], SimpleNamespace(st_dev=held.st_dev, st_nlink=1,
+                        st_mtime_ns=held.st_mtime_ns - 2, st_ctime_ns=held.st_ctime_ns)
+                return value
+            for field in ('mtime', 'ctime'):
+                for reversed_order in (0, 1):
+                    with patch.object(self.f.u, 'journal', side_effect=coarse):
+                        self.holds()  # Each equal/reversed clock independently blocks.
+            self.f.update.check()
+        else:
+            self.holds()
+            self.holds()
+        self.assertEqual(self.f.state_bytes(), before)
+        self.assertEqual(self.f.ctl.events, [])
+
     def test_unknown_DELETE_after_prior_confirmation_holds_until_real_recovery(self):
         job = self.f.state / 'jobs/GH-77'
         api = self.existing_api(job, admitted=True)
@@ -265,6 +318,14 @@ for name, role, module in (('predecessor','legacy',predecessor),('candidate','le
     for admitted in (False,True):
         setattr(DeliveryRefreshTests, 'test_' + name + '_refresh_' + ('deleted' if admitted else 'already_absent'),
                 scenario(role,module,admitted))
+
+def retained(module, recover):
+    return lambda self: self.retained_equal_clock(module, recover)
+
+for name, module in (('predecessor', predecessor), ('candidate', q)):
+    for recover in (False, True):
+        setattr(DeliveryRefreshTests, 'test_equal_clock_hold_' + name + str(recover),
+                retained(module, recover))
 
 
 if __name__ == '__main__':

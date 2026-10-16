@@ -2,7 +2,7 @@
 
 ## GH60 receipt refresh — current correction, 16 October 2026
 
-Owner24h extension6222244874 retains1/3used candidates and2remaining, same
+Owner24h extension6222244874 retains old cycles; corrective candidate3/3, same
 writer/branch/PR103. New window16Oct18:34:56UTC to17Oct18:34:56UTC;
 source cutoff17Oct18:04:56UTC, final30min handoff. Previous windows/cycles,
 reviews, archives and nativeHOLDs remain history; no install/pilot admission.
@@ -12,14 +12,15 @@ then reads labels. An interruption can preserve an older confirmed label receipt
 Both confirmations must follow their own immutable comment intent; they need
 not follow one another. The updater now checks this partial order for mtime
 AND ctime. It retains individual same-FD/nonfuture/single-link/device checks,
-DELETE-intent-before-label, label-after-retained-hold and strictly newer comment
-reconciliation after a hold. Unknown/missing/stale proofs still HOLD.
+DELETE-intent-before-label. A retained hold requires BOTH comment and label
+mtime AND ctime strictly newer than that hold, independently; equal/coarse
+proofs HOLD even when all JSON times coincide. Unknown/missing proofs HOLD.
 
-All301prior tests plus15new tests PASS (316total/0skips); prepared7REDs are
+All316prior tests plus4corrective tests PASS (320total/0skips); prepared7REDs are
 permanent, plus a historical Review refresh and negative borrowed-label/pending
-DELETE/hold boundaries. Native real-writer16fixtures reproduce16oldHOLDs and
-16newPASSes with0second-invocation POST/DELETE; API doubles/device2065, not
-runtime2050 or agents. Full evidence and limits:
+DELETE/hold boundaries. Candidate2's independent review reproduced stale label
+proof after a hold with equal JSON times; the4corrective tests were allRED.
+Candidate2's native16cases remain history, not final-HEAD acceptance. Details:
 [evidence/gh102-delivery-refresh.md](evidence/gh102-delivery-refresh.md).
 
 Packaging requires five explicit exact-HEAD PASS conditions: receipt_refresh,
