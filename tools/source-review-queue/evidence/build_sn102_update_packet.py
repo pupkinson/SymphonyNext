@@ -35,7 +35,8 @@ def build(source, output, previous, inputs):
     assert review['head'] == head and review['tree'] == tree
     assert review['independent'] is True and review['state'] == 'completed'
     assert review['result'] == 'no_major_findings'
-    assert review['conditions'] == {'4285700019': 'PASS', '4281361556': 'PASS', '4281361568': 'PASS'}
+    assert review['conditions'] == {'native_clock_domain': 'PASS', '4285700019': 'PASS',
+                                    '4281361556': 'PASS', '4281361568': 'PASS'}
     assert re.fullmatch(r'https://github\.com/pupkinson/SymphonyNext/pull/103#issuecomment-[0-9]+', review['url'])
     assert sha((inputs / 'independent-review.md').read_bytes()) == review['report_sha256']
     attestation = json.loads((inputs / 'source-attestation.json').read_bytes())
@@ -66,7 +67,8 @@ def build(source, output, previous, inputs):
                     payload={name: sha(raw) for name, raw in payload.items()},
                     updater_sha256=sha((packet / 'update_queue.py').read_bytes()), review=review)
     save(packet / 'manifest.json', manifest)
-    for name in ('UPDATE.md', 'evidence/gh102-notification-journals.md'):
+    for name in ('UPDATE.md', 'evidence/gh102-notification-journals.md',
+                 'evidence/gh102-clock-domains.md'):
         shutil.copyfile(base / name, packet / Path(name).name)
     shutil.copytree(inputs, packet / 'qualification')
     static = packet / 'qualification/predecessor'

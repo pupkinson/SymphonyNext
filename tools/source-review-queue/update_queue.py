@@ -416,6 +416,12 @@ class Updater:
         # Copied/retimed proofs are outside that provenance. Coarse/equal
         # post-hold times or clock/order anomalies remain HOLD, never success.
         now = time.time_ns()
+        # Inode timestamps may be coarser than utc() in the existing writer:
+        # a successful save can have JSON at > mtime. Compare application
+        # timestamps to the captured wall clock, never to an inode clock.
+        # Integer microseconds match datetime precision without float rounding.
+        wall_now = (datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+                    + datetime.timedelta(microseconds=now // 1000))
 
         def coherent(metadata):
             require(metadata.st_dev == intended.st_dev and metadata.st_nlink == 1
@@ -426,7 +432,7 @@ class Updater:
             coherent(metadata)
         require(intended.st_mtime_ns <= received.st_mtime_ns <= retired.st_mtime_ns
                 and intended.st_ctime_ns <= received.st_ctime_ns <= retired.st_ctime_ns
-                and confirmed_at.timestamp() <= retired.st_mtime_ns / 10 ** 9,
+                and confirmed_at <= wall_now,
                 'NOTIFICATION_FILE_CHRONOLOGY')
         label_intent = directory / 'label-remove-intent.json'
         if label_intent.exists() or label_intent.is_symlink():
@@ -436,7 +442,7 @@ class Updater:
                     'NOTIFICATION_LABEL_OUTCOME_UNKNOWN')
             require(deleting.st_mtime_ns <= retired.st_mtime_ns
                     and deleting.st_ctime_ns <= retired.st_ctime_ns
-                    and timestamp(deletion['at']).timestamp() <= deleting.st_mtime_ns / 10 ** 9,
+                    and timestamp(deletion['at']) <= wall_now,
                     'NOTIFICATION_FILE_CHRONOLOGY')
         hold = directory / 'delivery-hold.json'
         if legacy and (hold.exists() or hold.is_symlink()):
@@ -447,7 +453,7 @@ class Updater:
                     'NOTIFICATION_DELIVERY_UNRESOLVED')
             require(held.st_mtime_ns < received.st_mtime_ns
                     and held.st_ctime_ns < received.st_ctime_ns
-                    and timestamp(value['at']).timestamp() <= held.st_mtime_ns / 10 ** 9,
+                    and timestamp(value['at']) <= wall_now,
                     'NOTIFICATION_COMMENT_RECONCILIATION_UNCONFIRMED')
         return intent['body']
 

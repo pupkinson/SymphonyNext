@@ -1,5 +1,31 @@
 # GH102 update and rollback contract
 
+## Native clock-domain repair — 16 October 2026
+
+Owner admission6210951994 adds3candidates in the same writer/branch/PR103;
+old cycles/windows/results/archives remain history. Start07:57:45UTC,
+source cutoff09:27:45/handoff09:57:45UTC. Review≤90min/candidate; no install/pilot.
+
+GH25 and actual installed-writer fixtures disproved application timestamp≤inode
+mtime. The candidate checks JSON timestamps against one captured application
+wall clock (integer microseconds, no float or tolerance) and other JSON times.
+Same-FD inode mtime/ctime coherence/order and STRICT post-hold receipt replacement
+remain mandatory. Equal/ambiguous proof still HOLDs; updater never retimes,
+replays or fabricates delivery proof. All three label/DELETE/hold clauses covered.
+
+301tests PASS/all285retained; native writer fixtures16direct and32extended
+cases PASS,16unknown initial outcomes blocked before GET reconciliation without
+duplicate POST/DELETE. These device2065fixtures are not runtime2050, a live agent,
+or full service update/rollback. Detailed report/readback boundaries and matrix:
+[evidence/gh102-clock-domains.md](evidence/gh102-clock-domains.md).
+
+Packaging requires independent native_clock_domain and all three priorP1 PASS
+verdicts on the new exact HEAD. A NEW archive/private root stage is required;
+keep the efa75ed archive/root stage and all earlier blocked archives. Fresh
+actual-predecessor/journal/filesystem/service checks remain mandatory. The
+following15October history is preserved; its three cross-clock application
+timestamp≤filemtime clauses are superseded by this section.
+
 ## Current controlled updater — 15 October 2026
 
 ### Corrective notification candidate after independent review

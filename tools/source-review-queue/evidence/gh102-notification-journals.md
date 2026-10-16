@@ -73,3 +73,10 @@ Additional permanent tests after independent finding:
 | New DELETE intent cannot borrow old marker despite old at field | test_new_delete_intent_cannot_reuse_old_marker_even_with_old_at_field | RED onbd418f3; GREEN corrected |
 
 Corrective targeted baseline:4tests/9subtest failures/exit1 EXPECTED RED on immutablebd418f3 updater. Corrected full suite285PASS=all244 prior+36main+5corrective tests,0fail/errors/skips. Earlier positive retained-hold test now executes actual unchanged queue reconciliation; it no longer merely assigns an old JSON timestamp. Full prepublication table was reread including root legacy/linked, developer root compatibility, every historical generation/state, schemas/bindings, optional DELETE and atomic leftovers, HOLD/recovery, original admission/drain and review/acceptance/artifact. Original queue/execution/predecessor bytes and all named critical AST remain unchanged. Candidate2 requires new independent exact-HEAD verdict; candidate1 FAIL remains history. No third candidate, native install/rollback or pilot is authorized by these tests.
+# Current clock-domain correction
+
+The16October candidate supersedes only the three application timestamp bounds
+against inode mtime. [gh102-clock-domains.md](gh102-clock-domains.md) records native
+RED/GREEN and same-domain checks. All schema/body/outcome/generation, same-FD
+file order and strict post-hold proof remain. The inventory below is retained;
+queue.py/execution.py journal/sender contracts are unchanged.

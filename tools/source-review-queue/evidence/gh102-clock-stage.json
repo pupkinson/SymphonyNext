@@ -1,0 +1,50 @@
+{
+  "admission_comment": 6210951994,
+  "base": "efa75ed8674534d28be9a0b318a7d40108fe6658",
+  "branch": "feat/sn102-executor-profile-20261015",
+  "candidates_handed_to_review": 0,
+  "cycle_definition": "prepared_candidate_handed_to_independent_review",
+  "duplicate_released": 6185521912,
+  "handoff_deadline": "2026-10-16T09:57:45Z",
+  "install": "NOT_ADMITTED_NOT_RUN",
+  "issue": 102,
+  "max_candidates": 3,
+  "old_used_cycles": [
+    2,
+    2,
+    2
+  ],
+  "old_windows_unchanged": true,
+  "owner": "\u0414\u0435\u043d\u0438\u0441",
+  "pilot104_105": "NOT_ADMITTED_NOT_RUN",
+  "pr": 103,
+  "prepared_candidate": "1/3_when_handed_to_review",
+  "prior_admission": 6185510750,
+  "schema": "snq-source-evidence/v1",
+  "scope": [
+    "update_queue.py",
+    "regression tests",
+    "UPDATE.md",
+    "evidence",
+    "package preparation"
+  ],
+  "source_cutoff": "2026-10-16T09:27:45Z",
+  "stage": "native_clock_domain",
+  "start": "2026-10-16T07:57:45Z",
+  "status": "AUTHOR_VERIFIED_PENDING_EXACT_HEAD_REVIEW",
+  "tests": {
+    "baseline": 285,
+    "errors": 0,
+    "failures": 0,
+    "full": 301,
+    "native_direct": 16,
+    "native_extended": 32,
+    "native_extended_full_readback": "MATCH",
+    "native_extended_report_sha256": "0ab4806cd5dfd082749f182c5f5fd1d601ae50b3b8e9bde677ffa3de3cc9a088",
+    "native_unknowns_blocked_before_recovery": 16,
+    "skips": 0,
+    "targeted": 16
+  },
+  "updater_sha256": "b070e6b4cbd049d9957368702d18c48684144d97738685d49d332f78c4edea5c",
+  "worktree": "/workspace/scratch/e220367fec81/sn102-impl"
+}
