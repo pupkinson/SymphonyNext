@@ -4225,3 +4225,282 @@ requirements and release/mvp-1 remain unchanged. No Task5/native/trusted/live/
 Bandit/global release disposition, CI statuses/Actions/mentions/labels,
 merge/deploy/activation/production/DF Assistant changes. Auth disabled.
 NOT_ACCEPTED / NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.
+
+
+## PR99 B-SNAPSHOT-01 — post-return evidence, 2026-10-16
+
+**WIP_TEST_EVIDENCE_CANDIDATE / T3_CLEANUP_HOLD / NOT_ACCEPTED / DO_NOT_MERGE.**
+Denis authorized only B-SNAPSHOT-01, implemented by the continuing author, not the
+finished independent reviewer. Admission and full readback:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6210426835 .
+Independent finding6208309902/verdict6208317048 supplies the source counterexample.
+Starting HEAD e5eda45f950c2da6c155cbab3d824dc446e4b50b,
+TREE afb76a8232c39090a7aa7bf15b441764a5a403a8,
+sole PARENT025f45f5400979f89dc1ea35cbd404741072a157,
+BASE097d64ada3138d49c6797001d02ab113c15ccb6e. Same existing draft PR99 and
+feat/sn005-current-access-logout-20261013 -> feat/sn005-browser-login-20261011.
+The published successor tuple and final documentary seal belong to the handoff.
+
+### Observation contract and preservation
+
+The earlier appendix's "Refusal snapshot", entered_at_refusal and
+NOT_EXERCISED_AT_REFUSAL descriptions are retained as history and superseded for
+this candidate. A real Oidc.exchange returns, the caller records returned_at,
+then a separate Agent operation returns ONE complete post_return_snapshot.
+Its at/events/counts are preserved unchanged, including events sampled after
+return. The active helper/logger now reports boundary=snapshot_after_return,
+returned_at, snapshot_at, original deadline, the full raw post_return_snapshot,
+and only OBSERVED_IN_POST_RETURN_SNAPSHOT or NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT.
+
+returned_at<=snapshot.at is asserted; no atomic return+snapshot or reconstruction
+of return-state is promised. SNI sample1521 after return1501 remains in snapshot1550
+and is observed IN THAT snapshot. A same-millisecond sample establishes no exact
+order. Missing SNI proves only missing observation: its timestamp can precede a
+pending Agent.update, so physical SNI before return is not excluded by absence.
+No new clock, RPC, barrier, timestamp filtering or synthetic TLS event was added.
+
+Both ordinary negatives and the controlled pre-dispatch gate use this actual
+evidence helper. EARLY_DEADLINE_NO_POST remains a deadline/no-POST check, separate
+from mandatory FULL_TLS_STAGE_CONTROL. History/counters/singletons/token0, final
+token0 and exact full first-snapshot prefix in final history remain intact.
+The existing assert_staged_history bytes are unchanged. A late raw token is
+retained by the formatter, accepted by that helper with expected token1, and
+rejected with expected token0 (actual assertion operands1 and0).
+
+All six existing B and thirteen C controls remain independent checks. Real
+1500/<1700,200/600/700/setup800, both real5000 positives, caller/worker/listener
+termination, natural cleanup, default2000/negative6000/accept5000/gate2500 and
+other POST650/<850/TLS/certificate/owner-down assertions are preserved. Scoped
+positives measured accept1/SNI1/POST1 and dispatch601/SNI-hold703ms for BOTH
+setup0 and setup800. Negatives retained token0 through separate final histories;
+the gated report explicitly had NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT.
+These are new author executions, not reproduction or retrospective PASS of run2.
+
+### Deterministic representation RED/GREEN
+
+Synthetic temporal maps are unit evidence for the actual logging helper, not
+executed TLS exchanges. Six new cases cover late SNI1521/return1501/snapshot1550,
+pre-return SNI1499, same-ms SNI1501, absent SNI, late token, and invalid snapshot
+timestamp before return. Baseline selection was exactly one named unit case;
+candidate unit selection exactly six. Final metadata selection exactly25 follows.
+
+Baseline is an explicitly MODIFIED diagnostic copy of the exact e5eda45 OIDC
+blob, not a byte-untouched runtime baseline. It renames the module, extracts the
+EXACT old classification expression into a helper used by its actual owning
+logging path, wraps safe observation metadata and adds the same counterexample.
+The additional consistency assertion holds on this timeline. RED1/1 exit2 was
+the false temporal label itself: left entered_at_refusal, expected
+OBSERVED_IN_POST_RETURN_SNAPSHOT. Elixir also warned that those atoms are
+disjoint; no undefined-function/syntax/setup failure supplied the RED. Candidate
+unit6/0 and sealed scoped25/0 use the repaired helper in real logger paths.
+
+- Baseline PRE-RUN `evidence/original-oidc.exs` SHA256 `f15ed1398712a63bccd410949b5bd27423aab7635233691a2954a80f90062a1b`.
+- Baseline PRE-RUN `baseline_oidc_test.exs` SHA256 `00ea6a9335a62d31a50d3644d6d7a00fcaa06bccb205ffffd446f9634b4efaf2`.
+- Baseline PRE-RUN `evidence/baseline-overlay.diff` SHA256 `65fef3e860beee576ae0e5186d4afdd4ed90601164181c419b714779b356d66e`.
+- Baseline PRE-RUN `unit_cases.exs` SHA256 `e2e2b0f79fa2dc6a9d78ec00c3ccf2922a8db5d1a2cd18517ac9cbc669816abc`.
+- Baseline PRE-RUN `run.py` SHA256 `84170adbca8eb26a564b222b40b53438e2e55cbf9ed3361757eb22a0ff0fa49b`.
+
+Exact baseline overlay below is sufficient with the pinned e5eda45 Git blob to
+reconstruct the diagnostic file (LF, preserve its blank lines). Its resulting
+file hash is the baseline_oidc_test.exs value above. Run only b_snapshot_unit
+metadata, not file:line. The repaired same-case unit is in the published OIDC
+module. No overlay was copied wholesale into active tests/fixture/product.
+
+Exact raw diff is encoded below as a JSON array of LF-terminated lines.
+Concatenating json.loads(block) reconstructs the exact bytes/hash above. This
+transport preserves blank context lines without Markdown trailing whitespace.
+An initial literal diff fence failed documentary diff-check; its original
+append and failure receipt are retained, executable inputs unchanged.
+
+```json
+[
+  "--- e5eda45/oidc_test.exs\n",
+  "+++ diagnostic-baseline-overlay\n",
+  "@@ -1,4 +1,4 @@\n",
+  "-defmodule SymphonyControl.Auth.OidcTest do\n",
+  "+defmodule SymphonyControl.Auth.OidcSnapshotBaselineTest do\n",
+  "   use ExUnit.Case, async: false\n",
+  "   import ExUnit.CaptureLog\n",
+  "   alias SymphonyControl.Auth.{Oidc, OidcFixture}\n",
+  "@@ -722,8 +722,7 @@\n",
+  " \n",
+  "   defp assert_staged_negative(f, report) do\n",
+  "     assert_staged_history(report.early, 0, false)\n",
+  "-    sni = if Map.get(report.early.counts, :tls_handshake, 0) == 1, do: :entered_at_refusal, else: :NOT_EXERCISED_AT_REFUSAL\n",
+  "-    IO.puts(\"EARLY_DEADLINE_NO_POST \" <> inspect({sni, report.early}))\n",
+  "+    IO.puts(\"EARLY_DEADLINE_NO_POST \" <> inspect(staged_snapshot_evidence(report)))\n",
+  "     # A deadline may expire before accept. Preserve the listener's original\n",
+  "     # 5000ms bound and allow only bounded natural fixture cleanup afterwards.\n",
+  "     assert :ok == OidcFixture.await_staged_done(f, 6_000)\n",
+  "@@ -914,4 +913,34 @@\n",
+  "     assert {:error, :invalid_request} == Oidc.authorization_url(cfg, @expectations, deadline())\n",
+  "     assert OidcFixture.calls(f, :discovery) == 0\n",
+  "   end\n",
+  "+  defp staged_snapshot_evidence(report) do\n",
+  "+    snapshot = report.early\n",
+  "+    assert report.returned_at <= snapshot.at\n",
+  "+    sni = if Map.get(report.early.counts, :tls_handshake, 0) == 1, do: :entered_at_refusal, else: :NOT_EXERCISED_AT_REFUSAL\n",
+  "+    %{boundary: :snapshot_after_return, returned_at: report.returned_at,\n",
+  "+      snapshot_at: snapshot.at, deadline: report.deadline,\n",
+  "+      sni_observation: sni, post_return_snapshot: snapshot}\n",
+  "+  end\n",
+  "+  @tag :b_snapshot_unit\n",
+  "+  @tag :bc_harness\n",
+  "+  test \"unit evidence labels SNI sampled after return only at the post-return snapshot\" do\n",
+  "+    snapshot = unit_staged_snapshot(1_521)\n",
+  "+    report = %{returned_at: 1_501, deadline: 1_500, early: snapshot}\n",
+  "+    evidence = staged_snapshot_evidence(report)\n",
+  "+    assert evidence.sni_observation == :OBSERVED_IN_POST_RETURN_SNAPSHOT\n",
+  "+    assert evidence.boundary == :snapshot_after_return\n",
+  "+    assert evidence.returned_at == 1_501\n",
+  "+    assert evidence.snapshot_at == 1_550\n",
+  "+    assert evidence.deadline == 1_500\n",
+  "+    assert evidence.post_return_snapshot == snapshot\n",
+  "+  end\n",
+  "+\n",
+  "+\n",
+  "+  # Synthetic maps exercise the actual evidence formatter, not a TLS exchange.\n",
+  "+  defp unit_staged_snapshot(sni_at) do\n",
+  "+    events = [fixture_ready: 0, tls_accept: 800, handshake_dispatch: 1_400]\n",
+  "+    events = if sni_at, do: events ++ [tls_handshake: sni_at], else: events\n",
+  "+    %{at: 1_550, events: events, counts: Map.new(events, fn {name, _} -> {name, 1} end), handshake_result: nil}\n",
+  "+  end\n",
+  "+\n",
+  " end\n"
+]
+```
+
+### Exact scoped selection and final executable gates
+
+- `SymphonyControl.Auth.OidcTest` — `test staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `test longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `test full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `test staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `test owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `test owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence labels SNI sampled after return only at the post-return snapshot`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence observes pre-return SNI without reconstructing return state`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence gives same-millisecond SNI no at-return ordering claim`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence missing SNI means only not observed in the post-return snapshot`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence retains a late token that the real negative history assertion rejects`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence rejects a snapshot timestamp before recorded return`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 primary assertion failure survives cleanup with FIFO removed`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor800 still runs the real writer and product assertions`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor2600 cannot launch after spending the original reserve`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 ready supervisor with insufficient reserve confirms no child`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launch delivery delay consumes the fixed Python endpoint`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 absent supervisor readiness terminates without fabricated writer receipts`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launched writer without readiness is cancelled and actually reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 supervisor readiness scheduled beyond endpoint is bounded before child launch`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 lost Port remains nonqualified and cannot hide the primary assertion`.
+
+Fresh format/specs/strict lint0 precede the final seal and T1/T2. One initial new
+124>120 map line caused lint exit4; equivalent multiline layout fixed it in the
+same first correction cycle. No quality threshold, exception, ignore or profile
+changed. Correction cycles1/2, product0, extra agents0, profile changes0.
+
+| Invocation | UTC start | UTC end | Main exit / outer forced | Raw output SHA256 |
+|---|---|---|---|---|
+|baseline-red|2026-10-16T07:34:19.146215+00:00|2026-10-16T07:34:23.361394+00:00|2 / False|`aba51a250df5694b2266426da37a51ab4291fb0595112eecec6eaac3faf8c7ad`|
+|unit-green|2026-10-16T07:35:10.131816+00:00|2026-10-16T07:35:13.098324+00:00|0 / False|`2f7ead209172604fb8155f813eef8d16f57af51af4b20af1afcbbb8444e6f5fc`|
+|format-check-final|2026-10-16T07:37:28.306143+00:00|2026-10-16T07:37:29.126660+00:00|0 / False|`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`|
+|lint-final|2026-10-16T07:36:53.749831+00:00|2026-10-16T07:36:59.443560+00:00|0 / False|`c3e6f8263a4dbe70bd84d24125a1a7152aef1305f238c5d55e258c38a77f4f71`|
+|scoped-sealed|2026-10-16T07:39:14.796569+00:00|2026-10-16T07:40:02.537704+00:00|0 / False|`8a34c2725fa58b3353feed75daf6ac77c58e89783451a908caf797673dbddf77`|
+|T1|2026-10-16T07:40:16.434399+00:00|2026-10-16T07:40:41.648545+00:00|0 / False|`d3866a59856976302f62380b8754c3beef3666c61aa6a3250afd173c76dfafc3`|
+|T2|2026-10-16T07:40:59.616729+00:00|2026-10-16T07:44:30.545654+00:00|0 / False|`39ae9d61ab1311c207aa3bceb568b772504b329be3ab7560f1262eb3ec7e62ef`|
+|T3|2026-10-16T07:45:24.926579+00:00|2026-10-16T07:52:27.193670+00:00|0 / True|`9e621c34e1dcecaf478c310f8fef21d749d96f6e2a15048309ea93f228b28b8b`|
+|T4-bootstrap|2026-10-16T07:52:58.603135+00:00|2026-10-16T07:52:58.706441+00:00|0 / False|`d5987f0d73b4533bcaa00cefadc1d12c2ec3cc6bf89a78c4641d38cd5b565320`|
+|T4-mcp|2026-10-16T07:53:12.027208+00:00|2026-10-16T07:53:12.231160+00:00|0 / False|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+Results: sealed scoped25/0; T1 98/0; T2 517/0. Ordinary make MAIN0:
+883tests/0failures/6 unchanged skips,100% configured coverage,Dialyzer0/0/0.
+Normal seed835548/max_cases8 retained. T3 overall remains CLEANUP_HOLD, described
+below. Independent Python checks after runtime:12/0 and11/0. T1 -> T2 -> T3 ran
+once, sequentially; no unchanged failed-suite retry or shell/C/product repair.
+
+Actual argv and cwd (under own run.py subreaper; no shared launcher):
+
+- baseline-red, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "/workspace/work/pr99-bsnapshot-20261016T072411/baseline_oidc_test.exs", "--only", "b_snapshot_unit", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- unit-green, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/oidc_test.exs", "--only", "b_snapshot_unit", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- scoped-sealed, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T1, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- T2, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T3, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["make", "-C", "elixir", "all"]`.
+- T4-bootstrap, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- T4-mcp, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+Pre-gate executable/test/config251 SHA256 `16c8d6964821e26639e912115a928ce0ac688ffb0867a9b6a5758916326cb398`;
+pre-gate whole255 `4379823aea0fb7f8fad8a2cbcf79677a48bd350ebdd00bd384d1d07e96b41111`.
+External runner/env/tools/selected-cases/bootstrap/NIF inventory167 entries SHA256
+`a0a5d1ded90f6349ecbd7d90e60406f2a78eab80377e36a9456401d7a1570456`.
+Tracked executable seal and all167 external entries MATCH after runtime; later
+documentation/MANIFEST appends are a separate documentary seal, not pre-gate input.
+
+The external-seal assembler initially failed on a guessed /usr/local/bin/python3;
+the actual resolved path is /usr/bin/python3.13. An already-started scoped-final
+25/0 at07:38:05–07:38:53Z is retained as PREPARATORY, not the sealed gate. Corrected
+full seal at07:38:37Z preceded distinct scoped-sealed07:39:14Z and all broad gates.
+The tracked executable bytes did not change across that assembly error. Initial
+preflight lacked pg_read_all_settings for observing PGDATA; only the own synthetic
+role in the own cluster received it, before any tests. Initial rebar PATH probe
+exited127; the absolute pinned Rebar version probe passed. Failures are retained.
+
+### Environment, lifecycle and limits
+
+Fresh own same-branch clone; prior author/reviewer copies, caches, dirty/untracked
+and evidence are preserved. Real launcher chain/shared-reset env.sh read only.
+All six mix/elixir/erl/beam/postgres/rebar hashes were read before the first VM
+probe. Installed Elixir1.19.5/OTP28.5/ERTS16.4/PG17.11/Python3.13.5/Rebar3.25.1,
++S4:4 reused; no OS/toolchain/PG reinstall or global update. Own0700 evidence,
+HOME/Mix/Hex/deps/build/XDG/tmp and actual DEV core+project PLT paths verified.
+Own Hex2.5.3 bootstrap and45 source archives with exact inner/outer lock checks;
+no previous/shared/author compiled artifacts copied. PLTs built fresh by make.
+
+Before tests, actual runner/BEAM and nested make confirmed full SN004/SN005
+manifest: own Unix-only55474, sn004_fixture, separate sn004_test/sn005_test and
+postgres, ownership/settings/DDL rollback/no public product tables/private key
+root. Actual DSM=mmap retained. Env frontend/child/nested make and observed BEAM
+HOME matched own paths; Git credential HOME was confined to control-plane work.
+Sampling gaps remain UNKNOWN, not an automatic ISOLATION_PASS.
+
+Standard coverage output uses an own output-only elixir/cover symlink to external
+0700 coverage. A post-T2 static check correctly found that symlink untracked:
+the repository ignore matched directories, not symlinks. Only this declared
+output was added to own .git/info/exclude; the original exclude is retained.
+No tracked ignore/config/input or checker was weakened. Integrity then matched
+the same executable seal before T3; default make argv/profile stayed unchanged.
+
+New T3 owned sh PID15000/start1165011 and15005/start1165014 remained after main+3s.
+First observed07:48:56.950Z, first parent erl_child_setup11583/start1145054;
+last parent own subreaper11405. Safe argv digest for both:
+e770a6efc9127a9add795be42ce206fd0ed5fd3ec863bb215c334bc735784fb0.
+Owner identities were checked before SIGKILL at07:52:27.141/142Z; actual adopted
+waits both-9 at07:52:27.192Z. Cause UNKNOWN; no causal link to C is asserted.
+This new containment and historical T3_CLEANUP_HOLD stay separate from main0.
+No investigation or signals of the old two shells/foreign processes/PID1/zombies.
+
+Own PG ownership checked, fast-stop0, direct postmaster actual wait0, status3/no
+server. Before disposal,639 recorded roots were absent and999 recorded ports had
+no listener. All recorded identities then absent, identity_unknown=[], observed
+nonempty runtime HOME mismatches0; missing HOME samples remain UNKNOWN. Own
+PGDATA/empty keys/Mix tmp/socket were disposed, with empty private directories
+recreated by later runner calls; final terminal cleanup/readback belongs in
+handoff. Absence after containment is not natural cleanup or C wait/reap proof.
+C Port-loss remains expected NONQUALIFIED/terminal_unknown;25/0 is not blanket
+C acceptance. The accepted C source protocol, fixture and all product bytes/modes
+are frozen. Final scope/MANIFEST90/order/composition8/design-plan pins/secret/diff,
+commit-byte and actual PR-body checks are recorded with publication readbacks.
+
+T0 first recorded action2026-10-16T07:24:11Z; deadline11:24:11Z, included reserve
+10:54:11Z. Old B/C2/2,C/quality2/2, qualifications/diagnostic runs/windows remain
+consumed. Historical run2 FAILED, A_UNKNOWN, PROCESS_HOLD_PREPARED_CACHE /
+PRE_BYTES_UNKNOWN / HOME004 and prior source conclusions remain independent.
+No auth activation, Task5/native/trusted/live/Bandit/global release/Actions/status/
+labels/mentions/merge/deploy/production/DF Assistant changes. Auth disabled.
+Next: independent B-SNAPSHOT/preservation source review on the exact successor,
+then separately authorized runtime qualification; no author acceptance.
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

@@ -881,3 +881,17 @@ whole OIDC AST and Store/Vault assertions match025f; configs/exclusions unchange
 All runtime commands use own supervisor/private environment. Standard make keeps
 its normal seed/concurrency/coverage/Dialyzer. Outer T3 containment is separate
 from command success and never credited to C's3000ms lifecycle.
+
+
+### PR99 B-SNAPSHOT-01 checkpoint — 2026-10-16
+
+Staged TLS evidence now explicitly describes the complete post-return snapshot;
+no state at refusal is reconstructed from counts or millisecond timestamps.
+Semantic old-label RED1/1, new unit6/0, sealed scoped25/0, T1 98/0, T2 517/0;
+ordinary make MAIN0/883tests/0failures/6skips/100%coverage/Dialyzer0, but
+T3_CLEANUP_HOLD (two new own sh required SIGKILL/actual wait-9, cause UNKNOWN).
+Post-runtime Python12/0+11/0. Product, fixture, C, A and quality inputs frozen.
+Full timeline/overlay/argv/seals/limits in the engineering appendix. Independent
+review and separate runtime qualification remain required. Historical A_UNKNOWN,
+run2 FAILED/process-cache/HOME004 holds remain. Auth disabled; NOT_ACCEPTED /
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.
