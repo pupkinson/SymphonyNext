@@ -675,17 +675,15 @@ defmodule SymphonyControl.Auth.OidcTest do
     IO.puts("absolute deadline fixture events (no credentials): " <> inspect({stage, released_at, done_at, :provider_and_listener_terminated}))
   end
 
+  @tag :bc_harness
   test "staged connection dispatch and TLS handshake cannot produce a late POST" do
     f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
     cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
     started = System.monotonic_time(:millisecond)
-    assert {:error, _} = staged_exchange(f, cfg, 1_500)
+    report = staged_exchange(f, cfg, 1_500)
+    assert {:error, _} = report.result
     assert System.monotonic_time(:millisecond) - started < 1_700
-    assert OidcFixture.calls(f, :tls_accept) == 1
-    assert OidcFixture.calls(f, :tls_handshake) == 1
-    assert :ok == OidcFixture.await_staged_done(f)
-    assert OidcFixture.calls(f, :token) == 0
-    assert_staged_events(f)
+    assert_staged_negative(f, report)
   end
 
   test "missing access lifetime uses signed ID expiry without extending it" do
@@ -697,61 +695,198 @@ defmodule SymphonyControl.Auth.OidcTest do
 
   defp staged_exchange(f, cfg, ms) do
     started = System.monotonic_time(:millisecond)
-    caller = Task.async(fn -> exchange(f, cfg, ms) end)
+
+    caller =
+      Task.async(fn ->
+        code = OidcFixture.issue_code(f, Map.to_list(@expectations))
+        expires = deadline(ms)
+        result = Oidc.exchange(cfg, code, @expectations, expires)
+        returned_at = System.monotonic_time(:millisecond)
+
+        %{
+          result: result,
+          post_return_snapshot: OidcFixture.staged_snapshot(f),
+          deadline: expires,
+          returned_at: returned_at
+        }
+      end)
+
     assert_receive {:jwks_waiting, provider}, 1_000
     {:links, links} = Process.info(caller.pid, :links)
     worker = Enum.find(links, &(&1 != self()))
     assert is_pid(worker)
     monitor = Process.monitor(worker)
     send(provider, :release_jwks)
-    result = Task.await(caller, 5_000)
+    report = Task.await(caller, 5_000)
+    assert report.returned_at <= report.post_return_snapshot.at
     assert_receive {:DOWN, ^monitor, :process, ^worker, reason}, 500
     assert reason in [:normal, :killed]
     refute Process.alive?(worker)
     refute Process.alive?(caller.pid)
-    IO.puts("staged exchange lifecycle: " <> inspect({started, System.monotonic_time(:millisecond), reason, :caller_and_worker_terminated}))
-    result
+    IO.puts("staged exchange lifecycle: " <> inspect({started, report.returned_at, report.deadline, reason, :caller_and_worker_terminated}))
+    report
   end
 
-  defp assert_staged_events(f) do
-    events = OidcFixture.staged_events(f)
-    assert Enum.map(events, &elem(&1, 0)) == [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :fixture_done]
-    times = Map.new(events)
-    assert times.handshake_dispatch - times.tls_accept >= 600
-    assert times.fixture_done - times.tls_handshake >= 700
-    IO.puts("staged TLS monotonic events (no credentials): " <> inspect(events))
+  defp assert_staged_negative(f, report) do
+    assert_staged_history(report.post_return_snapshot, 0, false)
+    IO.puts("EARLY_DEADLINE_NO_POST " <> inspect(staged_snapshot_evidence(report)))
+    # A deadline may expire before accept. Preserve the listener's original
+    # 5000ms bound and allow only bounded natural fixture cleanup afterwards.
+    assert :ok == OidcFixture.await_staged_done(f, 6_000)
+    final = OidcFixture.staged_snapshot(f)
+    assert_staged_history(final, 0, true)
+    assert Enum.take(final.events, length(report.post_return_snapshot.events)) == report.post_return_snapshot.events
+    IO.puts("staged final history (separate from post-return snapshot): " <> inspect(final))
   end
 
+  defp staged_snapshot_evidence(report) do
+    snapshot = report.post_return_snapshot
+    assert report.returned_at <= snapshot.at
+    # One Agent observation after return; no reconstruction of state at return.
+    # Equal millisecond samples establish no order. Absent SNI may still have a
+    # pending Agent update, whose stage timestamp was sampled before that update.
+    sni =
+      if Map.get(snapshot.counts, :tls_handshake, 0) == 1,
+        do: :OBSERVED_IN_POST_RETURN_SNAPSHOT,
+        else: :NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT
+
+    %{
+      boundary: :snapshot_after_return,
+      returned_at: report.returned_at,
+      snapshot_at: snapshot.at,
+      deadline: report.deadline,
+      sni_observation: sni,
+      post_return_snapshot: snapshot
+    }
+  end
+
+  defp assert_staged_history(snapshot, tokens, complete) do
+    histories = [
+      [:fixture_ready, :fixture_done],
+      [:fixture_ready, :tls_accept, :handshake_dispatch, :handshake_return, :fixture_done],
+      [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :handshake_return, :fixture_done],
+      [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :handshake_return, :token, :fixture_done]
+    ]
+
+    names = Enum.map(snapshot.events, &elem(&1, 0))
+    assert Enum.any?(histories, fn history -> if complete, do: names == history, else: names == Enum.take(history, length(names)) end)
+    assert Enum.uniq(names) == names
+    times = Enum.map(snapshot.events, &elem(&1, 1))
+    assert Enum.sort(times) == times
+    assert Enum.all?(times, &(&1 <= snapshot.at))
+
+    for name <- List.flatten(histories) |> Enum.uniq() do
+      assert Map.get(snapshot.counts, name, 0) == Enum.count(names, &(&1 == name))
+    end
+
+    assert Map.get(snapshot.counts, :token, 0) == tokens
+    if complete, do: assert(List.last(names) == :fixture_done)
+    times = Map.new(snapshot.events)
+    if times[:handshake_dispatch], do: assert(times.handshake_dispatch - times.tls_accept >= 600)
+
+    if times[:tls_handshake] && times[:handshake_return] do
+      assert times.handshake_return - times.tls_handshake >= 700
+    end
+  end
+
+  @tag :bc_harness
   test "longer permitted window confirms staged endpoint can receive one real POST" do
+    staged_positive(0)
+  end
+
+  @tag :bc_harness
+  test "full real staged TLS path remains viable after setup800" do
+    staged_positive(800)
+  end
+
+  defp staged_positive(pause) do
     f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
     cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
-    # This endpoint deliberately returns a fixed 400 after receiving POST.
-    assert {:error, :unknown_outcome} = staged_exchange(f, cfg, 5_000)
+    staged_setup_pause(pause)
+    # The same real endpoint returns its fixed400 after receiving POST.
+    report = staged_exchange(f, cfg, 5_000)
+    assert {:error, :unknown_outcome} = report.result
     assert :ok == OidcFixture.await_staged_done(f)
+    snapshot = OidcFixture.staged_snapshot(f)
+    assert_staged_history(snapshot, 1, true)
     assert OidcFixture.calls(f, :tls_accept) == 1
     assert OidcFixture.calls(f, :tls_handshake) == 1
     assert OidcFixture.calls(f, :token) == 1
-    events = OidcFixture.staged_events(f)
-    assert Enum.map(events, &elem(&1, 0)) == [:fixture_ready, :tls_accept, :handshake_dispatch, :tls_handshake, :token, :fixture_done]
-    IO.puts("positive staged TLS monotonic events (no credentials): " <> inspect(events))
+    IO.puts("FULL_TLS_STAGE_CONTROL " <> inspect({pause, snapshot}))
   end
 
+  @tag :bc_harness
   test "staged TLS fixture retains both delays after an adverse setup scheduling pause" do
     f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
     cfg = OidcFixture.delayed_token_endpoint(f, 600, 700)
+    staged_setup_pause(800)
+    started = System.monotonic_time(:millisecond)
+    report = staged_exchange(f, cfg, 1_500)
+    assert {:error, _} = report.result
+    assert System.monotonic_time(:millisecond) - started < 1_700
+    assert_staged_negative(f, report)
+  end
+
+  defp staged_setup_pause(0), do: :ok
+
+  defp staged_setup_pause(800) do
     pause_started = System.monotonic_time(:millisecond)
     marker = make_ref()
     Process.send_after(self(), {:setup_pause_done, marker}, 800)
     assert_receive {:setup_pause_done, ^marker}, 1_000
     assert System.monotonic_time(:millisecond) - pause_started >= 800
-    started = System.monotonic_time(:millisecond)
-    assert {:error, _} = staged_exchange(f, cfg, 1_500)
-    assert System.monotonic_time(:millisecond) - started < 1_700
-    assert OidcFixture.calls(f, :tls_accept) == 1
-    assert OidcFixture.calls(f, :tls_handshake) == 1
+  end
+
+  @tag :bc_harness
+  test "owned fixture gate forces original deadline refusal before dispatch" do
+    f = OidcFixture.start!(delay_ms: 200, hold_jwks: self())
+    ref = make_ref()
+    cfg = OidcFixture.delayed_token_endpoint(f, 600, 700, dispatch_gate: {self(), ref})
+    assert_receive {:staged_dispatch_waiting, ^ref, server}, 1_000
+
+    try do
+      started = System.monotonic_time(:millisecond)
+      report = staged_exchange(f, cfg, 1_500)
+      assert {:error, _} = report.result
+      assert System.monotonic_time(:millisecond) - started < 1_700
+      assert report.returned_at >= report.deadline
+      assert Enum.map(report.post_return_snapshot.events, &elem(&1, 0)) == [:fixture_ready, :dispatch_waiting]
+      assert OidcFixture.calls(f, :tls_accept) == 0
+      assert OidcFixture.calls(f, :tls_handshake) == 0
+      assert OidcFixture.calls(f, :token) == 0
+      IO.puts("EARLY_DEADLINE_NO_POST forced_before_dispatch " <> inspect(staged_snapshot_evidence(report)))
+    after
+      send(server, {:cancel_staged_dispatch, ref})
+    end
+
+    assert_staged_gate_cleanup(f, :dispatch_cancelled)
+  end
+
+  @tag :bc_harness
+  test "owned staged gate closes its listener on owner loss" do
+    f = OidcFixture.start!()
+
+    owner =
+      spawn(fn ->
+        receive do
+          :stop -> :ok
+        end
+      end)
+
+    on_exit(fn -> if Process.alive?(owner), do: Process.exit(owner, :kill) end)
+    ref = make_ref()
+    OidcFixture.delayed_token_endpoint(f, 600, 700, dispatch_gate: {owner, ref})
+    Process.exit(owner, :kill)
+    assert_staged_gate_cleanup(f, :dispatch_owner_down)
+  end
+
+  defp assert_staged_gate_cleanup(f, terminal) do
     assert :ok == OidcFixture.await_staged_done(f)
-    assert OidcFixture.calls(f, :token) == 0
-    assert_staged_events(f)
+    snapshot = OidcFixture.staged_snapshot(f)
+    assert Enum.map(snapshot.events, &elem(&1, 0)) == [:fixture_ready, :dispatch_waiting, terminal, :fixture_done]
+    for name <- [:fixture_ready, :dispatch_waiting, terminal, :fixture_done], do: assert(Map.fetch!(snapshot.counts, name) == 1)
+    for name <- [:tls_accept, :handshake_dispatch, :tls_handshake, :token], do: assert(Map.get(snapshot.counts, name, 0) == 0)
+    IO.puts("staged gate terminal " <> inspect(snapshot))
   end
 
   test "malformed discovery documents and throttling fail closed before POST" do
@@ -805,5 +940,86 @@ defmodule SymphonyControl.Auth.OidcTest do
     assert {:error, :invalid_request} == Oidc.exchange(cfg, "code", nil, deadline())
     assert {:error, :invalid_request} == Oidc.authorization_url(cfg, @expectations, deadline())
     assert OidcFixture.calls(f, :discovery) == 0
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence labels SNI sampled after return only at the post-return snapshot" do
+    snapshot = unit_staged_snapshot(1_521)
+    report = %{returned_at: 1_501, deadline: 1_500, post_return_snapshot: snapshot}
+    evidence = staged_snapshot_evidence(report)
+    assert evidence.sni_observation == :OBSERVED_IN_POST_RETURN_SNAPSHOT
+    assert evidence.boundary == :snapshot_after_return
+    assert evidence.returned_at == 1_501
+    assert evidence.snapshot_at == 1_550
+    assert evidence.deadline == 1_500
+    assert evidence.post_return_snapshot == snapshot
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence observes pre-return SNI without reconstructing return state" do
+    snapshot = unit_staged_snapshot(1_499)
+    evidence = staged_snapshot_evidence(%{returned_at: 1_501, deadline: 1_500, post_return_snapshot: snapshot})
+    assert evidence.sni_observation == :OBSERVED_IN_POST_RETURN_SNAPSHOT
+    assert evidence.boundary == :snapshot_after_return
+    assert evidence.post_return_snapshot == snapshot
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence gives same-millisecond SNI no at-return ordering claim" do
+    snapshot = unit_staged_snapshot(1_501)
+    evidence = staged_snapshot_evidence(%{returned_at: 1_501, deadline: 1_500, post_return_snapshot: snapshot})
+    assert evidence.sni_observation == :OBSERVED_IN_POST_RETURN_SNAPSHOT
+    assert evidence.boundary == :snapshot_after_return
+    assert evidence.post_return_snapshot == snapshot
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence missing SNI means only not observed in the post-return snapshot" do
+    snapshot = unit_staged_snapshot(nil)
+    evidence = staged_snapshot_evidence(%{returned_at: 1_501, deadline: 1_500, post_return_snapshot: snapshot})
+    assert evidence.sni_observation == :NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT
+    assert evidence.boundary == :snapshot_after_return
+    assert evidence.post_return_snapshot == snapshot
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence retains a late token that the real negative history assertion rejects" do
+    snapshot = unit_staged_snapshot(1_521)
+    events = snapshot.events ++ [handshake_return: 2_221, token: 2_222]
+    snapshot = %{snapshot | at: 2_250, events: events, counts: Map.new(events, fn {name, _} -> {name, 1} end)}
+    evidence = staged_snapshot_evidence(%{returned_at: 1_501, deadline: 1_500, post_return_snapshot: snapshot})
+    assert evidence.post_return_snapshot == snapshot
+    assert evidence.post_return_snapshot.counts.token == 1
+    assert_staged_history(evidence.post_return_snapshot, 1, false)
+
+    failure =
+      assert_raise ExUnit.AssertionError, fn ->
+        assert_staged_history(evidence.post_return_snapshot, 0, false)
+      end
+
+    assert failure.left == 1
+    assert failure.right == 0
+  end
+
+  @tag :b_snapshot_unit
+  @tag :bc_harness
+  test "unit evidence rejects a snapshot timestamp before recorded return" do
+    snapshot = unit_staged_snapshot(nil)
+
+    assert_raise ExUnit.AssertionError, fn ->
+      staged_snapshot_evidence(%{returned_at: 1_551, deadline: 1_500, post_return_snapshot: snapshot})
+    end
+  end
+
+  # Synthetic maps exercise the actual evidence formatter, not a TLS exchange.
+  defp unit_staged_snapshot(sni_at) do
+    events = [fixture_ready: 0, tls_accept: 800, handshake_dispatch: 1_400]
+    events = if sni_at, do: events ++ [tls_handshake: sni_at], else: events
+    %{at: 1_550, events: events, counts: Map.new(events, fn {name, _} -> {name, 1} end), handshake_result: nil}
   end
 end

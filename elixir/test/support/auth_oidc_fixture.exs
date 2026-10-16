@@ -50,7 +50,19 @@ defmodule SymphonyControl.Auth.OidcFixture do
     File.write!(secret, "synthetic-client-secret-canary")
     File.chmod!(secret, 0o600)
     signing = JOSE.JWK.generate_key({:rsa, 2048})
-    initial = %{opts: opts, root: root, signing: signing, counts: %{}, codes: %{}}
+    evidence = "owned-https/" <> Base.encode16(:crypto.strong_rand_bytes(32), case: :lower)
+
+    initial = %{
+      opts: opts,
+      root: root,
+      signing: signing,
+      counts: %{},
+      codes: %{},
+      op_session: Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+      op_active: true,
+      observation_evidence: evidence
+    }
+
     state = ExUnit.Callbacks.start_supervised!({Agent, fn -> initial end}, id: make_ref())
 
     server_opts = [
@@ -90,12 +102,32 @@ defmodule SymphonyControl.Auth.OidcFixture do
       File.rm_rf!(root)
     end)
 
-    %{state: state, server: server, server_id: server_id, origin: origin, secret_ref: secret, ca: ca}
+    fixture = %{state: state, server: server, server_id: server_id, origin: origin, secret_ref: secret, ca: ca}
+    Map.put(fixture, :observation_evidence, evidence)
   end
 
   def config(fixture) do
     {:ok, config} = Config.load(bindings(fixture))
     Map.put(config, :tls_cacerts, [fixture.ca])
+  end
+
+  def logout_token(fixture, claims \\ %{}, opts \\ []) do
+    data = Agent.get(fixture.state, & &1)
+    now = System.system_time(:second)
+
+    base = %{
+      "iss" => data.origin <> "/issuer",
+      "aud" => "control-client",
+      "iat" => now,
+      "exp" => now + 300,
+      "jti" => Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+      "sid" => "session-1",
+      "sub" => "human-1",
+      "events" => %{"http://schemas.openid.net/event/backchannel-logout" => %{}}
+    }
+
+    merged = base |> Map.merge(claims) |> Map.drop(Keyword.get(opts, :drop, []))
+    encode_token(data, merged, Keyword.get(opts, :fault))
   end
 
   def bindings(f) do
@@ -132,10 +164,11 @@ defmodule SymphonyControl.Auth.OidcFixture do
 
   def calls(f, endpoint), do: Agent.get(f.state, &Map.get(&1.counts, endpoint, 0))
 
-  def delayed_token_endpoint(f, connection_delay, handshake_delay) do
+  def delayed_token_endpoint(f, connection_delay, handshake_delay, opts \\ []) do
     root = Agent.get(f.state, & &1.root)
     owner = self()
     ready = make_ref()
+    gate = Keyword.get(opts, :dispatch_gate)
 
     opts = [
       ip: {127, 0, 0, 1},
@@ -144,8 +177,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
       certfile: Path.join(root, "cert.pem"),
       keyfile: Path.join(root, "key.pem"),
       sni_fun: fn _ ->
-        # OTP may invoke SNI again for a TLS 1.3 HelloRetryRequest. This is
-        # one handshake, not another connection or another delay budget.
+        # A TLS 1.3 HelloRetryRequest remains the same handshake/delay.
         unless Process.get(ready) do
           Process.put(ready, true)
           stage(f, :tls_handshake)
@@ -159,7 +191,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
     {:ok, listener} = :ssl.listen(0, opts)
     {:ok, {_, port}} = :ssl.sockname(listener)
     url = "https://localhost:#{port}/token"
-    Agent.update(f.state, &Map.put(&1, :token_url, url))
+    Agent.update(f.state, &Map.merge(&1, %{token_url: url, staged_listener: listener}))
     ExUnit.Callbacks.on_exit(fn -> :ssl.close(listener) end)
 
     server =
@@ -170,24 +202,10 @@ defmodule SymphonyControl.Auth.OidcFixture do
            send(owner, {:staged_endpoint_ready, ready})
 
            try do
-             {:ok, socket} = :ssl.transport_accept(listener, 5_000)
-             stage(f, :tls_accept)
-
-             try do
-               # Dispatch starts at the real client accept, never at fixture
-               # setup; no filler connection or operating-system backlog race.
-               Process.sleep(connection_delay)
-               stage(f, :handshake_dispatch)
-
-               with {:ok, socket} <- :ssl.handshake(socket, 2_000),
-                    {:ok, request} <- :ssl.recv(socket, 0, 1_000),
-                    true <- String.starts_with?(request, "POST ") do
-                 stage(f, :token)
-                 body = ~s|{"error":"invalid_grant"}|
-                 :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
-               end
-             after
-               :ssl.close(socket)
+             # Opt-in gate is before accept as well as dispatch. A real client
+             # can connect to the listener, but no synthetic accept/SNI occurs.
+             if staged_dispatch_gate(f, gate) == :ok do
+               staged_accept(f, listener, connection_delay)
              end
            after
              :ssl.close(listener)
@@ -206,9 +224,83 @@ defmodule SymphonyControl.Auth.OidcFixture do
     end
   end
 
-  def staged_events(f), do: Agent.get(f.state, &Enum.reverse(Map.get(&1, :staged_events, [])))
+  defp staged_accept(f, listener, connection_delay) do
+    case :ssl.transport_accept(listener, 5_000) do
+      {:ok, socket} ->
+        Agent.update(f.state, &Map.put(&1, :staged_socket, socket))
+        stage(f, :tls_accept)
 
-  def await_staged_done(f) do
+        try do
+          staged_handshake(f, socket, connection_delay)
+        after
+          :ssl.close(socket)
+        end
+
+      {:error, :timeout} ->
+        :ok
+    end
+  end
+
+  defp staged_handshake(f, socket, connection_delay) do
+    Process.sleep(connection_delay)
+    stage(f, :handshake_dispatch)
+    result = :ssl.handshake(socket, 2_000)
+
+    outcome =
+      case result do
+        {:ok, _} -> :ok
+        {:error, :closed} -> :closed
+        {:error, :timeout} -> :timeout
+        {:error, _} -> :tls_error
+      end
+
+    Agent.update(f.state, &Map.put(&1, :staged_handshake_result, outcome))
+    stage(f, :handshake_return)
+
+    with {:ok, socket} <- result,
+         {:ok, request} <- :ssl.recv(socket, 0, 1_000),
+         true <- String.starts_with?(request, "POST ") do
+      stage(f, :token)
+      body = ~s|{"error":"invalid_grant"}|
+      :ssl.send(socket, "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: #{byte_size(body)}\r\nconnection: close\r\n\r\n#{body}")
+    end
+  end
+
+  defp staged_dispatch_gate(_f, nil), do: :ok
+
+  defp staged_dispatch_gate(f, {owner, ref}) do
+    monitor = Process.monitor(owner)
+    stage(f, :dispatch_waiting)
+    send(owner, {:staged_dispatch_waiting, ref, self()})
+
+    try do
+      receive do
+        {:cancel_staged_dispatch, ^ref} ->
+          stage(f, :dispatch_cancelled)
+          :cancelled
+
+        {:DOWN, ^monitor, :process, ^owner, _} ->
+          stage(f, :dispatch_owner_down)
+          :cancelled
+      after
+        2_500 ->
+          stage(f, :dispatch_gate_timeout)
+          :cancelled
+      end
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+  end
+
+  def staged_events(f), do: staged_snapshot(f).events
+
+  def staged_snapshot(f) do
+    Agent.get(f.state, fn data ->
+      %{events: Enum.reverse(Map.get(data, :staged_events, [])), counts: data.counts, at: System.monotonic_time(:millisecond), handshake_result: data[:staged_handshake_result]}
+    end)
+  end
+
+  def await_staged_done(f, timeout \\ 2_000) do
     server = Agent.get(f.state, &Map.fetch!(&1, :staged_server))
     monitor = Process.monitor(server)
 
@@ -217,11 +309,28 @@ defmodule SymphonyControl.Auth.OidcFixture do
         ExUnit.Assertions.assert(reason in [:normal, :noproc])
         ExUnit.Assertions.assert(Enum.any?(staged_events(f), &(elem(&1, 0) == :fixture_done)))
         ExUnit.Assertions.refute(Process.alive?(server))
+        resources = Agent.get(f.state, &Map.take(&1, [:staged_listener, :staged_socket]))
+
+        for key <- [:staged_listener, :staged_socket], socket = resources[key] do
+          # OTP28 reports EINVAL for a closed listener. Also verify the real
+          # underlying inet Ports are gone; an error alone is not cleanup.
+          ExUnit.Assertions.assert(:ssl.sockname(socket) in [{:error, :closed}, {:error, :einval}])
+          ports = staged_socket_ports(socket) |> Enum.uniq()
+          ExUnit.Assertions.assert(ports != [])
+          for port <- ports, do: ExUnit.Assertions.assert(Port.info(port) == nil)
+        end
+
         :ok
     after
-      2_000 -> raise "staged endpoint termination missing"
+      timeout -> raise "staged endpoint termination missing"
     end
   end
+
+  defp staged_socket_ports(port) when is_port(port), do: [port]
+  defp staged_socket_ports(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> Enum.flat_map(&staged_socket_ports/1)
+  defp staged_socket_ports(list) when is_list(list), do: Enum.flat_map(list, &staged_socket_ports/1)
+  defp staged_socket_ports(map) when is_map(map), do: map |> Map.values() |> Enum.flat_map(&staged_socket_ports/1)
+  defp staged_socket_ports(_), do: []
 
   defp stage(f, name) do
     at = System.monotonic_time(:millisecond)
@@ -252,6 +361,7 @@ defmodule SymphonyControl.Auth.OidcFixture do
         "/token" -> :token
         "/authorize" -> :authorize
         "/eligibility" -> :eligibility
+        "/logout" -> :logout
         _ -> :other
       end
 
@@ -287,6 +397,12 @@ defmodule SymphonyControl.Auth.OidcFixture do
     wait_for_keys(data)
     {_, public} = data.signing |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
     kid = if Keyword.get(data.opts, :fault) == :unknown_kid and Map.get(data.counts, :jwks, 0) == 0, do: "old", else: "current"
+
+    kid =
+      case Keyword.get(data.opts, :logout_key_rotation) do
+        count when is_integer(count) -> if Map.get(data.counts, :jwks, 0) < count, do: "old", else: "current"
+        _ -> kid
+      end
 
     barrier_response(conn, data, :jwks, fn ->
       if Keyword.get(data.opts, :fault) == :malformed_jwks do
@@ -327,21 +443,87 @@ defmodule SymphonyControl.Auth.OidcFixture do
     end
   end
 
-  defp respond(conn, :authorize, state, _data) do
+  defp respond(conn, :authorize, state, data) do
     conn = fetch_query_params(conn)
     params = conn.query_params
     code = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
     expected = %{nonce: params["nonce"], challenge: params["code_challenge"], redirect_uri: params["redirect_uri"]}
     Agent.update(state, &put_in(&1, [:codes, code], expected))
     location = params["redirect_uri"] <> "?" <> URI.encode_query(%{code: code, state: params["state"]})
-    conn |> put_resp_header("location", location) |> send_resp(303, "")
+    cookie = [secure: true, http_only: true, same_site: "Lax", path: "/"]
+    conn |> put_resp_cookie("__Host-fixture-op", data.op_session, cookie) |> put_resp_header("location", location) |> send_resp(303, "")
+  end
+
+  defp respond(conn, :logout, state, data) do
+    conn = conn |> fetch_cookies() |> fetch_query_params()
+
+    {params, conn} =
+      if conn.method == "POST" do
+        {:ok, body, latest} = read_body(conn)
+        {URI.decode_query(body), latest}
+      else
+        {conn.query_params, conn}
+      end
+
+    valid = rp_request?(conn, params, data)
+
+    cond do
+      not valid ->
+        json(conn, 400, %{"error" => "invalid_logout"})
+
+      conn.method == "GET" ->
+        json(conn, 200, %{"confirmation_required" => true})
+
+      conn.method == "POST" and params["confirm"] == "yes" ->
+        Agent.update(state, fn current -> %{current | op_active: false, opts: Keyword.put(current.opts, :idp_session, false)} end)
+        conn |> put_resp_header("location", params["post_logout_redirect_uri"]) |> send_resp(303, "")
+
+      true ->
+        json(conn, 400, %{"error" => "invalid_logout"})
+    end
   end
 
   defp respond(conn, :eligibility, _state, data) do
-    json(conn, 200, %{"eligible" => Keyword.get(data.opts, :eligible, true)})
+    if get_req_header(conn, "authorization") == ["Bearer synthetic-access-canary"] do
+      if barrier = Keyword.get(data.opts, :eligibility_barrier) do
+        {owner, ref} = barrier
+        send(owner, {:eligibility_accepted, ref, self()})
+
+        receive do
+          {^ref, :release} -> :ok
+        after
+          2000 -> :ok
+        end
+      end
+
+      observation = %{
+        "issuer" => data.origin <> "/issuer",
+        "subject" => hd(get_req_header(conn, "x-fixture-subject")),
+        "sid" => get_req_header(conn, "x-fixture-sid") |> hd() |> Jason.decode!(),
+        "client_id" => "control-client",
+        "application_id" => "own-app",
+        "provider_id" => "own-provider",
+        "resource_id" => hd(get_req_header(conn, "x-fixture-resource")),
+        "generation" => "fixture-v1",
+        "version" => "synthetic-wire-v1",
+        "evidence" => data.observation_evidence,
+        "app_group" => Keyword.get(data.opts, :app_group, true) and Keyword.get(data.opts, :eligible, true),
+        "user_active" => Keyword.get(data.opts, :user_active, true),
+        "idp_session" => Keyword.get(data.opts, :idp_session, true)
+      }
+
+      json(conn, 200, Map.merge(observation, Keyword.get(data.opts, :observation_patch, %{})))
+    else
+      json(conn, 200, %{"eligible" => Keyword.get(data.opts, :eligible, true)})
+    end
   end
 
   defp respond(conn, _, _, _), do: send_resp(conn, 404, "")
+
+  defp rp_request?(conn, params, data) do
+    conn.req_cookies["__Host-fixture-op"] == data.op_session and data.op_active and
+      params["client_id"] == "control-client" and params["post_logout_redirect_uri"] == Keyword.get(data.opts, :rp_post_logout_uri)
+  end
 
   defp verifier_matches?(verifier, %{challenge: challenge}) when is_binary(verifier),
     do: Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false) == challenge

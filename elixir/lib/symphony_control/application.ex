@@ -9,7 +9,7 @@ defmodule SymphonyControl.Application do
 
   use Supervisor
 
-  alias SymphonyControl.Auth.{Access, Clock, Config, RateLimiter, Routes}
+  alias SymphonyControl.Auth.{Access, AuthorizerBindings, Clock, Config, Eligibility, RateLimiter, Routes}
   alias SymphonyControl.{Repo, Router}
 
   @spec start_link(keyword()) :: Supervisor.on_start() | :ignore
@@ -17,11 +17,32 @@ defmodule SymphonyControl.Application do
     if Keyword.get(opts, :enabled, Application.get_env(:symphony_elixir, :control_enabled, false)) == true do
       with {:ok, auth} <- auth_options(opts),
            {:ok, http_children} <- http_children(Keyword.get(opts, :http), auth) do
-        Supervisor.start_link(__MODULE__, {opts, auth, http_children}, name: __MODULE__)
+        start_control(opts, auth, http_children)
       end
     else
       :ignore
     end
+  end
+
+  defp start_control(opts, auth, http_children) do
+    case Supervisor.start_link(__MODULE__, {opts, auth, http_children}, name: __MODULE__) do
+      {:ok, _pid} = started ->
+        # Pool processes start before their asynchronous connections. A bounded
+        # real checkout completes that initial handoff without inventing schema
+        # readiness or preventing a live, unready supervisor during an outage.
+        task = Task.async(fn -> initial_connection() end)
+        _result = Task.yield(task, 500) || Task.shutdown(task, :brutal_kill)
+        started
+
+      result ->
+        result
+    end
+  end
+
+  defp initial_connection do
+    Repo.query("SELECT 1", [], timeout: 500, log: false)
+  catch
+    _, _ -> :unready
   end
 
   @impl true
@@ -77,7 +98,9 @@ defmodule SymphonyControl.Application do
   end
 
   defp auth_children(nil), do: []
-  defp auth_children(auth), do: [{Clock, []}, {Access, auth}, {RateLimiter, []}]
+
+  defp auth_children(auth),
+    do: [{Clock, []}, {Eligibility, config: Keyword.fetch!(auth, :config)}, {AuthorizerBindings, managed: not Keyword.has_key?(auth, :eligibility_confirm)}, {Access, auth}, {RateLimiter, []}]
 
   defp http_children(nil, _auth), do: {:ok, []}
 

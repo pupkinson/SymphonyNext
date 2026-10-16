@@ -579,57 +579,517 @@ defmodule SymphonyControl.Auth.StoreRepairTest do
     assert {:ok, _} = Store.consume_login(cfg, flow.state, "browser", Clock.now())
   end
 
+  @tag :bc_harness
   test "F5 own stalled key resource cannot precede the operation deadline", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 writer350 preserves product assertions and completes within one cleanup budget", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [hold_ms: 350], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 intentional nonzero writer is classified and reaped", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [exit_status: 7], fn _ -> :ok end)
+    assert receipt.report["classification"] == "nonzero_exit"
+    assert receipt.report["child_exit"] == 7
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 helper budget cancels and reaps an over-budget real writer", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [hold_ms: 3_500], fn _ -> :ok end)
+    assert receipt.report["classification"] == "budget_exceeded"
+    assert receipt.report["child_exit"] != 0
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  test "F5 primary assertion failure survives cleanup with FIFO removed", %{cfg: cfg} do
+    assert_raise ExUnit.AssertionError, "\n\nintentional primary assertion\n", fn ->
+      with_fifo_writer(cfg, [], fn _ -> flunk("intentional primary assertion") end)
+    end
+
+    assert_fifo_completed(Process.get(:last_fifo_cleanup))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 delayed supervisor800 still runs the real writer and product assertions", %{f: f, cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 800], &assert_fifo_product(f, cfg, &1))
+    assert_fifo_completed(receipt)
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 delayed supervisor2600 cannot launch after spending the original reserve", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 2_600, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_deadline")
+    refute Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 ready supervisor with insufficient reserve confirms no child", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 2_250, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "insufficient_reserve")
+    assert Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 launch delivery delay consumes the fixed Python endpoint", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [launch_delay_ms: 2_200, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "insufficient_reserve")
+    launch = Enum.find(receipt.events, &(&1.message["event"] == "launch_received"))
+    assert launch.message["command"] == "launch"
+    sent = Enum.find(receipt.commands, &(&1.command.event == "launch"))
+    assert sent.result == true
+    assert sent.command.end_ns == receipt.helper.python_deadline
+    ready = Enum.find(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+    assert launch.message["at_ns"] - ready.message["at_ns"] >= 2_200_000_000
+    assert launch.message["end_ns"] == receipt.helper.python_deadline
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 absent supervisor readiness terminates without fabricated writer receipts", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [suppress_ready: true, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_absent")
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 launched writer without readiness is cancelled and actually reaped", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [writer_ready_delay_ms: 3_500, writer_required: false], fn _ -> :ok end)
+    assert receipt.ready == nil
+    assert receipt.report["classification"] == "budget_exceeded"
+    assert receipt.report["child_exit"] != 0
+    assert_fifo_terminated(receipt)
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 supervisor readiness scheduled beyond endpoint is bounded before child launch", %{cfg: cfg} do
+    receipt = with_fifo_writer(cfg, [supervisor_ready_delay_ms: 3_500, writer_required: false], fn _ -> :ok end)
+    assert_fifo_no_child(receipt, "readiness_deadline")
+    refute Enum.any?(receipt.events, &(&1.message["event"] == "supervisor_ready"))
+  end
+
+  @tag :bc_harness
+  @tag :c_deadline
+  test "F5 lost Port remains nonqualified and cannot hide the primary assertion", %{cfg: cfg} do
+    assert_raise ExUnit.AssertionError, "\n\nprimary assertion after Port loss\n", fn ->
+      with_fifo_writer(cfg, [hold_ms: 3_500], fn path ->
+        state = Process.get({:fifo_helper, path})
+        assert Port.close(state.helper.port)
+        flunk("primary assertion after Port loss")
+      end)
+    end
+
+    receipt = Process.get(:last_fifo_cleanup)
+    refute receipt.qualified
+    assert receipt.classification == :terminal_unknown
+    assert receipt.report == nil
+    assert receipt.port_exit == nil
+    assert receipt.down == :normal
+    assert receipt.removal == {:returned, {:ok, {:error, :enoent}}}
+    refute File.exists?(receipt.helper.path)
+    # Lost terminal transport cannot prove the child's actual wait/reap. This
+    # expected UNKNOWN is never counted as a normally completed writer/helper.
+  end
+
+  defp assert_fifo_product(f, cfg, path) do
+    start = System.monotonic_time(:millisecond)
+    result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
+    elapsed = System.monotonic_time(:millisecond) - start
+    assert result in [{:error, :dependency_unavailable}, {:error, :unknown_outcome}]
+    assert elapsed < 800
+    assert {:error, :dependency_unavailable} = TokenVault.seal(%{cfg | session_key_ref: path}, "synthetic-fifo-canary", "AAD")
+    assert {:error, :dependency_unavailable} = TokenVault.open(%{cfg | session_key_ref: path}, "invalid", "AAD")
+  end
+
+  defp with_fifo_writer(cfg, opts, assertion) do
     path = cfg.session_key_ref <> "-fifo"
     assert {_, 0} = System.cmd("mkfifo", ["-m", "600", path])
-    owner = self()
-    writer_ref = make_ref()
+    key = {:fifo_helper, path}
 
-    releaser =
-      Task.async(fn ->
-        # An external owned writer can release even a blocking BEAM file open.
-        # Nonblocking open and a finite end also clean up when Vault rejects FIFO.
-        script = """
-        import errno,os,pathlib,sys,time
-        time.sleep(0.85)
-        end=time.monotonic()+0.4
-        while time.monotonic()<end:
-            try:
-                fd=os.open(sys.argv[1],os.O_WRONLY|os.O_NONBLOCK)
-                os.write(fd,pathlib.Path(sys.argv[2]).read_bytes())
-                os.close(fd)
-                break
-            except OSError as e:
-                if e.errno!=errno.ENXIO: raise
-                time.sleep(0.005)
-        """
-
-        port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, args: ["-c", script, path, cfg.session_key_ref]])
-        send(owner, {:writer_started, writer_ref})
-
-        receive do
-          {^port, {:exit_status, 0}} -> :ok
+    outcome =
+      fifo_capture(fn ->
+        try do
+          fifo_start(key, path, cfg, opts)
+          primary = fifo_capture(fn -> fifo_assertion(key, opts, assertion) end)
+          cleanup = fifo_capture(fn -> fifo_wait(key, :done) end)
+          {primary, cleanup}
         after
-          1800 ->
-            Port.close(port)
-            :abandoned
+          fifo_finalize(key, path)
         end
       end)
 
-    assert_receive {:writer_started, ^writer_ref}, 1000
+    receipt = Process.get(:last_fifo_cleanup)
+    IO.puts("FIFO bounded cleanup " <> inspect(fifo_safe_receipt(receipt), limit: :infinity))
+    fifo_result(outcome, receipt)
+  end
+
+  defp fifo_start(key, path, cfg, opts) do
+    args = ["-u", "-c", fifo_supervisor_script(), path, cfg.session_key_ref, Jason.encode!(Map.new(opts))]
+    started = System.monotonic_time(:nanosecond)
+    port = Port.open({:spawn_executable, System.find_executable("python3")}, [:binary, :exit_status, {:line, 4096}, args: args])
+    monitor = :erlang.monitor(:port, port)
+
+    helper = %{
+      port: port,
+      monitor: monitor,
+      started: started,
+      deadline: started + 3_000_000_000,
+      python_deadline: nil,
+      path: path,
+      supervisor: nil
+    }
+
+    state = %{helper: helper, ready: nil, child: nil, report: nil, port_exit: nil, down: nil, events: [], commands: []}
+    Process.put(key, state)
+    {:os_pid, supervisor} = Port.info(port, :os_pid)
+    Process.put(key, put_in(state.helper.supervisor, supervisor))
+  end
+
+  defp fifo_assertion(key, opts, assertion) do
+    state = fifo_wait(key, :ready)
+    if Keyword.get(opts, :writer_required, true), do: assert(is_map(state.ready), "writer startup not confirmed")
+    assert fifo_remaining(state.helper) > 0, "helper deadline expired before assertion dispatch"
+    assertion.(state.helper.path)
+  end
+
+  # Cleanup errors remain values until the primary exception and its original
+  # stack have been selected. Finalization itself cannot replace that exception.
+  defp fifo_result({:returned, {{:failed, kind, reason, stack}, _}}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:returned, {_, {:failed, kind, reason, stack}}}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:failed, kind, reason, stack}, _receipt), do: :erlang.raise(kind, reason, stack)
+  defp fifo_result({:returned, _}, receipt), do: receipt
+
+  defp fifo_capture(fun) do
+    {:returned, fun.()}
+  catch
+    kind, reason -> {:failed, kind, reason, __STACKTRACE__}
+  end
+
+  defp fifo_finalize(key, path) do
+    state = Process.delete(key)
+
+    close =
+      try do
+        fifo_capture(fn -> fifo_close(state) end)
+      after
+        # This owned path is removed even when Port cleanup raises. File.rm and
+        # the absence check precede the final elapsed sample, including failures.
+        Process.put({key, :removal}, fifo_capture(fn -> {File.rm(path), File.lstat(path)} end))
+      end
+
+    removal = Process.delete({key, :removal})
+    finished = System.monotonic_time(:nanosecond)
+    receipt = fifo_receipt(state, close, removal, finished)
+    Process.put(:last_fifo_cleanup, receipt)
+  end
+
+  defp fifo_close(nil), do: :not_started
+
+  defp fifo_close(state) do
+    port = state.helper.port
 
     try do
-      start = System.monotonic_time(:millisecond)
-      result = Store.put_login(%{cfg | session_key_ref: path}, "browser", AuthDbFixture.flow(f), AuthDbFixture.clock(f))
-      elapsed = System.monotonic_time(:millisecond) - start
-      assert result in [{:error, :dependency_unavailable}, {:error, :unknown_outcome}]
-      assert elapsed < 800
-      assert {:error, :dependency_unavailable} = TokenVault.seal(%{cfg | session_key_ref: path}, "synthetic-fifo-canary", "AAD")
-      assert {:error, :dependency_unavailable} = TokenVault.open(%{cfg | session_key_ref: path}, "invalid", "AAD")
+      # Port.close is containment only. It supplies neither child wait/reap nor
+      # the missing supervisor exit status; such a receipt is nonqualified.
+      if Port.info(port), do: Port.close(port), else: :already_closed
     after
-      Task.await(releaser, 1500)
-      File.rm(path)
+      Process.demonitor(state.helper.monitor, [:flush])
     end
+  end
+
+  defp fifo_receipt(nil, close, removal, finished) do
+    %{classification: :launch_unknown, close: close, removal: removal, finished: finished, qualified: false}
+  end
+
+  defp fifo_receipt(state, close, removal, finished) do
+    elapsed = div(finished - state.helper.started + 999_999, 1_000_000)
+    terminal = fifo_terminal_known?(state)
+    removed = removal == {:returned, {:ok, {:error, :enoent}}}
+    qualified = terminal and removed and close == {:returned, :already_closed} and elapsed <= 3_000
+
+    classification = if state.report, do: state.report["classification"], else: :terminal_unknown
+    Map.merge(state, %{elapsed_ms: elapsed, finished: finished, close: close, removal: removal, qualified: qualified, classification: classification})
+  end
+
+  defp fifo_terminal_known?(%{report: nil}), do: false
+
+  defp fifo_terminal_known?(state) do
+    state.port_exit == 0 and state.down == :normal and
+      state.report["end_ns"] == state.helper.python_deadline and
+      state.report["at_ns"] <= state.helper.python_deadline and fifo_child_known?(state)
+  end
+
+  defp fifo_child_known?(%{report: %{"child_launched" => false}} = state) do
+    state.child == nil and state.ready == nil and state.report["child_exit"] == nil and
+      state.report["child_reaped"] == false
+  end
+
+  defp fifo_child_known?(state) do
+    state.report["child_reaped"] == true and is_integer(state.report["wait_return_ns"]) and
+      state.report["wait_return_ns"] <= state.helper.python_deadline
+  end
+
+  defp fifo_wait(key, phase) do
+    state = Process.get(key)
+
+    cond do
+      phase == :ready and is_map(state.ready) ->
+        state
+
+      not is_nil(state.down) and not is_nil(state.port_exit) ->
+        state
+
+      fifo_remaining(state.helper) == 0 ->
+        state
+
+      true ->
+        fifo_receive(key, state)
+        fifo_wait(key, phase)
+    end
+  end
+
+  defp fifo_remaining(helper) do
+    max(div(helper.deadline - System.monotonic_time(:nanosecond), 1_000_000), 0)
+  end
+
+  defp fifo_receive(key, state) do
+    %{port: port, monitor: monitor} = state.helper
+
+    receive do
+      {^port, {:data, {:eol, line}}} ->
+        message = Jason.decode!(line)
+        received = System.monotonic_time(:nanosecond)
+        event = %{message: message, received: received}
+        state = %{state | events: state.events ++ [event]}
+        Process.put(key, fifo_event(state, message, received))
+
+      {^port, {:exit_status, status}} ->
+        Process.put(key, %{state | port_exit: status})
+
+      {:DOWN, ^monitor, :port, ^port, reason} ->
+        Process.put(key, %{state | down: reason})
+    after
+      fifo_remaining(state.helper) -> :ok
+    end
+  end
+
+  defp fifo_event(state, %{"event" => "supervisor_started", "at_ns" => anchor}, received) do
+    # The anchor was emitted BEFORE owner receipt R. In Python's scale,
+    # anchor + (D-R-200ms) is no later than D-200ms. Monotonic origins need not
+    # agree; only elapsed nanoseconds are transferred. Delivery consumes this
+    # fixed endpoint, never adds a duration at receipt. The reserve is inside D.
+    endpoint = anchor + max(state.helper.deadline - received - 200_000_000, 0)
+    state = put_in(state.helper.python_deadline, endpoint)
+    command = fifo_command(state.helper, %{event: "deadline", end_ns: endpoint})
+    %{state | commands: state.commands ++ [command]}
+  end
+
+  defp fifo_event(state, %{"event" => "supervisor_ready"}, _received) do
+    event = if fifo_remaining(state.helper) >= 1_000, do: "launch", else: "cancel"
+    command = fifo_command(state.helper, %{event: event, end_ns: state.helper.python_deadline})
+    %{state | commands: state.commands ++ [command]}
+  end
+
+  defp fifo_event(state, %{"event" => "writer_started"} = message, _), do: %{state | child: message}
+  defp fifo_event(state, %{"event" => "writer_ready"} = message, _), do: %{state | ready: message}
+  defp fifo_event(state, %{"event" => "supervisor_terminal"} = message, _), do: %{state | report: message}
+  defp fifo_event(state, _message, _received), do: state
+
+  defp fifo_command(helper, command) do
+    # Fresh check after every receive and immediately before external dispatch.
+    payload = Jason.encode!(command) <> "\n"
+    sent = System.monotonic_time(:nanosecond)
+    result = if sent < helper.deadline, do: Port.command(helper.port, payload), else: :deadline_expired
+    %{command: command, sent: sent, result: result}
+  end
+
+  defp assert_fifo_completed(receipt) do
+    assert receipt.report["classification"] == "completed"
+    assert receipt.report["child_exit"] == 0
+    assert is_map(receipt.ready)
+    assert_fifo_terminated(receipt)
+  end
+
+  defp assert_fifo_terminated(receipt) do
+    assert_fifo_terminal(receipt)
+    assert receipt.report["child_launched"] == true
+    assert receipt.report["child_reaped"] == true
+    assert receipt.report["wait_return_ns"] <= receipt.helper.python_deadline
+    refute fifo_pid_current?(receipt.child["pid"], receipt.child["start_ticks"])
+  end
+
+  defp assert_fifo_no_child(receipt, classification) do
+    assert_fifo_terminal(receipt)
+    assert receipt.report["classification"] == classification
+    assert receipt.report["child_launched"] == false
+    assert receipt.report["child_reaped"] == false
+    assert receipt.report["child_exit"] == nil
+    assert receipt.child == nil
+    assert receipt.ready == nil
+  end
+
+  defp assert_fifo_terminal(receipt) do
+    assert receipt.qualified
+    assert receipt.elapsed_ms <= 3_000
+    assert receipt.report["at_ns"] <= receipt.helper.python_deadline
+    assert receipt.report["end_ns"] == receipt.helper.python_deadline
+    assert receipt.port_exit == 0
+    assert receipt.down == :normal
+    assert Port.info(receipt.helper.port) == nil
+    refute File.exists?(receipt.helper.path)
+    refute File.exists?("/proc/#{receipt.helper.supervisor}")
+  end
+
+  defp fifo_pid_current?(pid, ticks) do
+    case File.read("/proc/#{pid}/stat") do
+      {:ok, stat} ->
+        fields = stat |> String.split(") ", parts: 2) |> List.last() |> String.split()
+        actual = Enum.at(fields, 19)
+        assert is_binary(actual) and actual != "", "owned process identity UNKNOWN"
+        actual == ticks
+
+      {:error, :enoent} ->
+        false
+    end
+  end
+
+  defp fifo_safe_receipt(%{helper: _} = receipt) do
+    Map.take(receipt, [:events, :commands, :ready, :child, :report, :port_exit, :down, :elapsed_ms, :finished, :removal, :qualified, :classification])
+    |> Map.put(:bounds, Map.take(receipt.helper, [:started, :deadline, :python_deadline]))
+  end
+
+  defp fifo_safe_receipt(receipt), do: receipt
+
+  defp fifo_supervisor_script do
+    ~S"""
+    import errno,json,os,pathlib,select,subprocess,sys,time
+    opts=json.loads(sys.argv[3])
+    def emit(event,**data):
+        try: print(json.dumps(dict(data,event=event,at_ns=time.monotonic_ns())),flush=True)
+        except BrokenPipeError: pass
+    def remaining(end,reserve=0):
+        return max((end-time.monotonic_ns())/1e9-reserve,0)
+    def command(end):
+        left=remaining(end)
+        if not left: return {'event':'budget_exceeded'}
+        readable,_,_=select.select([sys.stdin],[],[],left)
+        if not readable: return {'event':'budget_exceeded'}
+        line=sys.stdin.readline()
+        return json.loads(line) if line else {'event':'owner_lost'}
+    def gate(delay_ms,end):
+        target=time.monotonic_ns()+delay_ms*1_000_000
+        while time.monotonic_ns()<target:
+            left=remaining(min(target,end-350_000_000))
+            if not left: return 'budget_exceeded'
+            readable,_,_=select.select([sys.stdin],[],[],left)
+            if readable:
+                return 'owner_lost' if not sys.stdin.readline() else 'cancelled'
+        return None
+    def delivery_gate(delay_ms,end):
+        target=time.monotonic_ns()+delay_ms*1_000_000
+        while time.monotonic_ns()<target:
+            left=remaining(min(target,end-350_000_000))
+            if not left: return 'launch_deadline'
+            select.select([],[],[],left)
+        return None
+    def no_child(classification,end):
+        emit('supervisor_terminal',classification=classification,end_ns=end,
+             child_launched=False,child_exit=None,child_reaped=False)
+    # No child is possible before a fixed, owner-derived endpoint arrives.
+    emit('supervisor_started')
+    initial=command(time.monotonic_ns()+500_000_000)
+    if initial.get('event')!='deadline':
+        no_child('deadline_unconfirmed',None);sys.exit(0)
+    end=initial['end_ns']
+    emit('deadline_received',end_ns=end)
+    delay=3_500 if opts.get('suppress_ready') else opts.get('supervisor_ready_delay_ms',0)
+    stopped=gate(delay,end)
+    if not stopped and not remaining(end,0.35): stopped='budget_exceeded'
+    if stopped:
+        classification='readiness_absent' if opts.get('suppress_ready') else 'readiness_deadline'
+        no_child(stopped if stopped!='budget_exceeded' else classification,end);sys.exit(0)
+    emit('supervisor_ready',end_ns=end)
+    stopped=delivery_gate(opts.get('launch_delay_ms',0),end)
+    if stopped:
+        no_child(stopped,end);sys.exit(0)
+    launch=command(end-350_000_000)
+    emit('launch_received',command=launch['event'],end_ns=end)
+    if launch.get('event')!='launch' or launch.get('end_ns')!=end:
+        no_child('insufficient_reserve' if launch['event']=='cancel' else launch['event'],end);sys.exit(0)
+    if remaining(end)<0.8:
+        no_child('insufficient_reserve',end);sys.exit(0)
+    writer='''import errno,json,os,pathlib,sys,time
+    opts=json.loads(sys.argv[3])
+    time.sleep(opts.get('writer_ready_delay_ms',0)/1000)
+    ticks=pathlib.Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()[19]
+    print(json.dumps({'event':'writer_ready','pid':os.getpid(),'start_ticks':ticks}),flush=True)
+    time.sleep(opts.get('hold_ms',0)/1000)
+    time.sleep(0.85)
+    end=time.monotonic()+0.4
+    while time.monotonic()<end:
+        try:
+            fd=os.open(sys.argv[1],os.O_WRONLY|os.O_NONBLOCK)
+            try: os.write(fd,pathlib.Path(sys.argv[2]).read_bytes())
+            finally: os.close(fd)
+            break
+        except OSError as e:
+            if e.errno!=errno.ENXIO: raise
+            time.sleep(0.005)
+    sys.exit(opts.get('exit_status',0))
+    '''
+    child=subprocess.Popen([sys.executable,'-u','-c',writer,*sys.argv[1:]],stdout=subprocess.PIPE,text=True)
+    ticks=pathlib.Path(f'/proc/{child.pid}/stat').read_text().rsplit(') ',1)[1].split()[19]
+    emit('writer_started',pid=child.pid,start_ticks=ticks,end_ns=end)
+    classification=None
+    ready=False
+    status=None
+    waited=None
+    try:
+        while child.poll() is None:
+            left=remaining(end,0.4)
+            if not left:
+                classification='budget_exceeded';break
+            readers=[sys.stdin]+([] if ready else [child.stdout])
+            readable,_,_=select.select(readers,[],[],min(0.02,left))
+            if child.stdout in readable:
+                line=child.stdout.readline()
+                if line:
+                    message=json.loads(line)
+                    if message.pop('event')!='writer_ready': raise RuntimeError('protocol')
+                    emit('writer_ready',**message);ready=True
+            if sys.stdin in readable:
+                classification='owner_lost' if not sys.stdin.readline() else 'cancelled';break
+    finally:
+        try:
+            if child.poll() is None:
+                child.terminate()
+                try: child.wait(timeout=min(0.15,remaining(end,0.15)))
+                except subprocess.TimeoutExpired:
+                    if remaining(end,0.1): child.kill()
+            # An actual wait return is separate from Port close/process absence.
+            status=child.wait(timeout=remaining(end,0.1))
+            waited=time.monotonic_ns()
+            emit('writer_reaped',child_exit=status,wait_return_ns=waited,end_ns=end)
+        except subprocess.TimeoutExpired:
+            classification='reap_unknown'
+        finally:
+            child.stdout.close()
+    classification=classification or ('completed' if status==0 and ready else 'nonzero_exit')
+    emit('supervisor_terminal',classification=classification,end_ns=end,
+         child_launched=True,child_exit=status,child_reaped=waited is not None,wait_return_ns=waited)
+    sys.exit(0 if waited is not None else 73)
+    """
   end
 
   test "F2 independent session limit expires while credentials remain valid", %{f: f, cfg: cfg} do

@@ -1,3 +1,661 @@
+## Final verification and cleanup update — NOT_PUBLISHED
+
+Current mandatory A148/0 exit0; B446/1 exit2; standard C NOT_RUN because B RED.
+No current full coverage/Dialyzer result and no author acceptance.
+024 scope PASS:90 exact MANIFEST names/order/digests,230 published frozen files,
+8 composition pins,7 permitted deltas relative newest saved source, runtime/test
+inventory1df175fd04ab2e59a9549a4b8238f2ec5939bf612711bbc6ea3f07ff5b70fac9 unchanged.
+025 prepared body and026 exact fresh published body checker PASS; actual PR body never edited.
+The exact previous body is retained verbatim in the private prepared text/history.
+Local actual-body copy's extra newline was corrected before its checker and retained
+in PR_BODY_CUSTODY, not concealed as a verified exact copy.
+
+027 cleanup PASS at2026-10-13T21:02:21.563570+00:00: own PG005 owner exit0, both postmasters
+normal SIGINT stop/exit0/wait/reap, PIDs/starttimes49470/5538452 and49482/5538469,
+owner49469/5538443; own sockets absent. 784 TLS roots absent,
+1159 ports observed closed, no live owned fixture; own DB/key/socket
+paths removed after all dependent tests. Earlier PID1-adopted zombies/UNKNOWN exits
+remain unchanged and were never signalled. This successful cleanup does not repair them.
+
+One read-only output probe ENOENT: CHAT_EXPORT_BLOCKED. New self-contained latest
+source/patch/bundle/ledger/redacted evidence will be privately sealed without embedding
+old archives. Source, input snapshots and old packages remain. Publication readbacks
+are separate after seal. Stopping on B and used corrective cycles before deadline;
+T019:42:27Z/reserve23:12:27Z/deadline23:42:27Z and all historical lineage are unchanged.
+Six findings independently OPEN; NEW independent review NOT_RUN; no automatic next stage.
+
+# PR99 freshness-contract stage — terminal author status
+
+FRESHNESS_CONTRACT_IMPLEMENTED / MANDATORY_GATES_NOT_GREEN / NO_NEW_HEAD.
+All six Task4 findings independently OPEN; NEW independent review NOT_RUN.
+Config.activation_allowed?false and production authdisabled are unchanged.
+
+Owner-approved clarification and exact admission:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6153858886
+The approved design49f4a2eda5c56b83b355f26aa69c92de4c84e549afad13b9c1c885dc9ea31c41
+and planf5285de9b65b40cacfa6b8a8ed57b15695807d894ef254e331f94941cc7acb9f remain byte-exact.
+The plan's advance49999→real HTTP200 example is explicitly interpreted by the owner:
+measurement49999 is not final decision49999 after native delivery waits. The safety
+invariant remains observation age strictly below50000ms at the final synchronous
+decision, on independent UTC/monotonic/native sample axes. Request5s, Store750ms,
+SQL500ms, local session/credential expiry and signed claim bounds remain separate.
+No epsilon/grace/TTL increase, whole-second rounding, key-check removal or production
+test-clock selector was introduced. This test-contract refinement is explicit review
+scope, not a newly claimed security bug fix or rewrite of the canonical plan.
+
+The SAME own author worktree was continued after independently checking newest packet
+dbd9b710d5fdb075929c8e02d44005bafcfe37319a44cf2b7a7b8a26a9e1ef7d,
+195009491bytes/789members,255 source files, inventory5f731ea8e1b6da468db6dd564b09bdee3a686b7cfc5cd89f7fc4a82d21c29b3c,
+patch192a975e840ee11f7c9ea04455fcda1bb9ec8d2cd60cf25cfe3922dec6cb195b,
+runtime/test870b971b8d493a78f272c55dd057871ce43ffa3e97350a229579f856aa31ef8d.
+001 custody exit0: actual bytes/CRC/member hashes/bundle/255 restored bytes matched.
+No reset/clean/reimplementation or old-packet substitution. Earlier packets and
+input blobs/reports remain unchanged; successor package does not recursively embed archives.
+
+## Three-level evidence on final runtime bytes
+
+| Group | Product path and causal target | Current result / limit |
+| --- | --- | --- |
+|A exact boundary|Shared pure Eligibility.observation_current?/4 is called by the real acceptance path with actual native now/current registered Clock. Exact49999/50000/50001 on independent UTC/monotonic/original native cap;49999 measured sample delivered0/1/2ms; invalid sample/epoch/producer/config/ref/invalidation|014/A/B all owning assertions pass.0ms delivered49999 accepts;1/2ms delivery rejects. Config/Actor/ref acceptance remains separately server-bound; predicate is no durable authority.|
+|B real cache hit|Real own HTTPS/PG/current session+grants,49000 logical age and measured final native decision, provider then ineligible; actual production predicate traced in the HTTP caller after domain read|014200 at49000.168ms; A/B same assertions pass. Provider count unchanged; exact original cache entry clock/ref/until preserved. Remaining real I/O headroom is a transport positive, not the exact-boundary test.|
+|C crossing|Real request/domain query held, then already-measured49999 sample held20ms across its1ms native remaining lifetime, local actor still current, request<5s|014/A/B fixed403/no private body/no session/CSRF cookies; paired49000+same20ms hold returns200. Cache entry unchanged;50000/60000 and separate app-group/user-active/idp-session strict403 remain.|
+
+Saved004 numeric trace independently read: current? true at49999+0.035611,
+0.422187 and0.363286ms, false at49999+1.044232=50000.044232ms.
+The original full trace retains local Validity true before that final observation
+check. Return timestamps follow the finite synchronous decision; no hard-realtime
+promise after arbitrary OS/VM suspension or for physical COMMIT is made.
+New pure helper extraction preserves the final guard and also applies delivered
+sample age at pre-wait cache checks; production supplies actual time/producer.
+
+## Current gates and remaining blocker
+
+A019148/0 exit0, seed143345/max_cases1. Exact related B020446/1 exit2,
+seed381068/max_cases1. Sole B failure: unchanged
+elixir/test/symphony_control/auth/http_body_test.exs:133/assert135,
+positive real HTTPS login callback cookie and Authenticate survive body refusal repairs;
+AuthHttpFixture.login!/2:219 rejects GET login begin (expected303, actual status
+not printed by its generic assertion). Failure occurs before callback/eligibility;
+root cause UNKNOWN. Neither this assertion nor the frozen Login/framing source was changed.
+021 restores that module's same seed/order with safe numeric Store/Clock/get-status
+events:13/0. It does not reproduce or explain the full-B refusal and cannot replace
+the failed446/1 gate. Login begin2/3 trace patterns missed actual HTTP begin4;
+Store/Clock/get events are retained, diagnostic limit explicit.
+
+Current standard make C NOT_RUN because mandatory B is RED, per owner instruction.
+No current full configured coverage/Dialyzer result, no standard max_cases weakening
+and no separate checks substituted. Six historical live skip IDs/source stay exact;
+they were not newly executed or reattested here. Bootstrap02212/0 and MCP02311/0,
+both exits0.018 full format/specs/strict Credo PASS. Final scope/body/cleanup/seal
+receipts are separate; no all-gates or source acceptance claim.
+
+Final frozen runtime/test inventory1df175fd04ab2e59a9549a4b8238f2ec5939bf612711bbc6ea3f07ff5b70fac9;
+source before terminal docs c25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e;
+input diff e8ce6154ca73d173a38e60cc83ca98a67fb6d4aab8f17801b694738d9476b892;
+fixture config925a3a399ee4872f3683410510d1f817a9f1065394a1701dc79140ffb1d0c785.
+No runtime/test changes after017 freeze; only documentation/MANIFEST subsequently update.
+
+## Prior failure disposition, without retrospective acceptance
+
+| Prior input | Exact issue | Disposition |
+| --- | --- | --- |
+|A021341535/1,143/2 and B022698353/1,441/2|49999 real HTTP200 vs403|Owner-approved three-level test replacement above, actual safety bound unchanged. Saved concrete native crossing verified; not every failure attributed to it.|
+|A021341535/1|revocation_test:32/assert37 idp_session403 vs503|UNKNOWN original cause.006 narrow10/0 and007 original combined-A order143/0 on unchanged saved bytes do not establish cause; later A/B strict scenario passes without error widening.|
+|B022698353/1|oidc_test:516/assert520/helper632 validated POST barrier absent650ms|UNKNOWN original cause.015 immutable published-product reference and016 candidate whole unchanged OIDC module both97/0 with same seed/fixture bytes and owned preparation. Original failure not called flaky or retroactively PASS.|
+|C023|exec transport interrupted at mix setup|Historical actual exit UNKNOWN; tests/coverage/Dialyzer NOT_REACHED. Current connected exec/own owner004 short receipt exit0 does not repair that old exit or establish its interruption cause.|
+|Old122/130|403→400 assertions; immediate readiness;49999; old callback/unknown-COMMIT/F1/F2/F5|Complete old failure indices/limits remain at handoff6152767784 and preserved packets. Two exact status literals/startup/key metadata/polling fixes stay intact; unexplained old failures are not erased.|
+
+007 saved original combined-A seed341535143/0;015 published immutable OIDC
+reference97/0;016 candidate97/0 with same698353. Timely token barrier arrived
+165ms/167ms after T0 respectively, before unchanged650ms expiry; actual deadlines,
+TLS,1500/<1700 staged bounds and latePOST0 controls remain. Diagnostic modes do
+not replace standard or mandatory related gates and do not establish old root causes.
+
+## Preserved R1–R6 source mechanisms and author controls
+
+| Finding | Preserved mechanism / current A/B author evidence | Limit |
+| --- | --- | --- |
+|R1|Checked server-private local session/credential bounds/key/config/epoch/request envelope across receipt/domain/CSRF waits; late Actor/permission/private body/cookies denied, timely both routes and ordinary production Clock pass|Old immutable081 causal RED retained; no fresh independent closure.|
+|R2|Verified signed native temporal guard inside existing atomic jti/revoke transaction; measured exp/iat and real PG lock/query delays yield jti0+unrevoked sessions; immediate/replay/restart/sid+sub pass|No un-revoke/delete compensation, no claim that confirmed COMMIT was undone; unknown COMMIT remains unknown.|
+|R3|Reservations/publication capacity≤1000 with32 jobs/waiters, singleflight/ref/deadline fences;999+two real jobs both orders and failure/invalidation/expiry pass|No concurrency1 or cap increase.|
+|R4|Exact millisecond300000/300001/300999 age,30000/30001 future skew, strict exp equality/before/after controls pass|No whole-second rounding or margin.|
+|R5|Endpoint-specific invalid-token/replay400/no-store/no-effect; valid/newjti already-out200; local/protected403,405+Allow,429,dependency/unknown503 remain|Exact two inherited owning literals retained, no global403 replacement.|
+|R6|Supervisor-lifetime original binding owner survives abrupt Access restarts, restores exact missing/nil/explicit and preserves later external changes; working restarted protected read passes|No claim that prior leakage itself granted access; startup/graceful/default-deny boundaries retained.|
+
+All owning inherited F1–F5/Task3 R1–R7/N1 controls passed where reported in B,
+including40 F2 measured controls/20 timely; overall B remains FAILED. New production
+delta relative newest seal is only eligibility.ex; test delta only eligibility_test
+and revocation_test. All other saved production/test bytes frozen, including
+Config/Clock/Actor/TokenVault/Login/Routes/RequestContext/HttpBody/RateLimiter/
+Store/Oidc/Logout/Application/authorizer_bindings/domain/schema/lock/CI/planning.
+90 inherited MANIFEST names/order retained. Approved historical reports remain verbatim.
+
+## Budget, first failures and resource limits
+
+Admission6153858886; prospective T0 2026-10-13T19:42:27Z,
+reserve23:12:27Z/deadline23:42:27Z, last1800s included. Historical Task4 2/2 CLOSED
++ R1–R6 additional2/2 USED + prior continuation1/1 USED + freshness-contract2/2 USED.
+Cycle1 began source tests/extraction; cycle2 corrected the new test's trace target
+and unchanged120-character style refusals. Stopping on unresolved mandatory B;
+no third cycle/window/automatic extension, agents0/profile changes0. Old windows,
+spend, extensions, violations, early missing snapshots/adopted-shell/cache/native
+HOLD and old driver123/PID22817 UNKNOWN/reapUNAVAILABLE remain unchanged.
+
+002 own PG setup failed because precreated empty directory skipped reused initdb
+existence check; own postmaster49341 exited2 and was waited/reaped.003 own clusters
+then READY,004 actual exec/owner/SELECT1 receipt0;003 clusters stopped/waited/reaped0
+to correct legacy port to frozen55_474 in the unique own socket.005 is the current
+own live owner until dependent checks end.002/003 scripts/logs/cleanup preserved.
+008 three missing-callable-API errors are not semantic security RED.01035/1 wrong
+query-child trace,012 two Credo style findings, first parser singular-failure miss
+and corrected v2 index are retained. No original failure/stream/input overwritten.
+Current cleanup receipt follows after all dependent checks; old PID1-adopted PG/make
+zombies and UNKNOWN exits from the earlier interruption are not reattested or signalled.
+
+Published tuple remains HEADa1f82a4c68ed4c846526ab744c1e8e367b4c55b7 /
+TREE754dd2ea50457b30e63b1cc630cb2947825a65d2 /sole parent=PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e.
+Existing draft/base unchanged; no commit/push/body update. Self-contained latest
+source/patch/baseline bundle/ledger/redacted evidence retained separately, old packet
+paths+hashes as lineage only. One output probe is recorded; a private VM path is not
+a downloadable attachment. Publication readbacks follow outside seal.
+
+No author self-acceptance, reviewer/Task5 launch, release/merge/production activation,
+real IdP/browser/UID/ingress/native/trusted/live/Actions/DF Assistant/permissions or
+main/release/PR75/97/98 changes. Task1–3 accepted snapshots, original specification,
+PR79/82/84/multi-server/autonomy contract and separate Bandit/HTTP1/native release
+gates remain. All six findings independently OPEN; NEW review NOT_RUN.
+
+## Current command receipts
+
+- 014-freshness-cycle2-targeted: exit0; 2026-10-13T20:14:00.798733+00:00–2026-10-13T20:14:39.422112+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdouta38be0f26edb8852a7bf2d98e621816c24528b5a8e17f9e18591f3b8b7167004, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 015-published-OIDC-seed698353-control: exit0; 2026-10-13T20:16:22.671898+00:00–2026-10-13T20:17:37.990395+00:00; input37ed4ff7055ae8ddfb598e80df1cbb95f2748fd1f552c0e7108edc18ff81db4d; redacted stdout1eb06f904022f3180adff32bfb753762de266ed93649db09e4522971a85f6ab8, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 016-candidate-OIDC-seed698353-control: exit0; 2026-10-13T20:18:36.548660+00:00–2026-10-13T20:19:35.458125+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdoutf3e4c41ac93d83f8d59fb4342cc2b2fd85a6e33bf895c9d0795fee00d509ff54, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 017-freeze-final-runtime: exit0; 2026-10-13T20:21:38.563866+00:00–2026-10-13T20:21:43.241260+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdout91066693276275c911c4008dd539c2d8b43c2395c452a3fd7f156a14d2bac517, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 018-final-format-specs-credo: exit0; 2026-10-13T20:22:55.141581+00:00–2026-10-13T20:23:07.927458+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdout8c2c3f23c95bf941275f2e50e0df152cfe0ab151f64273a477025821b6e8ebe7, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 019-mandatory-A-combined: exit0; 2026-10-13T20:24:34.586945+00:00–2026-10-13T20:26:48.552783+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdoute8ea94307520b6cc4e4990041585de94cd3b640cf4881cb7a75ae274e86b5ecc, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 020-mandatory-B-related: exit2; 2026-10-13T20:28:37.378761+00:00–2026-10-13T20:34:22.362111+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdout2043b8268ef648168659225424fce199e25c330f0cc9105354a57590ffc135f8, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 021-related-login-refusal-diagnostic: exit0; 2026-10-13T20:37:30.380537+00:00–2026-10-13T20:37:56.092180+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdout28b173a152ca992b20f6ddc1f9ca1ec48a395d7692f78e9c194277b0530544e8, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 022-mandatory-D-bootstrap: exit0; 2026-10-13T20:46:10.142865+00:00–2026-10-13T20:46:10.664996+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdoute3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, stderr9d32a83d81be2ce75c0cb3d774bc318ca59262ddc1f1bf40243d058df708f71f.
+
+- 023-mandatory-D-MCP: exit0; 2026-10-13T20:46:43.672455+00:00–2026-10-13T20:46:44.454232+00:00; inputc25d85c6b641b064c0d28210c2b4d8578cddf1964e1eb56aeaa6904a4a7b902e; redacted stdoute3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, stderrd6adc98708c08381730bd2d8ca66b0fb4b26093fd639c739aabef7dbb7dfe217.
+
+
+---
+
+## Preserved preceding engineering history
+
+
+PR-body custody correction:029 validated the historical local file; exact comparison later found it differed from the fresh GitHub body. PR_BODY_FILE_CORRECTION retains both hashes/diff. Fresh full-readback text was saved separately and031 actual fresh body checker PASS; prepared history was corrected to retain that exact previous published body.027 ENOENT and preparatory NameError remain recorded, not concealed. The PR body itself was never edited.
+
+
+## Final E and cleanup receipts
+
+026 scope/MANIFEST90/order/composition8/diff/231 frozen files and exact two status deltas PASS.027 body check failed because the preparatory script lacked import re and did not create the file; input/exit retained. Prepared text was then actually created;028 prepared body and029 actual unchanged published body check both PASS. Published PR99 body/readback stayed exact; no body update was made. README/engineering history remains verbatim.
+
+Own945 resource rows:538 TLS roots absent,894 observed ports closed, no live owned fixture VM. Both own PG sockets absent; own disposable DB/key directories removed after interruption reconciliation. Normal PG stop/wait/reap is NOT_ATTESTED: owner and both postmasters were externally interrupted and PID1-adopted Z; exits UNKNOWN/reap unavailable. Own make42708/starttime4758174 is also adopted Z, exitUNKNOWN. No PID1/foreign process signals. Historical driver123/PID22817 caveat is preserved separately. Source/input blobs/dirty patch/old packages survive. One integration pass is USED; mandatory gates remain failed/unknown, so this attempt stops without a new HEAD or author acceptance.
+
+| R group | Preserved causal immutable-a1 RED / candidate mechanism | Current author evidence / limit |
+| --- | --- | --- |
+|R1|081 nine late Actor/permission/domain/session+CSRF controls fail on immutable product; private checked local bounds/key/config/epoch/request envelope reaches final consumers|A/B causal session/credential waits, both protected routes and queued CSRF deny without private body/cookies; timely owned HTTPS/PG/ordinary Clock positives pass. Overall49999 observation positive remains failed.|
+|R2|038/067 already-measured signed sample and real PG lock leave jti/revoke effects on old source; verified native temporal guard stays inside existing transaction|A/B delayed exp/iat/query/lock cases prove jti0+sessions unrevoked; immediate valid/replay/restart/sid+sub controls pass. Confirmed or unknown COMMIT is never undone or compensated.|
+|R3|038999 entries+two real jobs publish1001 in both orders; admission/publication reservations bound current cache|A/B cache≤1000, both orders, failure/invalidation/expiry/capacity/singleflight controls pass;32 jobs/waiters/ref/deadline fences retained.|
+|R4|038 rounded current time admits age300001; exact millisecond arithmetic|A/B300000/300001/300999,30000/30001 skew, exp equality/before/after and required claims controls pass; no margin.|
+|R5|038 invalid back-channel403; endpoint-specific handler400|A/B strict400/no-store/no-effect, immediate200/newjti already-out200/replay400; unrelated403/405/429/dependency503 preserved. Both new owning literals exact.|
+|R6|038 abrupt Access restarts lose missing/nil/explicit originals; parent-lifetime bindings owner|A/B single/repeated own restarts, working protected read, exact final restore and later foreign binding preservation pass. No broader lifecycle permission claim.|
+
+All six findings remain independently OPEN; NEW review NOT_RUN. This table is author evidence, not source acceptance. No Task5, production auth, main/release/PR75/97/98/CI/DF Assistant/permission change. Exact fresh published tuple remains a1f82a4/754dd2ea/sole parent=base097d64ad. Separate new packet/readback receipts follow; VM path is not an attachment.
+
+# PR99 saved-candidate integration continuation — terminal source status
+
+MANDATORY_GATES_NOT_GREEN / NO_NEW_HEAD. Independent review NOT_RUN; all six Task4 findings remain independently OPEN. Config.activation_allowed?false is unchanged.
+
+Admission6149930947. T02026-10-13T16:05:56Z; reserve19:35:56Z; deadline20:05:56Z. HistoricalTask4 2/2 CLOSED + R1–R6 additional2/2 USED + continuation1/1 USED. Old windows/spend/violations unchanged.002/003 counter0 artifact is corrected separately without altering their receipts; first edit already used the single continuation pass. No agents/profile changes.
+
+Preserved own sealed candidate255 files was verified against inventory258339c90b7e3dda9b3764a65d7c7af9b2184d75258440cf4dd5a35380ff2933, packetSHAfde26700cb99d3fa7ba3eed17befe128d73f553e428c0f19074697791e7f5c42/99654616bytes/1489members, full CRC/member SHA and bundle. Source stayed in the author's existing worktree; no reset/clean/reimplementation.
+
+Continuation delta: exactly two authorised owning back-channel403→400 assertions; raw non-following key metadata in Validity with regular/descriptor/33byte/content checks retained; bounded real initial Repo SELECT1 in Application, live/unready on dependency absence; fixture condition-first polling resampled once at its expired-deadline branch. Added causal and timely controls in allowed validity/standalone tests. Other production code was preserved from sealed candidate. No TTL/epsilon, deadline, scope, schema, lock, flags, coverage, skips or protected policy changes.
+
+Metadata006 RED: own file server suspended, old key witness queues;00714/0 after raw metadata includes49999ms positive. That GREEN did not establish the later combined result. Startup00830 restarts:3 immediate false checks, two ready_conn_count0; all30 actual SELECT1 then exact readiness.009 RED: returned startup while four real connections held;01039/0 after bounded initial handoff.016 stronger fixture RED: condition became true before200ms while old false sample was delivered later;017 condition/startup controls GREEN, still49999 failure.015 first draft did not establish timely condition and had a compiler warning; preserved, superseded.
+
+Key I/O actual100+100 benchmark018: overlay median64us/p952483/max7392; tmpfs median52us/p95459/max1189. Own synthetic keys moved to the declared0700 tmpfs directory; no production key configuration changed. This mitigated measured I/O but did not remove the1ms native-window counterexample. At49999ms, correct final native checks can expire during mandatory Clock/cache/key waits. No grace or false success was added; the required HTTP positive still fails on later input. This remains an unresolved integration blocker, not a declared harmless flake.
+
+Old122/130 full failure disposition:
+| Failure | Disposition |
+| --- | --- |
+| owning default/custom back-channel403 | Exact two literals400;0022/0; both modules pass in combined/related. |
+|125 fixture Authorizer alias style | Already fixed in sealed130 source; direct input-blob diff retained; fresh020 strict Credo/spec/format pass. |
+| N1 immediate readiness | Actual asynchronous initial pool race causally reproduced and bounded initial connection handoff corrected; unchanged N1/standalone positives pass in010/A/B. |
+|49999ms HTTP200 vs403 | Native observation bound expires after an already measured sample plus mandatory waits; raw metadata/fixture storage mitigate but combined positive still fails. OPEN. |
+| unknown session COMMIT2232 vs<2000 | UNKNOWN original cause; unchanged assertion now passes011/B. No retroactive PASS/root-cause claim. |
+| concurrent callbacks login begin refusal | UNKNOWN original cause; unchanged control passes011/B. No cause inferred from quiet success. |
+| F5 FIFO releaser Task.await1500 timeout | UNKNOWN original cause; unchanged control passes011/B. No historical reap or timeout waiver. |
+| F2 early forbidden before last measured sample | UNKNOWN exact old cause.011 new current/session control also missed barrier;012 did not reproduce it but exposed a distinct expiry-polling race. Full B40 measured controls/20 timely all pass; old failure retained. |
+
+Diagnostic limitations:003 tracer collided with Store tests' own tracer, setup failures not semantic RED.004 additional trace target overwrote003's extra trace stream; complete003 stdout/stderr/input/exit remain.005 called Repo supervisor instead of DBConnection pool and failed setup; corrected008 provided real pool evidence.012 failure was native-expiry wait at823, not mailbox barrier; earlier hypothesis corrected.014 exact queued alias delivery1/0 does not supersede failed combined gates. All raw-private/redacted streams and per-command source/config/diff hashes are retained.
+
+## Mandatory current gates
+
+- 020-quality-format-lint: exit0, 2026-10-13T17:28:59.542474+00:00–2026-10-13T17:29:27.957767+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdout825166a47500cef7b8140ff38816b86296e64b5f3c4494ab6244f2a95acce9b4, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 021-mandatory-A-combined: exit2, 2026-10-13T17:30:07.550803+00:00–2026-10-13T17:32:36.207444+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdoute80b67c9977438af98dc4799b1d42bf5cc4584901385875837b22acda719d9c3, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 022-mandatory-B-related: exit2, 2026-10-13T17:35:07.361497+00:00–2026-10-13T17:41:38.780502+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdout96bed98dbbc6c483fd4329c00488dbcb2fee1ff1e6ea4a25e0e03564710c6510, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 023-mandatory-C-standard-all: exitUNKNOWN_EXEC_TRANSPORT_INTERRUPTION, 2026-10-13T17:43:34.384791+00:00–2026-10-13T17:53:03.670051+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdoutfb86904a3213da6bc39db9158b1bf61406f04f769358c1ed5bfe5c7caef60dab, stderre3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+
+- 024-mandatory-D-bootstrap: exit0, 2026-10-13T17:54:06.320368+00:00–2026-10-13T17:54:07.084537+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdoute3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, stderrc017525d725f6c9c00fd318ca9d50dcacdd44f69172895eb78c89f673bad15f8.
+
+- 025-mandatory-D-mcp: exit0, 2026-10-13T17:54:06.674668+00:00–2026-10-13T17:54:07.571908+00:00; source9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; redacted stdoute3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, stderrdaae5b53d5aa84aca2128a980f1429783ce566b2eddd35d77a803c8950e66b28.
+
+A143/2:49999 and provider idp_session revocation503 instead403. B441/2:49999 and frozen OIDC token barrier not reached within650ms. Full B F1–F5, Task3 R1–R7/N1 and Task4 source controls otherwise passed on this input, not overall gate PASS. Runtime/test inventory870b971b8d493a78f272c55dd057871ce43ffa3e97350a229579f856aa31ef8d stayed fixed; source inventory before docs9e9fd725a3b3936b9125556374ee52e798ea6db9eb9a1831640b71bec665945f; final fixture config4750be3992599b673e7f783554af03b3628ed3ab2dd33db63f86de8284290c3d.
+
+C interrupted at mix setup before tests/coverage/Dialyzer. Exec-server transport disconnected; shell recovered, source255/old packet exact. Actual C exit UNKNOWN, not2 or0; owner absent, make42708/starttime4758174 PID1-adopted Z. No blind rerun, no replacement of full make with separate Dialyzer. No new full coverage/Dialyzer claim; previous124 is only historical. OOM counters0 do not establish interruption cause. Environment status remained running/connected with observed revision82 versus earlier34; no republish was requested by this implementer, exact cause UNKNOWN.
+
+Own PG owner29554/starttime4229568 and postmasters29575/starttime4229844,29602/starttime4230162 became PID1-adopted zombies during interruption. They are no longer live; actual exit/wait/reap UNKNOWN/UNAVAILABLE. No PID1/foreign signals or fake normal cleanup receipt. Source/evidence survive; exact path/port/owned-resource cleanup and a separate seal follow. Old123/PID22817 UNKNOWN and historical unreapable limits stay unchanged. Own real HTTPS/PG task4 lifecycle/both protected routes/local CSRF/token-free RP/signed logout, guarded no-effect PG expiry controls and authorizer restarts passed in A/B where reported; this is author fixture evidence, no production/live acceptance.
+
+Published tuple unchanged: HEADa1f82a4c68ed4c846526ab744c1e8e367b4c55b7 /TREE754dd2ea50457b30e63b1cc630cb2947825a65d2 /sole parent=PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e. Existing PR99 stays draft/base; no commit/push/body update. No release/merge/Actions/Task5/native/trusted/live/real IdP/browser/DF Assistant/permission change. One output-path read-only probe ENOENT: CHAT_EXPORT_BLOCKED; private packet is not an attachment. New source/patch/bundle/ledger/redacted evidence retained separately; publication readbacks outside seal.
+
+The preceding engineering history is retained verbatim below. No author self-acceptance. New independent review NOT_RUN. Remaining failures/unknown outcomes require a separately admitted next action; this continuation supplies no extra cycle/window.
+
+---
+
+# Task4 T4-R1–R6 additional repair — 2026-10-13
+
+IMPLEMENTED CANDIDATE / MANDATORY GATES NOT GREEN / NOT PUBLISHED / INDEPENDENT REVIEW NOT_RUN.
+All six findings remain independently open until a new verdict. Config.activation_allowed? remains false.
+The complete preceding Task4/Task1–3 report is retained verbatim below as dated history.
+
+## Terminal verification update
+
+Current status: CANDIDATE_SAVED / MANDATORY_GATES_NOT_GREEN / NOT_PUBLISHED.
+The published PR99 HEAD/tree/sole parent/base remain the initial tuple; no commit,
+push or PR-body edit was made. NEW independent review NOT_RUN; all six findings
+remain independently OPEN. The author does not accept this implementation.
+
+| Command receipt | Exit | Result |
+| --- | --- | --- |
+| 119-final-standard-all | 2 | 801 tests, 12 failures, 6 skipped; Coverage:   99.77% |
+| 120-identity-domain-red | 2 | 2 tests, 2 failures |
+| 122-final-related | 2 | 436 tests, 8 failures |
+| 123-final-dialyzer | UNKNOWN_DRIVER_FAILURE | See redacted evidence and complete command receipt |
+| 124-dialyzer-recovery | 0 | See redacted evidence and complete command receipt |
+| 125-terminal-standard-all | 2 | See redacted evidence and complete command receipt |
+| 130-standard-all-final-alias | 2 | 802 tests, 4 failures, 6 skipped |
+| 126-pr-body-prepared | 0 | See redacted evidence and complete command receipt |
+| 127-pr-body-actual | 0 | See redacted evidence and complete command receipt |
+| 128-bootstrap-terminal | 0 | See redacted evidence and complete command receipt |
+| 129-mcp-terminal | 0 | See redacted evidence and complete command receipt |
+
+Fixture-only alias correction after125 changes no production byte.
+Current six scoped modules in required related122: AuthorizerBindings3/0,
+Validity5/0, LogoutHttp27/0, Access26/0, Csrf3/0, Eligibility15/0: total79/0
+within the combined436/8 failure result. This is input-specific author evidence,
+not an overall gate PASS. TARGETED_FINAL_MATRIX and RELATED_FINAL_FAILURE_INDEX
+retain the exact module/failure list. The old49999ms cache positive, readiness,
+concurrent callback/unknown-COMMIT and F1/F2/F5 timing controls remain failures
+where reported; no assertion, deadline, skip, coverage exclusion or flag was weakened.
+
+Identity coverage fixture correction:119 failed both new identity cases because
+the interpreter received cover_compiled.beam. The new trusted fixture authorizer
+calls production authorization, then holds the real RuntimeIdentity.read before
+snapshot. It changes/restores only own Application state and replaces no covered
+production bytecode. Immutable product120 recompiled82 and returned private200
+in both expired session/credential cases (2/2 semantic RED); related122 now passes
+both plus timely positives. The new internal read test separately refuses exact
+local UTC expiry at the final Store caller sample, without releasing an envelope;
+Eligibility rejects an untyped private witness. Two unreachable private clauses
+were removed: receipt factory has only its two handled constructors with a checked
+Validity struct; mutation helper is called only after typed local/signed guards.
+Unknown public inputs continue to fail closed and all old assertions remain.
+
+Own ledger owner correction/failure: a proposed optional kernel direct-child list
+was unavailable. Driver123 exited before wait, leaving owned22817/starttime3639107
+as PID1-adopted zombie; actual child exit UNKNOWN, no reap or PASS claimed. No PID1
+or foreign-process signal was sent. Original and failed runner versions are preserved;
+the compatible PPID-fenced subreaper uses250ms polling.124 is a separate new receipt,
+not recovery of123's unknown exit. New and historical reaping/cache limitations remain.
+
+Time procedure gap retained: several earlier clock reads and launches shared one
+orchestration call, so the requested separate model-side pre-launch read was not
+fully followed. Recorded UTC inputs remain inside the prospective window; this
+does not retrospectively attest that procedure. Later long launches use a separately
+read current time. Historical2/2 CLOSED + additional cycle2/2 remains the same stage,
+with no new allowance, agent, profile change or automatic extension.
+
+CHAT_EXPORT_BLOCKED: one read-only stat/access probe returned ENOENT for the selected
+output path. Private source/patch/baseline bundle/ledger/redacted-evidence seal and
+durable GitHub report are used; no VM path is a downloadable attachment. Runtime
+keys/cookies/JWT/DB/cache/PLTs/raw streams are excluded from the portable package.
+Final cleanup/seal/readbacks are separate external receipts to avoid circular hashes.
+
+Final controls132 repeat: the unchanged49999ms positive and both exact non-root
+standalone supervisor/Router positives pass3/0 in a quiet run. Full130 remains
+802/4/6, coverage100%, exit2; related122 remains436/8, exit2. The repeat does not
+replace or erase either failed mandatory suite. Full130 build/format/specs/strict
+Credo pass; its Dialyzer stage was not reached; separate124 passes0/0/0. Final
+scope133:233 unchanged bytes,18 changed existing paths,4 admitted new paths;
+all86 old manifest names/order and90 exact digests,8 composition pins, approved
+report history and public prepared sources verified. Source/test runtime bytes
+remain those of130; only this terminal documentation and manifest changed afterwards.
+
+## Source, ownership and budget
+
+Initial source HEAD a1f82a4c68ed4c846526ab744c1e8e367b4c55b7,
+TREE754dd2ea50457b30e63b1cc630cb2947825a65d2, sole parent / PR BASE
+097d64ada3138d49c6797001d02ab113c15ccb6e. Existing draft PR99 and branch
+feat/sn005-current-access-logout-20261013 keep base feat/sn005-browser-login-20261011.
+The implementer read the independent review6144021721, verdict6144047612,
+handoff6142903633, original admission6140268810 and coordinator scope6138402384.
+Fresh scoped claims/refs matched before admission; this is not global VM process attestation.
+[Repair admission6144793458](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6144793458)
+was published and read back completely before source/fixture writes.
+
+Actual first-action T0 11:29:10Z13October; deadline15:29:10Z; final1800s reserve14:59:10Z.
+UTC+3 times:14:29:10 /18:29:10 /17:59:10. Historical Task4 corrective2/2 CLOSED;
+additional integrated cycle1 began046, final cycle2 began066. No reset/extension,
+extra agent or profile change. Actual model/effort/speed UNKNOWN. Earlier windows,
+late runs, native HOLD, cache/adoption/reaping caveats retain their historical status.
+
+## One temporal composition
+
+| Authority output | Validity retained across added waits | Final synchronous decision |
+| --- | --- | --- |
+| Access Actor / authorization | Current coherent Store row bounds, exact Actor/config/epoch/key/original request; observation receipt | After last receipt Clock/GenServer wait and raw key check |
+| Project / runtime identity body | Same local witness plus observed eligibility across domain query/snapshot | Router before-send after receipt waits; late body replaced with fixed denial |
+| Callback cookies | Current local Actor envelope across queued CSRF issue | Controller after CSRF reply, before session/CSRF cookies and successful303 |
+| Local logout | Current session envelope across CSRF/material/Clock/DB waits | Guard inside existing revoke transaction after waits, before COMMIT dispatch decision |
+| Signed logout effect / acknowledgement | Verified issuer/jti/selector/config, exp/iat/nbf and actual native sample/original request | Guard before insert, after insert/query/lock waits, after revoke, before transaction return/COMMIT dispatch; ack checked separately |
+
+Request5s, Store750ms / SQL500ms, local session and credential lifetimes, observation<50000ms,
+and signed exp/iat/nbf bounds stay separate. Negative absolute monotonic values are valid;
+only same-domain deltas are converted. A queued sample/result cannot renew a bound.
+There is no epsilon, whole-second grace or exact-clock-equality requirement.
+The witness is server-private, token-free and request-bound; it grants no durable right and
+does not replace the current session/grant read for each operation. Old Actor and Store
+public return shapes stay unchanged. The internal envelope adds local_actor/4,
+session_material/4 and permissions/5; guarded revoke/4 and accept_logout/6 stay inside Store.
+
+The final mutation decision follows SQL/lock waits while jti/revoke are uncommitted.
+Expired bounds roll back both changes. A confirmed COMMIT is never described as undone;
+unknown COMMIT stays unknown, with no compensating un-revoke/delete-jti or blind retry.
+Physical COMMIT/network response timing after the synchronous decision is not a hard
+realtime promise independent of the OS/DB. Key fingerprint uses the frozen TokenVault
+trusted-path/raw-descriptor/open-resource-type/33-byte read contract, without a background
+IO server. Concurrent path replacement during open and arbitrary kernel IO realtime remain
+outside that inherited contract; content/key changes observed before decision deny.
+
+## Causal RED and current evidence
+
+| Finding | Immutable a1f82a4 RED | Candidate change / positive evidence |
+| --- | --- | --- |
+| R1 | Final081 nine causal failures: receipt sample delivery past session/credential; direct Actor/permission; both domain reads; pre-dispatch CSRF queue after current Actor | Checked row envelope to final consumers. Earlier08277/0 includes delayed no-body/no-cookie failures and timely HTTPS/PG/ordinary Clock positives. Later raw-reader controls also test both lifetime axes and exact bindings. |
+| R2 |038 delayed already-measured Logout Clock through exp/iat and uncommitted insert;067 real row locks leave durable jti1 | Verified native temporal witness to guarded existing transaction.082 rejects expired delivery/query/lock with jti0 and unrevoked rows; valid effect once, restart/replay and selectors preserved. Later timing/setup failures remain failures. |
+| R3 |038 two controlled distinct jobs at999 publish1001 in both orders | cache+inflight reservation and confirmed bounded publication.082≤1000, excess refusal, full1000, expiry/failure/invalidation cleanup and hit/refresh positives.32 jobs/waiters and same-key singleflight retained. |
+| R4 |038 signed whole-second iat accepts age300001ms | Exact ms arithmetic.082 age300000/300001/300999, skew30000/30001 and exp equality/before/after controls passed. |
+| R5 |038 invalid handler token403 | Endpoint-specific fixed invalid_request400/no-store.082 valid200/already-out newjti200/replay400/no second effect; protected/local403, method405, rate429, agreed dependency/unknown503 remain distinct. |
+| R6 |038 missing/nil/explicit prior binding lost after two abrupt Access restarts | Supervisor-lifetime AuthorizerBindings stores originals/generation; idempotent install, exact restore, later foreign changes preserved.082 true supervisor restarts and working protected read, graceful teardown and invalid-owner controls passed. |
+
+Final standard OpenID Back-Channel1.0 errata1 §§2.6/2.8 was read. Invalid requests/tokens
+reaching its handler require400. Operational503 remains the approved scoped error profile;
+this is not a claim that the standard removed its failure400 language. Low-level framing
+closes/unsupported-H2 resets and all unrelated403 semantics remain.
+
+Two wrong owning403 assertions are outside the path allowlist: http_body_test.exs:80
+and routes_test.exs:365. Only their default/custom back-channel expected403→400 was
+proposed, with concrete patch hashes d40f7474cb7dc6486205da3d7cf4ef7796f6d7addc9e5c51c465b2c6b4509e9b
+and b832685439a11fe4eaba2545602e69655144505f633f248b45c5ac6038448fa1.
+Owner direction is pending; both files remain frozen. No alternate production behavior
+is introduced to hide these assertions.
+
+## Commands, failures and mandatory gates
+
+Every recorded verification command captures argv/cwd/UTC start/end/exit, complete source inventory/content blobs,
+input diff, public config hash and raw-private/redacted stream hashes before execution.
+First failures and all reruns remain in COMMAND_LEDGER.jsonl. Source/config input-specific
+results do not certify later bytes. New helper source/fixtures are part of that inventory.
+
+- 026 exact-lock deps get passed; mix.exs/lock unchanged. Only public prepared tool/package/core
+  PLTs copied into own roots with identical pre/post hashes; no donor project/trusted CI cache.
+- 03864/17:15 semantic findings and two wrong fixture table selectors.044 domain selector
+  corrected;06711/11 semantic RED,081 final R1 fixtures9/9 semantic RED. Actual stable product
+  lib bytes in RED checkout are unchanged. Old callbacks using an outgoing debug event were
+  not causal queue proof; incoming pre-dispatch CSRF control supersedes them.
+- 029 compiled while later tests were added and is not treated as stable whole-input baseline.
+  Credential schema violation corrected with coherent expires<=credential bound, without schema edits.
+- 046 edit-script assertion,052/072 compilation issues preserved; no semantic RED attributed.
+- 05664/3 and07676/4 exposed fixture races/new private seam type checks; all preserved.
+- 08277/0 was the first full targeted GREEN on inventory1360ebf672dd78c2f145e373779e6828f5fa2c5cf080fa4b8cabd7dfa46f5695.
+- 084 mandatory related434/16 failed: two frozen R5 expectations, lifecycle child count and
+  timing/setup/old-control failures. It is not PASS. Permitted standalone count now includes
+  the seventh lifecycle child. Original PID-target fixture Clock holding behavior restored.
+- 092 own FIFO exposed a fingerprint IO-server wait/teardown stall; exact own-path release094
+  unblocked it.095 uses the same raw descriptor contract as frozen TokenVault.
+- 098102/4 and10139/6 failed timing/setup controls.101 current grants/revocation8/0 and
+  validity4/0, including FIFO and exact49999ms cached positive, passed within that run.
+  Earlier ordinary production Clock/both protected routes/local+signed lifecycle positives remain
+  input-specific evidence. No new skip or timeout/threshold/exclusion weakening.
+- 102 standard make all: build/escript and format passed; specs gate failed current?/5 placement.
+  Explicit4/5 specs108 correct that declaration without behavioral change. Full coverage,
+  strict Credo and Dialyzer still require fresh successful final receipts.
+- Bootstrap06912/0 and MCP07011/0; canonical composition8 exact hashes verified019.
+
+Production source frozen outside the selected8 existing modules and2 allowed helpers.
+Config/Clock/Actor/Vault/Login/Routes/RequestContext/HttpBody/framing/RateLimiter;
+domain/schema/migrations, lock/mix.exs, CI/policy/spec/planning/bootstrap stay unchanged.
+Current manifest retains all86 names/order; changed digests and4 authorized helper names
+are updated from exact final bytes. Six historical live skips remain unchanged. Native/trusted/live,
+real IdP/browser/UID/ingress and wider Bandit release disposition are separate gates.
+
+## Resources and publication boundary
+
+Actual identity agent1000:1000, prepared PG17.11 / Elixir1.19.5 / OTP28.5 verified.
+Own root /workspace/work/pr99-r1-r6-20261013T112910Z contains isolated source/RED, Mix/Hex,
+deps/build/core/project PLTs, ledger, synthetic TLS clients/keys and socket-only PG clusters.
+First legacy createdb setup failed; both owned postmasters stopped/reaped before correction.
+Current PG ownership/PID/starttime lives in PG_OWNERSHIP.json. Own final DB sn005_t4_final
+was declared before creation; earlier own test rows retained, never old/foreign DB adoption.
+All fixture processes remain owned and alive until their last dependent check. Real stop/reap,
+port/path/resource results must be recorded before the separate final seal/readback.
+
+No commit/non-force push/body update is permitted until all mandatory gates are GREEN and
+fresh ref/owner match. Current source remains uncommitted above a1f82a4; existing PR99 stays
+draft/base unchanged. Source/diff/bundle/ledger/redacted evidence will be separately sealed,
+not overwrite any old packet. VM paths are not download attachments. Any export blocker gets
+one read-only probe, private seal and durable GitHub report, with no uploader/privilege workaround.
+Final publication/cleanup/seal/readback receipts are external to tracked report to avoid hash cycles.
+
+---
+
+# Prior report — retained verbatim
+
+# Task4 current permissions, observation lifecycle and logout — 2026-10-13
+
+IMPLEMENTED / AUTHOR GATES PASSED (publication pending) / NOT SOURCE ACCEPTANCE / NOT RELEASE APPROVAL.
+Production Config.activation_allowed? remains false. Independent review NOT_RUN.
+All report text below this new section is retained verbatim as dated history.
+
+## Source and admission
+
+Accepted parent HEAD097d64ada3138d49c6797001d02ab113c15ccb6e,
+TREE56a9dd3b0f533232c490482c200087584728945a, parent76ef22196f4495dee4113a4ae2f56f25c08a3268.
+Own branch feat/sn005-current-access-logout-20261013; dependent PR base is
+feat/sn005-browser-login-20261011. No synthetic merge or accepted-ref modification.
+[Admission6140268810](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140268810)
+and [A6140436236](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140436236),
+[B6140832646](https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6140832646)
+were published with full-body readback. Current publication tuples are recorded
+outside this tracked report after the final source commit; no future SHA is invented.
+
+Conservative attempt T0 bound06:59:24Z13October is the observed Codex process start;
+exact first-tool UTC is unavailable. Hard deadline10:59:24Z, final1800s reserve10:29:24Z.
+One IMPLEMENTER, agents0/profilechanges0; historical Task3 counters/windows unchanged.
+Actual runtime model/effort/speed/session ID UNKNOWN.
+
+## Working source lifecycle and permission matrix
+
+Owned HTTPS code/PKCE/signature login commits a local PG session. Each protected
+operation rereads the active user, exact identity/session/generation/epoch/key and
+both expiry axes. Actor is a candidate, never a permission cache. Authorizer invokes
+current eligibility and the coherent Store.permissions statement before returning
+exactly :ok. Router checks the receipt and original deadline before private bytes
+are sent, including time spent in the project query.
+
+| Current local right | Own member project | Other project | Runtime identity |
+| --- | --- | --- | --- |
+| viewer/contributor/operator/approver/project_admin | Read | Deny | Separate grant only |
+| runtime_identity_read without membership | Deny | Deny | Read only |
+| absent/revoked/inactive/malformed/service/agent | Deny | Deny | Deny |
+
+No role enables mutation, enqueue, protocol approval or task-result acceptance.
+Old project schema_version1/whitelist/error/no-store contracts remain.
+
+## Observation, delivery and invalidation
+
+Eligibility cache key is exact issuer/sub/sid/config generation/boot epoch/local
+session ID. A success is strictly younger than50000ms on independent UTC and
+monotonic axes and a sample-anchored native delivery bound. Reads/hits/failures do
+not renew its timestamp. Bound resources:1000 cache entries,32 in-flight refreshes,
+32 joined callers per refresh. A monitored/linked asynchronous worker keeps the
+GenServer free of synchronous network work and dies on timeout/owner termination.
+Unique refresh refs prevent invalidated replies resurrecting a success. Replies
+queued past their original deadline are discarded before publication.
+
+The observer must match all configured client/application/provider/resource/generation
+bindings plus an explicit version/evidence binding from the trusted supervisor.
+Production observer/binding are unproved and closed; live_evidence=true, endpoint
+names and old JWT claims do not confer freshness. The owned fixture reports an
+actual HTTPS response for three separately mutable app-group/user-active/session
+states. Its synthetic version/evidence are not installed Authentik proof.
+
+## Additive inherited seams
+
+Store.session_material is one server-internal database(:read)/750ms operation,
+consumed only by Eligibility and Logout. It reuses candidate current-row/key/AAD,
+fresh-clock, two lifetime axes and final-caller acceptance. The material query caps
+ciphertext in PostgreSQL before transport/decryption (32768 plaintext plus29-byte
+vault envelope). Safe external-term decoding refuses compression, arbitrary/open
+structures, invalid field types and oversize tokens. Material never enters Actor,
+HTTP, audit, logs or cache. Old public shapes/write/COMMIT semantics are unchanged.
+
+HttpBody.read_payload returns at most32KiB and latest Conn through the same framing
+and <=1KiB chunks/deadline reader; read/2 remains compatible. No second transport
+read/unbounded parser. HTTP1 close-no-drain and uncaught unsupported-H2 reset remain.
+RequestContext is native; Eligibility/Oidc deadlines are absolute monotonic ms.
+
+## Logout and standard interpretation
+
+Task4 callback legitimately issues a separate browser-readable anti-CSRF cookie
+signed by Plug MessageVerifier/PBKDF2 and bound to every exact Actor field with an
+Access-process random secret. It contains only a random nonce, no session handle
+or IdP token. Secure/HttpOnly/Lax/__Host session cookie stays unchanged. Exact Origin,
+current local session and one valid X-CSRF-Token are required for POST logout;
+rotation invalidates old CSRF. Missing/bad/foreign/GET requests do not revoke.
+
+Store.revoke confirms local effect before RP handoff; live eligibility/IdP
+availability are not required. Unknown COMMIT returns unavailable, clears browser
+auth cookies and is reconciled without blind repetition. Standard token-free RP
+handoff uses client_id and the exact end_session_url/post_logout_uri. A backend GET
+is not browser logout: the real HTTPS fixture requires its OP session cookie and
+explicit user confirmation before its separate provider effect. Non-root returns
+are preserved and the LOGIN callback remains fixed to root. Real compatibility is
+Task5; no admin API/hint-token workaround exists.
+
+Signed back-channel uses bounded form/JWT and pinned oidcc3.9.0/jose1.11.12 signature
+functions. A separate read-only transport purpose admits discovery/JWKS only; unknown
+kid refreshes at most once under the same deadline. Signature/allowed alg/exact
+issuer+aud/events object/nonempty jti/sid-or-sub/no nonce are checked. Current final
+backchannel errata requires exp; new verified results retain expires_ms for caller
+rechecks. iat age<=300s and future skew<=30s use JWT seconds, expiry is strict at ms.
+Selectors: sid+sub intersection, sub-only exact identity, sid-only exact issuer/sid.
+Raw selectors never reach the effect; Store.accept_logout performs unique issuer+jti
+and revoke in its existing transaction. Retention exceeds3600s with a5s commit-bound
+margin; replay persists after process/control restart and does not repeat effects.
+
+Primary standards fetched13October:
+https://openid.net/specs/openid-connect-backchannel-1_0.html
+https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+Pinned library APIs inspected from the exact locked dependency sources.
+
+## Evidence and final author gates
+
+A RED0039/9 after real login/current candidate positive; body RED0051/1; GREEN00622/0.
+B RED007 cache-repeat and three wire revoke leaks; GREEN01322/0. Delivery RED0101/1
+held an actual completed project query then advanced clock50000ms; GREEN01121/0.
+Queued refresh RED0241/1 demonstrated a late success reappearing after request timeout;
+original-deadline publication fence added. Ciphertext RED0231/1 measured1048605 bytes
+returned by PG before the material cap. C RED0148/7 with local/signed positive targets;
+GREEN02014/0, including RP confirmation, selectors, restart/replay and unknown COMMIT.
+Binding/C GREEN02220/0. Latest broader026392/1 is one expected supervisor-count
+assertion needing the newly required Eligibility child, not a source permission leak.
+
+All first failures are retained: selector004 selected0; fixture008 nil-or; concurrent
+harness012 demanded8 admitted callers from frozen queue:false/pool4 (corrected to2
+joined actual requests); compilation015/016/019; time-loop017 and corrected stable
+wire negatives with separate exact300/301 and30/31 arithmetic. Selector021 mistakenly
+selected the preceding clock test; it is not claimed as the version mismatch RED.
+Receipts001–021 preserve command/UTC/exit/redacted stream hashes; full per-command dirty
+input snapshots were not captured then. Mandatory fresh gates022+ capture complete
+tracked/allowlist source hashes and diff before execution. No older results certify
+new bytes. Final standard make045 passed after the scoped two-cycle validation/refinement.
+Fresh full suite counts, coverage and zero-warning Dialyzer are recorded below;
+no previous714-test result is reused. Final static/body/publication receipts are
+retained in the owning exact-HEAD handoff.
+
+Task5 exact installed IdP/browser/two tabs/<=60s/UID/ingress, trusted/native checks and
+historical native HOLD remain open. Wider Bandit advisory remains a separate release
+gate; the lock/dependency was not patched. No production enablement, merge, deploy,
+Actions, reviewer launch, old-packet overwrite or foreign-resource mutation.
+
+Final standard `make -C elixir all`045 ran09:24:43.747814Z–09:28:51.264923Z,
+exit0. Build/escript build only, format/specs/strict Credo pass; full suite
+770tests/0failures/6unchanged live skips, configured coverage100%; Dialyzer
+0errors/0skips/0unnecessary skips. stdoutSHA256
+a27bf05ddf7fd5643338a98adf6396d8396fee1ff3371c6a08d52a9df8bb5c03;
+stderr emptySHA256e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+Complete input-hashes digest7038d3e22a236e3437ebc5c6c251b208dd406b8b1d59fb2afe7dbbd196383c44.
+Every runtime/test byte was reread against that input before publication.
+Own core/project PLTs were built from scratch; separate Dialyzer036 also passed.
+Bootstrap03112/0 and MCP03211/0 passed with exact frozen composition checks.
+
+Full034758/0/6 stopped at97.47%coverage;039auth-only352/0 exited3 with unchanged
+100%threshold because unrelated modules were not run. Subsequent meaningful fault,
+capacity, dependency-loss and measured queued-caller tests closed the new paths.
+Final targeted/related046404tests/0failures exit0 (09:30:29.713435Z–09:33:35.504148Z),
+stdoutSHA256df740ea5565e9f7d1b21cb347ba05b1efeb4b087b63083d3632eeb1dbc9e944c.
+This includes all auth/seam/project/identity/standalone/environment/agent boundaries
+and inherited F1–F5/R1–R7/N1. Final manifest04786/86, PR-body048 and diff049 exit0.
+Original77 manifest names/order and225 other tracked bytes preserved.
+Cycle1/2 covered initial broader/style refinements; cycle2/2 covered fault/lifecycle
+and coverage checks. No extra agent/profile/flag/exclusion or locked-suite weakening.
+Driver038 invalid guard and040 wrong process resumer were retained and corrected.
+Access now traps supervisor shutdown so its owned authorizer settings are restored;
+new tests check previous nil/missing settings. Source Config/Clock/Actor/Vault/schema,
+lock/mix.exs, CI/policy/planning and original77 MANIFEST names stay frozen/preserved.
+
+Owned PG is kept alive for the final dependent checks. Final045subreaper actually
+stopped and reaped current FIFO helpers21596/21601; their deferred cleanup is
+acknowledged. Earlier034helpers12121/12126 were adopted by PID1, TERM-stopped by
+matching ownership/starttime and remain unreapable zombies; no PID1/foreign signal.
+This current limitation and all historical caveats are retained. HTTPS fixture roots
+are removed on exit; terminal recorded ports/root checks follow all dependent tests.
+
+Output destination probe failed EACCES once. No rights expansion/repeated mkdir or
+alternative upload. A new independently sealed source/diff/bundle/ledger/redacted
+review packet stays at its private VM path with SHA/CRC in the GitHub handoff;
+it is not a downloadable chat attachment.
+
+---
+
+# Historical reports — retained verbatim
+
 # Task3 N1-only continuation — 2026-10-12
 
 IMPLEMENTED / AUTHOR GATES PASSED; new independent exact-HEAD review NOT_RUN.
@@ -2216,3 +2874,1633 @@ future commit hash. Historical interrupted-environment cleanup remains NOT_ATTES
 Trusted/native/live tests remain NOT_RUN/HOLD. Next bounded action is a NEW
 independent reviewer of the published exact HEAD; only that reviewer may determine
 F2 closure/source acceptance. This implementer does not start it or claim acceptance.
+# R6/T4-N1 author repair candidate — 2026-10-14
+
+This dated note precedes final candidate qualification. It preserves the full
+preceding report verbatim above. Admission:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6168418721
+Prior independent source audit/verdict:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6166999695
+https://github.com/pupkinson/SymphonyNext/pull/99#issuecomment-6167029895
+
+Baseline exact HEAD d01add0c83155cd89cba770e99c1f70d8189d7a0,
+TREE b019434e03cc24da6a5ba33874fd26c4a2c12a9b,
+PARENT a1f82a4c68ed4c846526ab744c1e8e367b4c55b7,
+PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e.
+Same head/base branches and existing draftPR99.
+
+T0 actual first action12:21:31Z; deadline16:21:31Z/reserve15:51:31Z.
+One implementer; at most2 new causal repair cycles, agents0/profile changes0.
+The prior reviewer role ended before this new owner-dispatched implementation;
+its d01add0c conclusions do not accept this new candidate. A subsequent reviewer
+must be independent of this implementation. Technical session/model/effort/speed
+UNKNOWN. Historical Task4/additional/continuation/freshness/diagnostic/VERIFY/
+publication windows remain USED/CLOSED; this stage resets none of them.
+
+## Mechanism and linearization
+
+The previous AuthorizerBindings captured global defaults, installed Auth.Authorizer
+by writing those keys and later restored a snapshot. Its get-then-set/delete
+could destroy an independent later edit. The new component captures no such
+snapshot and performs no put/delete of project_authorizer or runtime_identity_authorizer.
+
+Base values remain ordinary operator/default Application configuration.
+The existing GenServer owns generation, current writer, supervisor owner and
+incarnation. Managed install linearizes in its handler; repeated Access install
+preserves the live generation. Release is fenced by generation and actual
+GenServer caller pid and linearizes by clearing owned state. It does not restore
+or compare global values. Direct put/delete, including nil/missing/same-value/
+ABA changes, remains supported and becomes effective after managed release.
+
+Both product selection sites (Projects and RuntimeIdentity) use the same
+resolve/1. Lookup is bounded by250ms and available original request time.
+The resolver accepts only a current component/incarnation reply; managed selection
+always means Auth.Authorizer, not successful Actor/session/permission validation.
+Confirmed inactive/explicit legacy selection reads the current base setting.
+
+The module-owned persistent sentinel stores component pid/incarnation only.
+It is a fail-closed lifecycle discriminator, not a durable grant. Registered
+startup without a sentinel, pending startup, unknown/malformed context, unexpected
+component loss, dead owner/writer, stale queued reply and RPC failure deny.
+Normal release/owner retirement permits base selection. Unexpected binding
+component restart remains pending until an explicit install; existing Access is
+not automatically given a replacement grant. Normal managed Application and
+separate Access-supervisor ownership are covered. Deliberate legacy fixture
+callbacks remain non-managed and use base selection. There is no new public
+endpoint/configuration service, module/dependency/table or OTP-internal mutation.
+
+## Causal receipts available at this note's freeze
+
+An owned separate detached baseline copy remained d01add0c plus exactly two
+observer/test files. Instrumentation held the real restore after completed
+Application.fetch_env, retained the real get/put/delete APIs, waited for an
+independent writer to complete, then continued old restore. No probabilistic
+sleeps, Application mock or internal-table/controller write was used.
+Observer patch SHA256:
+ea7a24eba46f31cc705c0404080c202b0f2b4908269c43fbf78f0f74044f53d2.
+
+Baseline causal RED12:37:55.585052Z–12:39:03.247924Z:
+6tests/6failures/3excluded,exit2. Both keys, direct foreign put/delete/put(nil)
+lost their completed values. Output SHA256:
+e171f7f7bfe2648454f42a1d213ac4e596ddd03d1c0587083486062f7dd56e66.
+
+Pass1 initially exposed a harness expectation error: GenServer.stop returns
+:ok rather than an exit. The next control exposed a redundant stop_supervised!
+after a temporary child had already been removed. Both first failures are
+preserved; corrections stayed in the same local ownership hypothesis.
+Unknown managed startup values conservatively remain pending; only explicit
+managed:false selects legacy mode.
+
+Scoped GREEN13:10:02.021815Z–13:10:08.686745Z:
+16tests/0failures/45excluded,exit0,seed143345/max-cases1.
+Output SHA256:
+7630215a8fcb4df1d7798fea0a9896cf4052b6a88c56adee9fde331771d07151.
+These are causal controls, not the final full owning suite.
+The matrix has108 release plus108 normal owner-shutdown schedules:
+both keys; missing/nil/explicit; foreign put/delete/put(nil), Authorizer-equal,
+original-equal and ABA; before/during/after teardown. The held transition queues
+real lifecycle handling while the independent base mutation completes; the old
+check/write gap no longer exists. Helper-only write tracing and source absence
+of base writes support no-write cleanup, alongside actual raw postconditions.
+Fresh install/concurrent writes, stale writer/generation, component death/pending
+restart, queued old incarnation, timeout/invalid context and explicit legacy
+behavior are checked. Raw/effective dual assertions and real protected GETs
+preserve R6 meaning. Owned HTTPS/PG login->own project200->two Access restarts
+and200->membership403, foreign project403, separate platform grant/revoke, and
+normal production-supervisor topology are covered without retryGET.
+
+## Qualification and scope limits
+
+At this dated note, final T1/T2/T3/T4 qualification has not yet run.
+Actual results/first failures and new HEAD/tree/parent publication belong to the
+terminal owning #33 report and PR99 body/checkpoint. No future PASS is predicted.
+The runtime/test/doc source is frozen before final suites; result publication
+uses external workpad/PR metadata rather than rewriting this dated note afterward.
+
+R1–R5 were CLOSED_AT_SOURCE only on d01add0c. Their production modules/freshness
+logic remain byte-frozen, but the changed selection consumers require independent
+preservation review. Two inherited R1 identity-wait setups currently set a raw
+wrapper while managed binding is active. The agreed representation ignores that
+base override. A narrowly scoped explicit-fixture setup adaptation was asked of
+Denis; those R1 assertions/setups remain unchanged pending that answer.
+This known fixture seam is not evidence that expired private data is released.
+
+A148/1 and B020446/1 remain FAILED/ROOT_CAUSE_UNRESOLVED; N1 is not their proven
+cause. Instrumented historical positives do not qualify pristine or establish
+first boundaries/iterations/argv/order. Prior raw packages/streams were not
+obtained; their counts/hashes/cleanup remain AUTHOR_REPORTED. Historical
+missing auxiliary snapshots, T0 differences, cache/PLT/reaping/UNKNOWN exits,
+native/trusted/live/IdP/browser/UID/ingress/Bandit/HTTP1 gates are preserved.
+
+Own resources use agent1000:1000, Elixir1.19.5/OTP28 erts16.4/default4 schedulers,
+PG17.11 on an owned Unix socket, isolated Mix/Hex/build/core/project PLTs.
+Command argv/cwd/UTC/exits/input/output hashes are in owned receipts; initial
+pwd has first-tool UTC boundary with exact subprocess nanoseconds UNKNOWN.
+No production/DF Assistant/shared caches/old archives/root drivers are modified.
+No Task5/approval/merge/deploy/Actions/trusted status; author candidate only,
+INDEPENDENT_REVIEW_PENDING / NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5.
+Original v0.5/PR79/82/84/autonomy/multi-server requirements are retained.
+
+---
+
+# R6/N1 cycle2/2 — identity-barrier fixture continuation (2026-10-14)
+
+This separate dated entry preserves all preceding text as history. Owner
+addendum explicitly authorizes only auth_http_fixture.exs and the two
+runtime-identity lifetime variants plus paired controls in access_test.exs.
+All elixir/lib, AuthDbFixture and other tests remain byte-frozen to158529de.
+Admission and exact wiring before edits:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6171441500
+Full admission API readback EXACT MATCH; same own isolated author checkout.
+
+Baseline HEAD158529de999b1f662de95e4f69132d41687956ed,
+TREE f7af07657a14475cdef163a02a8d1f153598fb0b,
+PARENT d01add0c83155cd89cba770e99c1f70d8189d7a0,
+PR BASE097d64ada3138d49c6797001d02ab113c15ccb6e; same draft head/base branches.
+Fresh claims showed coordinator6171231155/6171241392 PREPARED/NOT_STARTED,
+no competing continuation in returned scoped histories; not global attestation.
+
+Original T0 2026-10-14T12:21:31Z/deadline16:21:31Z remain history.
+Continuation first action14:57:36Z; owner-authorized prospective extension sets
+effective deadline18:57:36Z=max(old,continuation+14400s),reserve18:27:36Z.
+Cycle1/2 was used; this consumes the sole remaining cycle2/2. Agents0/profile
+changes0; no new2/2 allocation, old windows/UNKNOWN/exits remain unchanged.
+
+## Exact fixture path and property
+
+Existing option keys remain task4 and eligibility_confirm. A narrow start_auth
+cond branch handles task4==true plus an explicitly supplied callback. Only
+callback==(&Eligibility.confirm/4) is passed unchanged; otherwise fixed
+invalid_task4_fixture_confirmation. It precedes the unchanged default/task4
+branch. There is no production option, anonymous wrapper or resolver exception.
+The real Task4 Eligibility GenServer and owned HTTPS observer remain installed.
+Explicit callback presence uses the existing AuthorizerBindings managed:false
+fixture path. Raw runtime_identity_authorizer initially names real Authorizer,
+then the unchanged IdentityReadAuthorizer wrapper becomes effective intentionally
+outside managed mode. It delegates real Authorizer.authorize before holding the
+request between authorization and RuntimeIdentity snapshot.
+
+Tests directly assert exact cfg/callback and Access.task4?true, known inactive
+owner with nil generation/writer, effective real authorizer then wrapper.
+While held they inspect only their own request's server-private dictionary and
+assert local Validity, receipt/actor/config/original deadline binding, actual
+Eligibility cache-ref acceptance and real witness currentness. These checks
+do not write request state or renew receipts. No private dict/cfg/worker/HTTP
+values are published. Production current grants/receipt/final hook remain real.
+
+For both session/credential axes original400ms setup,1500ms barrier wait,
+unchanged1800ms AuthDbFixture fail-safe,2000ms await and all negative
+identity/commit_sha/cookie assertions remain. Paired timely holds return200
+with the real schema_version/commit_sha/image_digest/config_sha256 contract;
+no fabricated identity wrapper field. No-platform-grant responses403 complete
+before a zero-wait no-barrier check. Anonymous/permissive captures are rejected.
+Unchanged N1/R6/managed HTTPS controls separately prove managed selection and
+current rights; these lifetime fixtures do not claim managed-mode coverage.
+
+## Compatibility receipts at this pre-gate freeze
+
+RED reuses own prior exact T2 input/stream, not a new run:459/2,exit2,
+output SHA256ffb3495964fc83345ad3d296298223669314bdaf0543a540d3a65dfd129259b2.
+All recorded elixir inputs equal158529de. Initial login/identity200 assertions
+preceded failure at absent identity_read_held; source managed resolver ignores
+raw wrapper. This is test compatibility RED, not security RED or historical503
+diagnosis. Prior raw streams/input receipts preserved, never overwritten.
+
+New scoped GREEN15:08:38.101035Z–15:08:48.722142Z:24tests/0failures,
+43excluded,exit0,seed143345/max-cases1. Output SHA256
+b1f592fc3f2a0157b78f420fcc96d015a4dd03bc3171a2c0c68f6920551c2b38.
+Includes8 identity cases plus unchanged16 N1/R6/lifecycle controls.
+Format/specs/style and docs/static preparation precede the final executable
+freeze. At this dated entry T1–T4 have not run. Final qualification and any
+permitted later docs/MANIFEST-only result delta must name both inventories;
+runtime-byte qualification is never represented as whole tracked-byte equality.
+
+Own identity/toolchain reconfirmed1000:1000,Elixir1.19.5/OTP28 erts16.4,
+default4 schedulers,Python3.12.14,PG17.11. New disposable own Unix PG/socket/keys
+under a continuation directory; prior own Mix/Hex/deps/build reused without
+shared-cache changes/reinstall. Lock-bound deps.get --check-locked exit0.
+First clock/pwd boundary retained; subsequent argv/cwd/UTC/exits/source+aux
+hashes recorded. Native remote and GitHub exact tuple agree.
+Current mandatory source audit body hash104fecd502be702592f76a900ae1f49d744583b41eb6641e07f4531c10a74095
+matches prior saved bytes. The old saved local terminal-report copy lacked one
+API trailing LF; fresh exact body SHAedeef7f6fd49b0cfa0c789a61b28e8b39d9d2adff0ce4f1dc3a56b37275ed784
+is separately saved; no substantive report/source drift, old copy preserved.
+
+Historical A148/1/B020 FAILED/ROOT_CAUSE_UNRESOLVED, instrumented diagnostics,
+raw-evidence/cleanup/auxiliary/T0/cache/PLT/reaping/UNKNOWN limits stay separate.
+Prior R1–R5 CLOSED_AT_SOURCE applies only to reviewed d01add0c. This author
+does not close R6/N1 or independently accept changed consumers/fixtures.
+No reviewer launch/Task5/main/release/protected CI/Actions/production/real IdP/
+browser/UID/ingress/permissions/DF Assistant/native drivers. Native/trusted/live/
+wide Bandit HOLD and original v0.5/PR79/82/84/autonomy/multi-server contracts remain.
+
+Pre-final style disposition: the first lint exit14 included new nested aliases,
+line lengths and start_auth complexity. Only new owning helpers/options were
+adapted (exact captures via aliases and private access_options); behavior unchanged.
+Second lint exit6 leaves10 remarks exclusively on unchanged158529de lines:
+Projects123,RuntimeIdentity20,old Access179/256 and managed lifecycle long line,
+plus AuthorizerBindingsTest62/142/293/396/413. Those frozen spans are untouched.
+This is a known wider STYLE_HOLD, not a fixture failure or historical503 cause.
+No exclusion/profile/policy change or frozen style repair is authorized here.
+
+## Continuation final executable gates and result-only seal
+
+Final executable input inventory (all tracked files except the three README/
+engineering docs and MANIFEST; git ls-files order SHA256 two spaces path LF):
+64acdadf5b9c67308672fc13601a1124d01c87afa388e75d08a36b7f7aef541b.
+Pre-gate whole tracked-byte inventory:
+ce45af63190fb8dc8186043980d8d81e221f870810c89737951d494fc1ce12b3.
+All subsequent changes are this separate docs/MANIFEST result delta; final
+publication inventory/static/body seals are recorded in terminal #33 handoff.
+No executable byte is changed or requalified by documentation alone.
+
+| Gate | Actual UTC | Result |
+| --- | --- | --- |
+| Scoped post-style controls |15:15:11.732725–15:15:21.637799Z|24/0,43excluded,exit0|
+| Full owning T1,seed143345/max-cases1 |15:17:18.125076–15:17:37.900724Z|67/1,exit2|
+| Exact related T2,seed381068/max-cases1 |15:19:07.204739–15:22:09.094893Z|465/0,exit0|
+| Ordinary make T3 |NOT_RUN|T1 RED blocks make; no current coverage/Dialyzer/full build qualification|
+| Bootstrap/MCP Python |15:19:53Z|12/0 and11/0,exit0 each|
+
+Post-style scoped output SHA256059172f463edddd66be8902812e427d18469edf7329ff412a75b6be6c410a8b8.
+T1 output SHA256c12dfcd761af3374f78f8bec6bf0d08c962b252c38936f3f922c5cbf319c4b9c.
+T2 output SHA256c351f724275e044a9e9f8c8c321bbccc7f7bca2d3b48c9265ee3e3d559a99845.
+Each final runtime suite ran once on those frozen executable bytes, no selective
+R6 exclusion or repeated unchanged gate. Both R1 expiry/timely/no-grant pairs
+and unchanged managed controls pass in full T1/T2; this does not hide T1 RED.
+
+New T1 first failure: unchanged standalone_http_test.exs119, initial missing
+connection remains bounded live and unready. Startup<1000ms, live/unready and
+preceding login403 assertions passed. The identity request raised
+Req.TransportError before status comparison. Actual HTTP status NOT_OBTAINED;
+safe reason/internal first boundary/root cause UNKNOWN. It is a new transport
+hold, not an observed503 or proof of a source regression caused by this fixture.
+T2's later PASS does not classify the T1 failure as harmless/flaky or close it.
+No reproduction/seed hunting/startup repair/trace or second T1 was performed.
+
+Protocol deviation retained: the independent offline Python suites were run
+while T2 was pending, rather than after it as the requested sequential gate
+schedule. Their PASS is static evidence only; sequencing is not claimed fully
+compliant and they were not blindly repeated. T1 began only after format PASS.
+The broader lint exit6/frozen10 remarks remains a separate STYLE_HOLD.
+
+Own normal PG stop and postmaster exit0/wait/reap obtained15:23:44Z.
+Ledger591 records:346 roots absent,571 ports closed,PG socket files absent.
+Own disposable PG/key/socket paths removed; receipts/source/history retained.
+No foreign/PID1/zombie signal. Old export EACCES was not retried or bypassed;
+no new attachment/package/hash claim. Published source is sufficient for review.
+
+SOURCE_SNAPSHOT_ONLY / AUTHOR_FIXTURE_COMPATIBILITY_VERIFIED /
+INDEPENDENT_REVIEW_PENDING / GATES_RED / NOT_ACCEPTED / DO_NOT_MERGE /
+NOT_RELEASE_APPROVAL / NOT_ACCEPTED_FOR_TASK5. R6/N1 independently open;
+historical A148/1/B020 and native/trusted/live/Bandit holds unchanged.
+Cycle2/2 consumed, no further repair cycle/profile/agent authorized. Terminal
+publication/readbacks and WRITER_RELEASED belong to owning #33/PR99/#95.
+
+
+## 2026-10-15 — T4-N2/P1 revision-bound authorizer candidate
+
+This separately authorized N2 + STYLE stage starts from published7be77f06,
+parent158529de, base097d64ad. Earlier sections remain dated history.
+It does not repeat the exhausted R6/N1 cycle2/2 or accept Task5/release.
+Owner explicitly extended the original2026-10-14T22:43:03Z deadline by24h;
+T0 remains2026-10-14T18:43:03Z, cleanup reserve22:13:03Z on October15.
+
+The existing lifecycle owner publishes one persistent descriptor containing
+helper PID, incarnation, unique revision, phase, generation, owner and writer.
+Startup, release, install and writer handoff publish before acknowledging the
+transition. Reads and an idempotent install by the same writer keep revision.
+Normal retirement publishes a unique known-legacy tombstone, preventing the
+absent/managed/absent ABA. Unexpected loss retains closed metadata.
+Application defaults are never installed, deleted or restored by this lifecycle.
+
+The descriptor publication is the mode-transition point. Selection obtains its
+candidate, including the raw base read, before comparing the current descriptor.
+Both Projects and RuntimeIdentity invoke the guarded authorization seam, then
+accept callback success only against the same decision and original HTTP
+deadline. The callback runs in its original request process, preserving exact
+MFA, receipt and Validity. There is no callback/SQL execution in the binding
+GenServer, retry or fallback on mismatch. Lookup250ms bounds lookup delivery;
+it does not become the callback budget. A module returned by compatibility
+resolve/1 alone is not reusable authority. Revisions grant no eligibility.
+The final synchronous local comparison is the selection/authorization decision
+point; arbitrary VM pauses after completion are not hard realtime promises.
+
+### Causal controls and their actual barrier boundaries
+
+| Control | Barrier before final acceptance | Observed postcondition |
+| --- | --- | --- |
+| Original7be real RuntimeIdentity RED | Genuine inactive reply already in suspended caller mailbox; real same-owner install acknowledged | Same supervised helper/incarnation, new generation, erroneous snapshot;6ms below lookup250; original deadline timely |
+| Both consumer keys | Real inactive/active reply queued before caller acceptance | Same-helper install, inactive ABA, active release/install and same-generation writer replacement invalidate old decision |
+| Raw base candidate | prepare/1 has read the real candidate; caller waits before authorize_selected/2 | Both keys reject after inactive or retired startup transition; this is an internal seam control |
+| Real HTTPS project/identity | Real authenticated caller held at produced inactive reply or inside actual trusted legacy callback | Valid human/session/real Eligibility receipt, no grants; managed install acknowledged before release;403/no private body or cookie within250ms |
+| Legacy callback | Callback has started in caller and is held before returning :ok | Managed transition invalidates result; real project create has no SQL effect |
+| Fresh child VM | Genuine absent legacy callback held while complete managed install/release/normal retirement occurs | New legacy tombstone differs; stale :ok denied, stable initial legacy succeeds |
+| Actual Application lifecycle | Access gracefully retired, helper stays alive, genuine inactive reply queued | Access restart installs new generation/revision in same helper; stale identity denied |
+| Delivery/deadline controls | Produced reply held beyond250ms, or callback held300ms | Late lookup denied; stable callback beyond250ms succeeds under original deadline and fails after its expiration |
+
+Existing dead owner/writer, pending, malformed metadata, helper replacement,
+ended-incarnation reply, current grants/revoke/foreign-project and N1 direct
+put/delete/same-value/ABA teardown controls remain. Exact task4 fixture capture
+Eligibility.confirm/4, real observer,400ms identity lifetime and all protected
+Actor/receipt/grant/privacy assertions remain. No AuthDbFixture or Access
+functional source changes were made. Earlier R1–R5/N1 source conclusions are
+preservation context, not independent runtime acceptance of this candidate.
+
+### STYLE delta, separate from functional selection changes
+
+Fresh ordinary mix lint before edits exited6: four alias diagnostics at
+Projects123, RuntimeIdentity20, AccessTest179/256; six long-line diagnostics at
+AuthorizerBindingsTest62/142/293/396/413 and AccessTest425. The complete log is
+retained, SHA25679c8de9f6676309d07be15c4c91a27e30c2d52b2b6fd8be27186f4d1bf5acf0c.
+These are actual fresh paths, including AccessTest rather than Access.ex.
+
+Style-only changes add equivalent aliases, wrap assertions/trace calls, and
+factor pure literal iteration lists without changing values/order. Existing
+test bodies normalized for aliases and those literal bindings compare equal:
+23 AuthorizerBindingsTest and22 AccessTest bodies/helpers, zero mismatches.
+The one internal-reply assertion intentionally adapted to the descriptor is a
+functional protocol delta, excluded from that style-only claim; its stale
+incarnation refusal remains. Callback arity/MFA, guards, errors, result shapes,
+deadlines and protected assertions are unchanged by style changes. No quality
+configuration, exclusion, threshold, Makefile, dependency lock or coverage flag
+changed. Fresh final pre-freeze strict lint has no diagnostics.
+
+### Evidence limitations retained
+
+Initial debugger barrier controls failed in test coordination, not product
+semantics. Later exact-form one-shot debugger controls passed4/0; final tracked
+controls use the internal production seam and do not alter coverage compilation.
+First HTTPS candidate controls failed4/22 because the trusted legacy test
+callback lacked a request-local receipt; repaired fixture callback performs the
+real Eligibility.confirm/4 instead of fabricating/copying a receipt. Every first
+failure/log/input is retained. Scoped preservation then passed48/0; one later
+proof-control test passed separately. No failure is relabeled or erased.
+
+Preparation violated the intended cache boundary: the installed launcher reset
+MIX_HOME/HEX_HOME, so early Hex/deps/core-PLT commands affected shared prepared
+cache. Pre-bytes are UNKNOWN; no blind restoration or preservation claim.
+Later commands use the same pinned real Elixir1.19.5/OTP28.5 binaries, unchanged
+four schedulers, actual own cache paths, existing CA/proxy/rebar and unchanged
+lock. Early002–004 inventory seals had a cwd defect; complete007+ seals do not
+retroactively repair them. Interrupted own PLT build038 exit/reap remains
+UNKNOWN. Own PostgreSQL restart observed crash recovery; old shutdown/reap is
+UNKNOWN. No foreign/PID1/adopted-zombie signals were sent.
+
+Each fresh gate receipt stores argv/cwd/UTC/exit, exact tracked-byte SHA256 list,
+aggregate input hash, patch/untracked seals, output hash, selected nonsecret
+environment and actual executable/runner hashes. List format is lowercase
+SHA256, two spaces, relative path, newline in git ls-files order. Executable
+seal excludes only the three permitted Markdown docs and MANIFEST.sha256.
+Final results below are appended after runtime gates; no late full inventory
+is represented as having existed before tests. Local receipts/overlays are
+retained; published source requires no private archive for independent review.
+
+
+Cycle1 fresh gates: T1 92/0 exit0; T2 490/0 exit0. First full make048
+exited2 after856 tests/0 failures/6 unchanged live skips: coverage99.82%
+versus100%, so Dialyzer NOT_RUN. Four uncovered lines were the original
+Projects/RuntimeIdentity rescue/catch boundaries, because the new common seam
+caught callback faults before those consumers. Cycle1 inputa6274fd0a51e445c372ec3a77143fb784fe0a3eb8092802f7057823175b7675a;
+executable485be3356d95a86ac9d83226fa1a48450c7d865a1b7acf19cfefd45eef8e64bb.
+First make output6d3431df0e5f1db31b8606ebc70f5667a725d62ae0582375f7772afae8d079f6.
+Cycle1 T4 NOT_RUN. All first results and coverage HTML are retained.
+
+Cycle2/2 removes only the duplicate inner callback rescue/catch from the
+internal AuthorizerBindings seam. Real legacy exceptions/throws/exits again
+reach each original consumer's unchanged forbidden boundary; mismatched
+revision/deadline still denies explicitly. prepare/1 retains fail-closed lookup
+handling. The existing frozen IdentityTest and ProjectsTest negative callback
+assertions exercise the original boundaries again; no artificial fault,
+weakened assertion or coverage exemption. Scoped controls97/0 passed after
+this causal change. No third causal repair cycle is available.
+
+
+### Fresh final candidate author qualification
+
+T1:92 tests/0 failures; T2:490/0; T3 ordinary make:856/0/6 unchanged live
+skips,100% coverage, Dialyzer0 errors/0 skipped; all exit0. Full format,
+specs and strict lint passed before cycle2 freeze. T4 bootstrap12/0 and MCP11/0
+ran after full make completed, sequentially without runtime overlap.
+
+| Receipt | UTC start → end | Exit | Output SHA256 |
+| --- | --- | --- | --- |
+| 054-cycle2-T1 | 2026-10-15T04:41:02.186953+00:00 → 2026-10-15T04:41:25.613377+00:00 | 0 | 421cfc5ba66c90df57617b5428f1eb15ac0d63db129e1f301a6e8d53ddf0c9d3 |
+| 055-cycle2-T2 | 2026-10-15T04:41:53.890149+00:00 → 2026-10-15T04:44:50.443646+00:00 | 0 | 50479895d28dd92f513fb0a1a732bff2ccf41cf378b61a778570aea485f69718 |
+| 056-cycle2-T3 | 2026-10-15T04:45:04.448494+00:00 → 2026-10-15T04:50:38.233449+00:00 | 0 | c053a5ebd4eb7f43a7fdf810c8e90bdb2d7872254e6851ab65e54eaac6ce91c7 |
+| 057-T4-bootstrap | 2026-10-15T04:50:54.830692+00:00 → 2026-10-15T04:50:54.988288+00:00 | 0 | d44f94a892b77183bc0e0de4c49edf60231c8feebdce5a228026bd43a92f4457 |
+| 058-T4-mcp | 2026-10-15T04:50:55.075402+00:00 → 2026-10-15T04:50:55.304318+00:00 | 0 | eb07e6c4b9906bc32b99dd73a8edd3eae4531594dedd6d51407b8af60624de00 |
+
+Exact command argv (cwd is repository root except T1/T2 in elixir):
+
+```text
+054-cycle2-T1: ["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]
+055-cycle2-T2: ["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]
+056-cycle2-T3: ["make", "-C", "elixir", "all"]
+057-T4-bootstrap: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]
+058-T4-mcp: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]
+```
+
+All five fresh runtime/Python inputs have whole-tracked seal
+f674af3ffe6aec30f832fd43d435e2b965fac9b28a2a9de5eb0fdd6ff82f1476.
+Executable/test/config251-file seal: 2a3b3be29efe99a4290c67f1ce3e59d767fca266fa4dda4b0ad72405a78fe0ca.
+The final docs-only/MANIFEST seal follows these gates; final full tracked
+inventory did not exist before them. Commit equality, final static/body checks
+and publication readbacks are recorded in owning #33. No full make is
+substituted by a source review or silently rerun after a docs-only seal.
+
+Baseline011 untracked observer overlay SHA256
+8405d3b221656eebb95cbb5112ef9e979ab0d9f457d20978a0b35ba31b49fd00;
+semantic RED output5f9477d6d187eed25d1445ab498d60f19ca811628e38bb18ef32464b7cd6fe0a.
+Additional baseline HTTPS REDs were4/4; their old bound assertion was after
+the failing status assertion and was not reached. The6ms baseline011 and
+current candidate bounds are the actual timely semantic evidence.
+
+N2 AUTHOR_FIXED_CANDIDATE / STYLE_AUTHOR_CHECK_PASS / AUTHOR_GATES_PASSED.
+Independent N2/R6, N1/R1–R5 preservation, consumer guards and style equivalence
+review remains required on the new exact published HEAD. Cache-boundary breach
+and early provenance/exit UNKNOWN remain process holds, not repaired by GREEN.
+Historical A148/1/B020/earlier T1 transport remain unresolved and are not
+attributed to N2. Activation/defaults/Task5/native/trusted/live/production
+boundaries remain unchanged. NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL /
+NOT_ACCEPTED / DO_NOT_MERGE. Cycle2/2 used, agents0/profile changes0.
+
+
+## 2026-10-15 — R6-TIME closing native-time candidate
+
+This separately authorized Task4 repair starts from5845695a1929dc13528a6ba9c0ec297303cf8c0a,
+tree446db2d34d0813cf3573eda95f388d1351a2b3d7, parent7be77f06, base097d64ad.
+Independent report6187290039/verdict6187300062 closed N2 at source and preserved
+N1/R1–R5, identity adaptation, STYLE equivalence and consumer fault contracts.
+R6-TIME/P2 remained: the early true time sample preceded unfinished current?.
+These source dispositions remain prior independent conclusions; the new candidate
+requires another exact-HEAD review. No Task5/release acceptance is supplied.
+
+Product delta is only the two acceptance time boundaries and one private predicate
+in AuthorizerBindings. Order is preliminary time -> entire registration/liveness/
+final-descriptor check -> fresh same absolute native bound -> local result.
+Selection retains its original L=min(prepare-start+250ms,D); post-callback retains
+only the captured original requestD. NilD keeps existing absent-context behavior;
+no new deadline, renewed budget, grace/epsilon, retry, stability loop or final RPC.
+The closing native sample upper-bounds completion of the descriptor validation.
+Clock and mutable state are not one atomic CPU operation. No physical return,
+HTTP send or arbitrary VM-pause-after-completed-check hard realtime is promised.
+The normal callback follows selection acceptance in the original caller, and its
+result has the separate request-deadline guard. Descriptor publication/revisions,
+lifecycle/interfaces/defaults and both frozen consumers are unchanged.
+
+### Causal RED -> GREEN, separate from standard qualification
+
+One own clean copy retained all255 tracked5845695 blobs for baseline011. The
+one-off observer is exactly one added call at the START of current?/1, before
+registration/liveness/descriptor work. Native RequestContext return tracing proves
+the preceding sample was true; at this hold0 state checks had completed for lookup,
+1 for post-callback. The latter also observes the real legacy authorize MFA
+returning :ok. Real prepare/RPC/raw Application candidate reads are not replaced.
+Both real RuntimeIdentity.read and Projects.create_project execute; Projects uses
+its real own disposable PostgreSQL fixture. No HTTP before-send hook is involved.
+Callbacks and state checks retain the actual caller PID, confirmed by trace and
+callback messages. Descriptor and full real helper state stay equal across hold.
+No fake reply/descriptor/Clock/Actor/result is supplied.
+
+Parent baseline observer SHA25685d110422fff685fc8580adeda678e6f92312b564c84b2c7b71a1a330d8cf431;
+untracked test SHA256f03c7e63c63f7fda1dc1a8a894ee9546c2089f031f9da7ef75011907a7defd92.
+The same observer line and test execute after the product repair: derived overlay
+SHA2561a629d0b2f01afd9f642621e48a02204c41dc07386aea6aa92a5399fa5e3f05a.
+The latter digest was saved after its run; exact derivation from the recorded
+product input plus the same one-line diff is retained, not presented as an earlier
+independent full auxiliary seal. Tracked source, test overlay, patch, runner/env
+and source-generation transcript are preserved for that causal execution.
+Baseline0118 tests/4 expected failures/exit2; four timely pairs PASS.
+Green013 same8 tests/0 failures/exit0. Each expired result is now denied; lookup
+callbacks0, post-callback callbacks1, Projects rows0. Timely controls still pass.
+
+Times below are actual monotonic milliseconds relative to this caller's start.
+L/D are from the real original RequestContext calls, not invented durations.
+Caller start precedes prepare by a few milliseconds; L-start can therefore exceed
+250 while the unchanged lookup itself remains250. Holds release at/after the exact
+observed bound; rounding only affects the observer's reported overshoot.
+
+| Key | Gap | Timing | Old hold/release | Old release-bound | Old result/rows | New hold/release | New release-bound | New result/callbacks/rows |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| project_authorizer | lookup | timely | 2.264/2.343 | -249.883 | project_created/[[1]] | 2.812/2.903 | -249.87 | project_created/1/[[1]] |
+| project_authorizer | callback | timely | 3.505/3.732 | -4996.267 | project_created/[[1]] | 2.433/2.484 | -4997.516 | project_created/1/[[1]] |
+| runtime_identity_authorizer | lookup | expired | 4.295/254.743 | 0.499 | identity_disclosed/not_applicable | 3.822/254.975 | 1.192 | denied/0/not_applicable |
+| project_authorizer | callback | expired | 2.265/5000.896 | 0.896 | project_created/[[1]] | 2.682/5001.319 | 1.32 | denied/1/[[0]] |
+| runtime_identity_authorizer | callback | timely | 2.786/2.843 | -4997.156 | identity_disclosed/not_applicable | 2.965/3.037 | -4996.962 | identity_disclosed/1/not_applicable |
+| project_authorizer | lookup | expired | 3.159/254.146 | 1.027 | project_created/[[1]] | 2.105/253.2 | 1.12 | denied/0/[[0]] |
+| runtime_identity_authorizer | lookup | timely | 2.382/2.457 | -249.892 | identity_disclosed/not_applicable | 2.94/2.999 | -249.917 | identity_disclosed/1/not_applicable |
+| runtime_identity_authorizer | callback | expired | 3.819/5001.76 | 1.76 | identity_disclosed/not_applicable | 3.699/5001.845 | 1.846 | denied/1/not_applicable |
+
+OriginalD was approximately5000ms in all causal cases. Lookup-negative releases
+remained beforeD; post-callback-negative releases crossedD under unchanged state.
+Instrumentation overhead is included: total real prepare plus trace/observer
+pre-hold work was2.2–4.3ms in baseline, a conservative upper bound on observer
+entry overhead rather than a separately estimated production cost. Deliberate
+250ms/5s holds dominate negative duration. No latency/SLO claim is inferred.
+
+The observer file was moved OUT of checkout before native qualification; no
+observer symbol exists in the on-disk product BEAM. Full T1/T2/make never load it.
+Six additive native owning regressions use ordinary local call tracing, not code
+replacement or suspension: both actual consumer paths with request/nil context
+observe the closing same-bound sample after complete current? and before callback/
+local success. Native015 scope40/0 (all prior34 plus new6) passed;
+request-at/after-bound controls deny with no project effect. Native012 on old code
+found four missing closing samples; a count-based slice removed its negative-step
+warning without relaxing assertions. Existing300ms callback-underD, originalD
+expiry, invalid context, callback exceptions, N2 activation/ABA/writer, absent/
+retired tombstone, no-grant/grant/revoke/identity/defaults controls remain.
+Every prior owning-test byte before module-end is retained; all other tests and
+fixtures, Projects/RuntimeIdentity/Access/RequestContext/Clock/Store/Validity/
+Eligibility, policies/plans/lock/Makefile remain frozen to5845695.
+
+### Preparation and retained holds
+
+Before any Mix operation the installed launcher chain was read and hashed.
+The reset-to-shared-cache launcher was not run. Direct selection uses the same
+installed pinned Elixir1.19.5/OTP28.5 binaries, same +S4:4, CA/proxy/rebar and own
+Mix/Hex/deps/build/core/project PLT paths. Actual process introspection001/005 and
+PLT path introspection022 record those destinations. Normal pinned Hex2.5.2 and
+mix deps.get --check-locked use own paths; no system tool install or foreign DB.
+
+Current preparation exception004: an env command frontend escaped the runner's
+initial HOME dispatch, so compile had inherited HOME while all cache/deps/build
+paths were own. TERM was requested on that owned process; observed exit0 does not
+attest fully isolated completion. Original HOME pre-bytes/effects are UNKNOWN.
+Runner corrected this for every non-Git command;005+ actual own HOME rechecked.
+This is disclosed, not erased by later GREEN. Initial read-only/clone probes are
+in the tool transcript; exact pre-run full hash receipts begin with001, not
+retroactively claimed for earlier reads.
+
+PROCESS_HOLD_PREPARED_CACHE / PRE_BYTES_UNKNOWN from N2+STYLE remains. Old shared
+cache is not deleted/restored/re-attested, old PLT/PG unknown exits and old adopted
+zombies are not touched. This is process/toolchain evidence, not Eligibility cache.
+Historical transport/A148/B020 remains UNKNOWN/unresolved without R6-TIME attribution.
+
+Conservative new R6-TIME T02026-10-15T08:15:00Z (first tool clock08:15:17Z),
+deadline12:15:00Z/reserve11:45:00Z; client UTC+3 window11:15–15:15/reserve14:45.
+One causal repair cycle used; maximum2, agents0/profile changes0. Prior N2+STYLE
+cycle2/2, original T0/explicit24h extension and all earlier budgets stay USED.
+
+
+### One-off observer source, retained for source-review reproducibility
+
+The following is dated diagnostic input, not a product/fixture edit or a standard
+qualification target. Its absolute author path identifies the historical overlay;
+a separate reproducer uses its own owned evidence path. Generate the overlay
+from the target product file with exactly this one-line diff, then execute the
+following test file in a disposable VM with the normal real owning fixtures.
+Keep the overlay/test outside the standard T1/T2/make target and end that VM
+before qualification. The4 negative baseline assertions fail at consumer results;
+after the minimal fix all8 assertions pass. No private packet is required to
+read these conditions or the published production repair.
+
+```diff
+--- published-authorizer-bindings.ex
++++ one-off-observer.ex
+@@ -112,0 +113 @@
++    SymphonyControl.R6TimeObserver.before_current()
+```
+
+```elixir
+defmodule SymphonyControl.R6TimeObserver do
+  def before_current do
+    {owner, ref, target} = Process.get({__MODULE__, :control})
+    hit = Process.get({__MODULE__, :hit}, 0) + 1
+    Process.put({__MODULE__, :hit}, hit)
+
+    if hit == target do
+      send(owner, {:r6_held, ref, self(), System.monotonic_time()})
+      receive do
+        {:r6_release, ^ref} -> :ok
+      after
+        8000 -> exit(:observer_setup_timeout)
+      end
+    end
+  end
+end
+
+Code.compile_file("/workspace/work/pr99-r6-time-20261015T081517Z/observer-authorizer-bindings.ex")
+
+defmodule SymphonyControl.R6TimeObserverTest do
+  use ExUnit.Case, async: false
+  alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+  alias SymphonyControl.{AuthDbFixture, Projects, Repo, RuntimeIdentity}
+
+  defmodule Legacy do
+    def authorize({owner, ref}, :runtime_identity_read), do: callback(owner, ref)
+    def authorize({owner, ref}, :project_create, :platform), do: callback(owner, ref)
+    defp callback(owner, ref) do
+      send(owner, {:r6_callback, ref, self()})
+      :ok
+    end
+  end
+
+  for key <- [:runtime_identity_authorizer, :project_authorizer], boundary <- [:lookup, :callback], timing <- [:expired, :timely] do
+    @key key
+    @boundary boundary
+    @timing timing
+    test "R6-TIME #{@key} #{@boundary} #{@timing} after early sample" do
+      if @key == :project_authorizer, do: AuthDbFixture.start!()
+      old = Application.fetch_env(:symphony_elixir, @key)
+      Application.put_env(:symphony_elixir, @key, Legacy)
+      on_exit(fn -> restore(@key, old) end)
+      helper = start_supervised!({AuthorizerBindings, owner: self(), managed: false})
+      descriptor = :persistent_term.get({AuthorizerBindings, :lifecycle})
+      state = :sys.get_state(helper)
+      assert state.phase == :inactive
+      owner = self()
+      ref = make_ref()
+      target = if @boundary == :lookup, do: 1, else: 2
+      request_deadline = RequestContext.deadline()
+      started = System.monotonic_time()
+
+      caller = Task.async(fn ->
+        Process.put({Authorizer, :deadline}, request_deadline)
+        Process.put({SymphonyControl.R6TimeObserver, :control}, {owner, ref, target})
+        receive do: ({:start, ^ref} -> :ok)
+        result = consume(@key, {owner, ref})
+        send(owner, {:r6_result, ref, classify(result), System.monotonic_time()})
+        receive do: ({:finish, ^ref} -> :ok), after: (2000 -> :ok)
+      end)
+
+      match = [{:_, [], [{:return_trace}]}]
+      :erlang.trace_pattern({RequestContext, :timely?, 1}, match, [:local])
+      :erlang.trace_pattern({Legacy, :authorize, :_}, match, [:local])
+      :erlang.trace_pattern({AuthorizerBindings, :current?, 1}, match, [:local])
+      :erlang.trace(caller.pid, true, [:call, :monotonic_timestamp, {:tracer, self()}])
+      send(caller.pid, {:start, ref})
+
+      try do
+        assert_receive {:r6_held, ^ref, pid, held}, 500
+        assert pid == caller.pid
+        before = traces(caller.pid)
+        samples = for {:trace_ts, ^pid, :call, {RequestContext, :timely?, [bound]}, _} <- before, do: bound
+        lookup_limit = hd(samples)
+        bound = if @boundary == :lookup, do: lookup_limit, else: request_deadline
+        assert List.last(samples) == bound
+        assert held < bound
+        assert List.last(for {:trace_ts, ^pid, :return_from, {RequestContext, :timely?, 1}, result, _} <- before, do: result) == true
+        completed = Enum.count(before, &match?({:trace_ts, ^pid, :return_from, {AuthorizerBindings, :current?, 1}, true, _}, &1))
+        assert completed == target - 1
+        callbacks_before = Enum.count(before, &match?({:trace_ts, ^pid, :return_from, {Legacy, :authorize, _}, :ok, _}, &1))
+        assert callbacks_before == target - 1
+        assert :persistent_term.get({AuthorizerBindings, :lifecycle}) == descriptor
+        assert :sys.get_state(helper) == state
+        if @timing == :expired, do: wait_until(bound)
+        resumed = System.monotonic_time()
+        if @boundary == :lookup, do: assert(resumed < request_deadline)
+        if @timing == :expired, do: assert(resumed >= bound), else: assert(resumed < bound)
+        send(pid, {:r6_release, ref})
+        assert_receive {:r6_result, ^ref, result, finished}, 2000
+        after_traces = traces(pid)
+        callbacks = callbacks_before + Enum.count(after_traces, &match?({:trace_ts, ^pid, :return_from, {Legacy, :authorize, _}, :ok, _}, &1))
+        rows = if @key == :project_authorizer, do: Repo.query!("SELECT count(*) FROM projects", [], log: false).rows, else: :not_applicable
+        same = :persistent_term.get({AuthorizerBindings, :lifecycle}) == descriptor
+        assert same
+        assert callback_pids(ref) == if(callbacks == 1, do: [pid], else: [])
+        IO.puts(Jason.encode!(%{control: "R6_TIME", key: @key, boundary: @boundary, timing: @timing, result: result,
+          early_true_observed: true, completed_state_checks_at_hold: completed, descriptor_unchanged: same,
+          callbacks: callbacks, callbacks_before_hold: callbacks_before, domain_rows: rows,
+          hold_age_ms: ms(held-started), release_age_ms: ms(resumed-started), finish_age_ms: ms(finished-started),
+          original_lookup_ms: ms(lookup_limit-started), original_request_ms: ms(request_deadline-started),
+          release_minus_bound_ms: ms(resumed-bound), observer: "native_one_line_before_current_overlay"}))
+        send(pid, {:finish, ref})
+        Task.await(caller, 2000)
+        if @timing == :expired do
+          assert result == :denied
+          assert callbacks == if(@boundary == :lookup, do: 0, else: 1)
+          if @key == :project_authorizer, do: assert(rows == [[0]])
+        else
+          assert result == if(@key == :project_authorizer, do: :project_created, else: :identity_disclosed)
+          assert callbacks == 1
+          if @key == :project_authorizer, do: assert(rows == [[1]])
+        end
+      after
+        send(caller.pid, {:r6_release, ref})
+        send(caller.pid, {:finish, ref})
+        if Process.alive?(caller.pid), do: Task.shutdown(caller, :brutal_kill)
+        :erlang.trace_pattern({RequestContext, :timely?, 1}, false, [:local])
+        :erlang.trace_pattern({Legacy, :authorize, :_}, false, [:local])
+        :erlang.trace_pattern({AuthorizerBindings, :current?, 1}, false, [:local])
+      end
+    end
+  end
+
+  defp consume(:runtime_identity_authorizer, actor), do: RuntimeIdentity.read(actor)
+  defp consume(:project_authorizer, actor), do: Projects.create_project(actor, %{key: "TIME", name: "R6 time fixture"})
+  defp classify({:ok, %{schema_version: 1}}), do: :identity_disclosed
+  defp classify({:ok, %SymphonyControl.Project{}}), do: :project_created
+  defp classify({:error, :forbidden}), do: :denied
+  defp classify({:error, %{code: :forbidden}}), do: :denied
+  defp classify(_), do: :unexpected
+  defp ms(native), do: System.convert_time_unit(native, :native, :microsecond) / 1000
+
+  defp traces(pid) do
+    ref = :erlang.trace_delivered(pid)
+    collect(ref, [])
+  end
+  defp collect(ref, acc) do
+    receive do
+      {:trace_delivered, _, ^ref} -> Enum.reverse(acc)
+      event when elem(event, 0) == :trace_ts -> collect(ref, [event | acc])
+    after
+      1000 -> flunk("observer trace delivery not confirmed")
+    end
+  end
+  defp callback_pids(ref, acc \\ []) do
+    receive do
+      {:r6_callback, ^ref, pid} -> callback_pids(ref, [pid | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+  defp wait_until(bound) do
+    left = bound - System.monotonic_time()
+    if left > 0 do
+      wait = System.convert_time_unit(left, :native, :millisecond) + 1
+      receive do: (:not_sent -> flunk("unexpected observer message")), after: (wait -> :ok)
+      wait_until(bound)
+    end
+  end
+  defp restore(key, :error), do: Application.delete_env(:symphony_elixir, key)
+  defp restore(key, {:ok, value}), do: Application.put_env(:symphony_elixir, key, value)
+end
+```
+
+
+### Fresh frozen-candidate qualification
+
+T1:98/0, T2:496/0, ordinary make(T3):862 tests/0 failures/6 unchanged live
+skips,100% coverage,Dialyzer0 errors/0 skipped, all exit0. T4 bootstrap12/0
+then MCP11/0 ran after full make, without runtime overlap. Full format/specs/
+strict lint PASS before freeze. First strict lint018 reported five long lines
+in new trace helpers; wrapping only those additions resolved them, with no
+quality/config/threshold/skip/assertion change. Protected tests remain exact.
+
+| Receipt | UTC start → end | Exit | Output SHA256 |
+| --- | --- | --- | --- |
+| 023-T1 | 2026-10-15T08:39:55.088566+00:00 → 2026-10-15T08:40:20.777538+00:00 | 0 | 0e19387050de42543b3a1f84313c1dbfb72047fbe574acdedde45ee0656a1fb7 |
+| 024-T2 | 2026-10-15T08:41:05.220497+00:00 → 2026-10-15T08:44:15.096753+00:00 | 0 | 44076d50aa50f3780cceae292ae0e495a5b00ca7d38befba5a59854c468797f4 |
+| 025-T3 | 2026-10-15T08:45:37.937306+00:00 → 2026-10-15T08:52:17.742969+00:00 | 0 | c886f62921b72a7baea49c961b34acbc6d8175f67eaba252e5ff035d74c8a10f |
+| 026-T4-bootstrap | 2026-10-15T08:53:36.956322+00:00 → 2026-10-15T08:53:37.103837+00:00 | 0 | 37e893beca7811536883d0f090c31852c57b1d82416257550c7f5e66c792010b |
+| 027-T4-mcp | 2026-10-15T08:53:37.193024+00:00 → 2026-10-15T08:53:37.432866+00:00 | 0 | 5c61909cc2340350b34fb98224c3eff7ceb5d41b9fae5f42220dea4ae0fa5205 |
+
+Exact argv, with T1/T2 cwd elixir and T3/T4 cwd repository root:
+
+```text
+023-T1: ["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]
+024-T2: ["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]
+025-T3: ["make", "-C", "elixir", "all"]
+026-T4-bootstrap: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]
+027-T4-mcp: ["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]
+```
+
+All five fresh gate inputs whole255: a978e5386603690b54fe954b1fe4ef3648bb719bc2747f3b46929b079608bc8a.
+Executable/test/config251 seal: b8f1237f937ae25aa9ac79f766f23fea112ec6775d1586382abeac9fe72e354a.
+
+011-pristine-time-red: exit2, output 67b39973cabfaba224deb6017d1c81165c667372a5e61320455b05c39e5423bd.
+
+012-native-order-red: exit2, output 66f913b8dd16f85a73f777c07db2e2bce1133364a68f0e5daa65d2c2a35d04f0.
+
+013-causal-time-green: exit0, output 1d2c59616775f40b15ed1bf6d484883753bf0ad2e80d897cc296627cb40a2d6a.
+
+015-native-controls: exit0, output cecafcb9aa7ee45f9fe185c5464dac11821a5bda5cddde91b0a97ff0b775cbe7.
+
+018-strict-lint: exit4, output 00c710117f1b6ae71be8e62f29d96535d052bc6b18d1303625e82a44ccce5667.
+
+021-lint-final: exit0, output c637d6466a8da95b5c689bad55768579864a648658f11a35bb74017bc4abe642.
+
+
+Receipts retain argv/cwd/UTC/exit, tracked input inventory and patch, untracked
+observer seal when present, runner/env/actual executable hashes and safe output
+hash. Inventory format is lowercase SHA256 + two spaces + git ls-files relative
+path + LF; aggregate SHA256 hashes exact list bytes. Only the three permitted
+Markdown docs and MANIFEST are excluded from executable seal. Later docs-only
+results/MANIFEST are not represented as earlier full tracked input. Publication
+handoff in #33 records actual PR-body checker/readbacks, exact commit/tree and
+equality of every tested executable blob with that commit.
+
+R6-TIME AUTHOR_FIXED_CANDIDATE / AUTHOR_GATES_PASSED / INDEPENDENT_REVIEW_PENDING.
+N2/N1/R1–R5, original Task1–3 snapshots and all earlier failures/UNKNOWN stay in
+history. Current author results do not replace independent review or prove the
+old shared cache/HOME preservation. PROCESS_HOLD_PREPARED_CACHE/PRE_BYTES_UNKNOWN /
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE. No next stage starts
+from this documentation. Original autonomy/multi-server/product requirements,
+activation=false and native/trusted/live/production boundaries remain unchanged.
+
+## PR99 B/C harness — 2026-10-15
+
+**WIP_TEST_HARNESS_CANDIDATE / STYLE_HOLD / NOT_ACCEPTED / DO_NOT_MERGE.**
+This appendix is an append-only owner-authorized prospective test interpretation,
+not independent acceptance, qualification restart, retrospective old assertion PASS,
+or product repair. Author acts IMPLEMENTER only; additional agents0/product changes0.
+Admission fully read back EXACT MATCH:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6199634452
+Owner proposal6198824272 and Denis's dispatched contract govern this bounded stage.
+
+Starting published object: HEAD7e6fb491a39bc8af4ef10d56732045635330c156,
+TREE57361b0f166139d853bc3142e4ddbc5720745210,
+PARENT5845695a1929dc13528a6ba9c0ec297303cf8c0a,
+BASE097d64ada3138d49c6797001d02ab113c15ccb6e.
+Same existing draft PR99, feat/sn005-current-access-logout-20261013 ->
+feat/sn005-browser-login-20261011. Published candidate HEAD/TREE and final
+docs/MANIFEST seal belong to the owning handoff; a document cannot contain its
+own commit hash. No rebase/amend/force/merge/new PR/ref-base change is authorized.
+
+T0 first action2026-10-15T18:40:22Z, deadline22:40:22Z, included finalization
+reserve22:10:22Z (client UTC+3:21:40:22–01:40:22 on16October; reserve01:10:22).
+Fresh accessible #33/#95/PR99 claims showed coordinator NOT_STARTED before
+admission; scoped dedup is not global VM attestation. Previous10:00–14:00
+qualification and16:11–18:11 diagnostic budgets/history are not reset.
+
+### B: old expectation, new guarantees and observations
+
+Old two1500ms staged negatives required early accept1/SNI1 regardless of earlier
+discovery/JWKS/accept duration. Published diagnostic6197252034 observed deadline
+~1499.381, refusal1501.146, dispatch1867.566 and SNI1868.472ms; early SNI0 was
+true and FAILED. Late1 never changes that failure. Pre-JWKS1129ms cause remains
+UNKNOWN; a product guarantee to progress TLS after its expired budget is not added.
+
+| Property | Owner-approved prospective assertion |
+| --- | --- |
+| EARLY_DEADLINE_NO_POST | Real Oidc.exchange, same original1500, return<1700; delay200/dispatch600/SNI700, setup800 in adverse case. |
+| Refusal snapshot | Atomic fixture events/counts/timestamp in actual caller immediately after return, before caller/worker termination checks. Explicit NOT_EXERCISED_AT_REFUSAL if SNI absent. |
+| Causal history | Only real permitted event prefixes, singleton counts consistent with events, monotonic times, token0; no unqualified count-in-[0,1]. |
+| Natural cleanup | Separate final snapshot retains exact early prefix, token0, fixture task dead, SSL handles invalid and real contained inet Ports absent. Original accept5000 preserved; only negative cleanup may wait6000, common await default2000 unchanged. |
+| FULL_TLS_STAGE_CONTROL | Original5000 positive and added setup800 positive: actual accept1/SNI1/POST1, exact full history; dispatch-accept>=600 and handshake-return-SNI>=700. |
+| Deterministic pre-dispatch refusal | Own real listener gate is already waiting before the request. It deliberately precedes accept too: no accept/SNI is fabricated. Original deadline crossed, real caller/worker terminate, token0 before/after explicit cleanup. |
+| Gate lifecycle | Opt-in only, owner monitor, explicit cancel or2500ms finite timeout closes own listener. Separate owner-loss control. Normal600/700 and TLS verification unchanged. |
+
+The full TLS positive is mandatory and independent of early negative coverage.
+No missing stage or NOT_EXERCISED counts as full-path PASS. Final scoped positives
+measured setup0 dispatch601/SNI704ms and setup800 dispatch601/SNI703ms, with
+handshake_result:ok and one real POST each. The two ordinary negatives happened
+to reach SNI in this new run; each separate final result was TLS error/token0.
+The controlled gate retained real early accept0/SNI0/POST0 and ended cancel/done.
+These are new measurements, not historical run2 reproduction.
+
+Coverage mapping: removing the request deadline violates1500/<1700 in the full
+path or gated control; late token violates both early/final token0; missing full
+positive stage or shorter600/700 violates counts/order/measured gaps; duplicate
+stages/POST violate singleton counts/history. The unchanged explicit second-POST
+transport guard also ran in T2. Leaked caller/worker/fixture task/inet Port fails
+terminal checks. All other TLS, POST650/<850, validation and owner-down cases are
+byte-preserved. Canonical hash-pinned design/plan are not rewritten.
+
+### C: bounded-cleanup matrix, no Store change
+
+F5 product assertions are preserved statement-for-statement in a local helper:
+real FIFO, Store.put_login refuses within elapsed<800 under unchanged Store750,
+and both actual TokenVault seal/open FIFO refusals. Writer keeps850ms before
+open and400ms ENXIO retry window. Neither resource nor result is faked.
+
+Writer-ready is a line from the actual running Python child (PID/start_ticks),
+after its interpreter/protocol starts. Parent Port creation alone is insufficient.
+The local Python supervisor receives only the original3000ms launch-budget
+remainder, with200ms BEAM reserve and250ms internal cancellation/wait reserve.
+It terminates/kills only its direct child if necessary and uses actual wait to
+reap it. Child exit status, supervisor Port exit and Port DOWN are distinct facts.
+Nonzero/cancellation cannot count successful writer; Port.close is fallback
+containment only, never OS wait/reap evidence. Nested finally removes FIFO after
+failed assertion/await. Primary exception is re-raised after cleanup observation;
+the final review guard also covers Port termination between info and close.
+
+| Final scoped case | Helper elapsed ms | Real child exit / class | Port / resource outcome |
+| --- | ---: | --- | --- |
+| timely, original product assertions |1324|0/completed|Port0, DOWN normal, child reaped, FIFO absent|
+| controlled350, same product assertions |1662|0/completed|same|
+| deliberate nonzero |1311|7/nonzero_exit|same, never successful writer|
+| over-budget3500 hold |2576|-15/budget_exceeded|actual terminated child reaped; Port0 is supervisor success only|
+| early primary assertion failure |1309|0/completed|exact primary ExUnit failure preserved; FIFO absent|
+
+Historical C trigger remains UNKNOWN. New old-code+350 control first failed at
+outer1500 after successful product assertions. Its initial diagnostic catch used
+Task.yield after timeout and could not observe future alias delivery. A distinct
+changed-input C-only control logged actual Port exit_status0 and releaser DOWN
+normal after outer timeout, with original FIFO removal point not reached; its
+extra finally removed own FIFO. This supports the controlled mismatch, not a
+historical replay or a claim that old cleanup passed.
+
+### Exact selection, cycles and final quality hold
+
+Before execution ExUnit metadata enumerated actual module/test names; no file:line
+selection was used. Baseline selected exactly old positive/adverse OidcTest and
+StoreRepairTest F5 (3tests); the later observed C selected exactly1test. Final
+`--only bc_harness` selected six OidcTest cases and five StoreRepairTest cases:
+
+- `SymphonyControl.Auth.OidcTest` — `staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `F5 primary assertion failure survives cleanup with FIFO removed`.
+
+Two harness cycles, product cycles0, agents0. First candidate scoped11/7 exit2:
+six B assertions expected :closed but OTP28 closed listener returned :einval;
+one C check expected unformatted primary error text. Cycle2 accepted the actual
+closed-handle classes AND required all real contained inet Ports absent; corrected
+the exact ExUnit error formatting. Scoped11/0 followed. Final author-side review
+added only the fallback-close race guard in that second cycle; the exact final
+revision got a fresh scoped11/0 and was sealed before broad gates.
+
+**Ordinary make was run ONCE and FAILED, exit2.** Setup/build/escript/format/specs
+passed. Strict Credo returned12 with five NEW owning-harness findings:
+- store_test.exs:640 line127>120; :636 line146>120;
+- oidc_test.exs:759 line121>120;
+- store_test.exs:629 with_fifo_writer complexity14>9;
+- auth_oidc_fixture.exs:167 delayed_token_endpoint complexity11>9.
+No quality configuration/exclusion/threshold was changed. Two cycles are consumed;
+no further source fix or make rerun was made. Coverage, ordinary full tests/skips
+and Dialyzer are NOT_RUN, not GREEN. T1/T2 positives do not replace this quality
+failure. The candidate is intentionally published WIP under the owner's allowance.
+
+### Commands, UTC, exits and sealed inputs
+
+Own root `/workspace/work/pr99-bc-20261015T184022`, fresh source `/source`.
+Private paths are VM evidence, not exported attachments. Raw outputs stay private;
+only fixed safe observations/hashes are published. Each command uses own run.py
+subreaper and restricted own environment, including env frontends and nested make.
+All final executable/test/config inputs were sealed before gates. Only the three
+allowed documentary appends and corresponding MANIFEST digests follow runtime.
+
+| Invocation | UTC start–end,15Oct2026 | Exit/result | Raw-output SHA256 |
+| --- | --- | --- | --- |
+|baseline-bc|18:47:58.572–18:48:14.336Z|2; 3/1 RED|`9af0a6edefe9282b4cc1b83a91213b3bbe15545169ab6f91292380058359d0d0`|
+|baseline-c-observed|18:50:18.400–18:50:28.351Z|2; 1/1 RED, actual later writer exit0|`7bb75e1448ea9ff9089402401f323c7de6928f85658cf70724ea9a52299bc643`|
+|scoped-cycle1|18:55:43.887–18:56:12.448Z|2; 11/7 FAILED|`c1b1c0a614357ff93268b9971dc03691d82ab1083765a9cf44073e9fcffe4d43`|
+|scoped-cycle2|18:57:46.210–18:58:15.981Z|0; 11/0|`09dbd679895e5dc26ed69fece7b9893bf3b6c7c91d47e6119ca1898a1c6b881a`|
+|scoped-final|19:02:09.118–19:02:36.771Z|0; 11/0 final|`6bd60c4f5da38f3c1ff5b65a1d8f9ea87f8db0967eff276eac1cb714bc8673b6`|
+|T1|19:03:09.444–19:03:33.583Z|0; 98/0|`39b064c4a1c4e130ea0ff89fc1460f6d56b0080a4a25799550117ea83db6dceb`|
+|T2|19:03:36.311–19:06:45.321Z|0; 503/0|`872eccadc838b0cbc98c69f38d4db28e6f09c1586c11b9ce48867a7ee85096cc`|
+|T3|19:06:48.000–19:06:59.916Z|2; FAILED lint; coverage/Dialyzer NOT_RUN|`e4434745caa99fe250933e29dfe1400746a2de37003cac49d01a263e9daecf37`|
+|T4-bootstrap|19:07:02.613–19:07:02.716Z|0; 12/0|`d44f94a892b77183bc0e0de4c49edf60231c8feebdce5a228026bd43a92f4457`|
+|T4-mcp|19:07:05.401–19:07:05.605Z|0; 11/0|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+Exact actual argv (cwd `/source/elixir` unless noted; env frontend retained):
+
+- scoped-final: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T1: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- T2: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T3 (cwd `/source`): `["make", "-C", "elixir", "all"]`.
+- T4-bootstrap (cwd `/source`): `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- T4-mcp (cwd `/source`): `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+T3 uses normal make seed/concurrency/coverage/skips; T1/T2 serialization is never
+transferred into it. T4 ran strictly after runtime; no identical failed-suite
+retry-to-green, no independent qualification or full-make PASS is claimed.
+
+- Final executable251 SHA256 `96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f`.
+- Pre-gate whole255 SHA256 `a77790af45a6bcbafc8b328135ff3f3002cfd9c03a824f89f1dc30160da33f13`.
+- External executable/runner/fixture-input inventory SHA256 `eebc923ac424f67ffbe43b825f58594e34c6539c0ede5f7093300c416f7a19d3`.
+- Fixture manifest before tests SHA256 `42fedab215ad681f7c9af23f0816d656cebe05efd8173f3ace214cfb5febc222`.
+- Original baseline overlay SHA256 `f33d5a59b45e4ed493944a954cd903fd9033e9758129b8a9f384334ee1e3274f`.
+- Observed C-only overlay SHA256 `a8e2a237381fecb64a44aacc4fe6b3a091238646d88e1b517e85688239784cdd`.
+- Final whole255 after documentary appends is separately recorded in handoff;
+  it must not be represented as the pre-gate whole inventory.
+
+84 product libs/all other protected sources and every tracked mode are frozen.
+90 MANIFEST names/order preserved; all actual digests, composition8, approved
+design49f4a2eda5c56b83b355f26aa69c92de4c84e549afad13b9c1c885dc9ea31c41 /
+planf5285de9b65b40cacfa6b8a8ed57b15695807d894ef254e331f94941cc7acb9f,
+owning-range prefixes/suffixes, product-assertion equivalence, diff and secret
+patterns are checked separately. Actual PR-body checker/readback follow publication.
+
+### Fixture, isolation, preparation failures and cleanup
+
+Real launcher was read, never executed. Direct installed Elixir1.19.5/OTP28.5/
+ERTS16.4/PG17.11 reused; +S4:4 as prepared profile. Own Hex2.5.3 bootstrap,
+installed Rebar3.25.1; all45 newly downloaded archive inner/outer digests match
+unchanged mix.lock. No old/shared compiled artifacts, deps/build/PLT copy or
+reinstallation. Actual writer Python3.13.5 is recorded; no exact historical Python
+runtime reproduction claim. Own HOME/Mix/Hex/deps/build/XDG/tmp/keys/PG paths are
+outside checkout; Git credential HOME/tokens are not inherited by tests.
+
+Before tests, real BEAM manifest connected to own Unix-only cluster55474 as
+sn004_fixture, separate sn004_test/sn005_test and postgres; ownership/SELECT1/
+DDL/INSERT/SELECT/ROLLBACK/no public product tables/private key-root confirmed.
+Both SN004 and complete SN005 env contracts propagate through frontend, child
+and nested make. Missing SN004 negative exits78 before SQL/tests. DSM=mmap remains
+in own PGDATA/pg_dynshmem; no profile change to obtain GREEN. Actual dev Dialyxir
+probe confirmed own `/mix/dialyxir_*` core and `/build/dev/*deps-dev.plt` paths;
+it is not PLT creation or Dialyzer qualification.
+
+Preparation failures retained: empty /dev/stdin make had no recipe; first direct
+Postgrex probe used invalid log:false callback and uncast regnamespace (rollback
+had completed); first metadata selection used unsupported __ex_unit__(:tests)
+rather than __ex_unit__().tests; extra Rebar version probe initially used an
+unexported binary name rather than installed absolute path. Only own probe code/
+argv changed; no tests ran before full corrected fixture preflight PASS. Every
+BEAM/version/syntax/dev probe was under own subreaper; no uncovered zombie probe.
+Read-only cloud skill snapshots/hashes retained as process guidance, no repository
+skill import/runtime activation/new hook/agent; owner scope overrides defaults.
+
+Own PG stop0 at19:08:22Z, actual postmaster wait/reap0; status3/no server;
+supervisor remaining descendants empty. Runtime cleanup audit19:08:51Z:
+39 supervised command receipts,1514 known PID/start-time identities absent,
+353 recorded fixture roots absent,573 recorded listener ports absent,
+outer forced cancellations0 and observed nonempty HOME mismatches0. Own synthetic
+PGDATA/keys/tmp/socket removed; source/evidence retained. Missing/empty process
+environ samples remain UNKNOWN, not total I/O attestation. Body-checker VMs are
+separately supervised after this runtime cleanup and checked in terminal handoff.
+No PID1/foreign/old zombie signal, old cache/evidence cleanup or re-attestation.
+
+### Preserved history and next bounded disposition
+
+Run1 T1 98/14 FAILED; run2 T1 98/0, T2 496/3 FAILED, T3 NOT_RUN_T2_FAILED;
+five-invocation diagnostic DIAGNOSTIC_INCOMPLETE. A_UNKNOWN stays open even
+though unchanged A passed current T1/T2. B's new causal diagnostic and C's
+controlled writer mismatch are not asserted as the complete historical causes.
+R6/R6-TIME/N1/N2/R1–R5 and other original-HEAD source conclusions are preserved.
+PROCESS_HOLD_PREPARED_CACHE / PRE_BYTES_UNKNOWN / HOME004 and old A148/B020/
+transport/cleanup UNKNOWN remain separate. Original v0.5, PR79/82/84/autonomy and
+multi-project requirements are unchanged; main/release/PR75/97/98 untouched.
+
+Independent reviewer must judge the new B coverage and C lifecycle, including
+real-path positives and child/Port ownership, not only test counts. Five strict
+Credo findings remain open; no automatic repair stage. After acceptance of a
+test delta, separate independent exact-candidate runtime qualification is still
+required. No self-acceptance, Task5, native/trusted/live/Bandit/global release
+disposition, merge/deploy/activation or DF Assistant work. Auth disabled;
+**NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.**
+
+## PR99 post-gate source audit correction — C late-ready budget, 2026-10-15T19:21:27Z
+
+**WIP_KNOWN_C_BUDGET_RISK / C_CONTRACT_NOT_ESTABLISHED / NOT_ACCEPTED / DO_NOT_MERGE.**
+This append qualifies the preceding author claims about the complete C budget.
+Observed tests and their exact results stay unchanged. No new test/product-code
+repair, gate rerun or acceptance was made; the two harness cycles remain consumed.
+
+In store_test.exs:723–750, fifo_receive computes remaining at725 BEFORE its
+blocking receive. The supervisor_ready branch at735 sends that earlier value
+minus200. A delay w before readiness can therefore overstate the current remaining
+budget by w. The outer BEAM3000 deadline still stops waiting, but fallback Port.close
+is not OS wait/reap, and the Python cancellation/reap may then extend beyond that
+original boundary. This is a concrete source scheduling risk; it was NOT observed
+as a failure in the timely/350/nonzero/over-budget/primary-assertion matrix and is
+not attributed as the historical C trigger.
+
+The earlier phrase "only original budget remainder" describes the intent and the
+normal observed runs, not an established invariant under delayed supervisor-ready.
+C's overall bounded-cleanup guarantee is therefore OPEN despite the matrix passing.
+The missing causal control is a delayed actual supervisor-ready before the budget
+is sent, with cancellation/reap/resource removal required inside the original3000.
+A future authorized repair must derive the remainder when it is sent (and avoid
+starting work after the cancellation reserve is exhausted), preserve primary
+failure and collect actual child/Port statuses. No such third repair is performed
+in this stage. Five Credo findings remain OPEN as well.
+
+This corrective appendix/README notes are the only additional tracked delta after
+initial candidate0072c9f2f3f4e92aaec84762c705a3d25b273d67. Its executable251 seal
+96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f remains identical.
+The new docs-only linear HEAD/TREE/final whole seal and corrected full readbacks
+are recorded in the existing owning handoff and PR99 checkpoint, with their old
+texts retained verbatim as history. B's prospective interpretation, A_UNKNOWN,
+historical run2 FAILED, product/source freezes and all release/process holds stay.
+Independent B/C review and separately authorized C/quality follow-up are required;
+no self-acceptance, Task5, activation or automatic next stage.
+
+
+### PR99 C/quality — 2026-10-15T20:03:26Z
+
+Owner-dispatched IMPLEMENTER follow-up to `025f45f5400979f89dc1ea35cbd404741072a157`,
+not a repeat of the completed B/C stage and not independent acceptance.
+Admission/full readback: https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6201262455 .
+Initial TREE `3b2824b597c53b64f8f016263b6f77644f390828`, sole parent
+`0072c9f2f3f4e92aaec84762c705a3d25b273d67`, PR BASE
+`097d64ada3138d49c6797001d02ab113c15ccb6e`. The existing head/base branches and
+open/draft/unmerged PR99 are retained. The published successor tuple belongs in
+the final #33/PR99 handoff; no circular self-hash is embedded in this appendix.
+
+The previous CURRENT CORRECTION remains historical: the025f C claim was not
+established. This appendix supplies the new prospective protocol and measured
+controls. It does not convert old run2 or its assertion into PASS. B remains the
+previously explicitly approved EARLY_DEADLINE_NO_POST / FULL_TLS_STAGE_CONTROL
+interpretation, with independent sufficiency review still required.
+
+#### New C endpoint and receipt contract
+
+T0h is sampled in owner nanoseconds before Port.open; D=T0h+3_000_000_000 exactly once. Python emits actual supervisor_started timestamp S; owner records its actual receipt R. It forms E=S+max(D-R-200_000_000,0). fifo_command checks fresh owner time<D immediately before Port.command. In the positive-remainder branch, E is no later than D minus200ms in Python scale because S emission precedes R receipt. In the clipped branch E=S: a transmitted E is still no later than D, since receipt and fresh send precede D; it provides no new quota and is already expired on Python receipt. If owner time reached D no command is sent. This proof transfers durations, never assumes equal clock origins. No changing clock, timestamp fabrication, repeated synchronization or new relative budget at launch receipt.
+
+Python installs E before the real supervisor-ready gate. Ready delay and absent readiness stop at E-350ms. Launch authorization retains the same E, is formed only with original-owner remaining>=1000ms, and a controlled2200ms delay holds its delivery/processing before readline. Python requires its fresh remaining>=800ms before Popen. Work stops at E-400ms; TERM wait<=150ms and final actual subprocess.wait uses current remainder minus100ms, all inside original D. Missing reap/nonzero supervisor status cannot qualify; no-child has distinct child_launched=false, child_exit=null, child_reaped=false and no fabricated writer-ready. Normal child PID/starttime, actual writer-ready, wait_return_ns, terminal event, Port exit/DOWN and final owned FIFO removal are separate facts.
+
+Owner never turns an elapsed source deadline into a new Python quota. Waits use current original D. Removal is nested-finally even after failed await/assertion. Final measured completion is sampled after File.rm AND File.lstat of the actual owned path, after terminal Port cleanup/demonitor. Receipt qualification requires terminal/Port0/DOWN, known actual child wait (or confirmed no-child), real removal and elapsed<=3000ms. Writer success additionally requires classification=completed/child_exit0/actual ready. Budget cancellation and nonzero exit are lifecycle controls, not successful writers. Primary exception and original stack win over cleanup errors.
+
+This is a finite protocol with measured schedules, not a hard-real-time promise under arbitrary OS/VM suspension. Deliberate Port loss removes terminal transport: scoped receipt elapsed3001ms/terminal_unknown/NONQUALIFIED. Its test passes by rejecting qualification and preserving the primary assertion/removal, not by claiming in-budget reap or borrowing a later outer collector. Python EOF cancellation exists, but an unavailable owner-side receipt remains UNKNOWN. Outer subreaper containment/reaps are separate evidence.
+
+
+Real FIFO creation remains `mkfifo -m600`; writer delay850ms and ENXIO window400ms
+remain literal real operations. The three timely product schedules execute the
+unchanged `assert_fifo_product`: real Store750 budget / elapsed<800 and both real
+TokenVault refusals. Key bytes/full writer argv are not logged. PID/starttime,
+writer-ready, child wait, supervisor terminal, Port exit/DOWN, removal/absence
+and final measurement remain separate evidence. No product/lib clock, SQL,
+authorization, endpoint, timeout or readiness behavior changes.
+
+#### Primary delayed-supervisor RED and causal cycles
+
+Baseline source is the exact025f Git blob, with a separately saved diagnostic
+overlay: renamed external test modules, one explicit metadata-selected test,
+real2600ms delay BEFORE supervisor_ready, and safe observation. No diagnostic
+overlay was copied wholesale into the candidate. Both baseline executions are
+new experiments, not historical run2 reproductions.
+
+First RED1/1 exit2 at20:12:13.623110–20:12:25.964267Z, output
+`3dc093d2f658760d6fa1561ce9604739348a434d95a39af877c20d0a09bbdab1`.
+The first T0 observer accidentally landed in excluded neighboring code; that
+metadata gap is retained. A changed observer, with no protocol change, produced
+RED1/1 exit2 at20:12:58.059322–20:13:10.712925Z, output
+`a2d35ba9c0c55e71cbf617e126d72373192799f7cb38014c3a31363fbb7e55d3`.
+It measured owner T0=-576460742458ms, D=-576460739458ms,
+supervisor_ready receipt=-576460739827ms: actual remaining369ms, but the old
+pre-receive value2998 sent duration2798ms. A real writer launched and became
+ready (PID22776/start554654); report/Port-exit/DOWN were absent at the3001ms
+receipt. Actual FIFO removal was D+1ms. The new no-child assertion failed
+semantically, rather than merely observing a trace-line order.
+
+The separate Python side channel recorded child wait/reap with exit-15 and
+owner_lost after fallback Port closure, plus supervisor atexit. That late
+containment is not in-budget cleanup. Supervisor OS exit status was not delivered
+through the closed Port and remains UNKNOWN; atexit/process absence is not wait.
+Both exact baseline files match their PRE-RUN hashes; the first was reconstructed
+post-run from its retained original blob/diff and verified, not newly pre-sealed.
+
+Cycle1 scoped17/1 exit2: the ready-with-insufficient-reserve control actually
+launched a real child under the then500ms minimum and cancelled/reaped it; the
+expected no-child classification failed. Raw output
+`f9a193f62cad25259f45bdfed42e56c61e21849ddf03fe5acf16dc472dcac9b1` retained.
+Cycle2 uses conservative800ms Python /1000ms owner launch reserves, holds launch
+delivery2200ms BEFORE Python readline, adds after-D and explicit Port-loss
+classification controls, and validates the final post-removal receipt.
+The2200ms control schedule replaced an unrun2400ms draft to give scheduling
+margin within the same second cycle; D/850/400 remain unchanged.
+Final scoped19/0 follows format/specs/strict lint0. New C/quality cycles2/2;
+no third functional cycle, product repair0/additional agents0.
+
+#### Exact selected cases and observed matrix
+
+ExUnit metadata selected exactly6 old B +5 old C +8 added C cases before the
+final scoped run (`--only bc_harness`); no file:line or neighboring module
+selection. Original case names/counts and all other F1–F5 bodies remain intact.
+Broad T1/T2 use the exact sealed file/directory argv; their completed trace
+indexes contain98/511 actual names. The default make run retains its ordinary
+seed267130 / max_cases8 and6 skips, with no T1/T2 serialization flags.
+
+- `SymphonyControl.Auth.OidcTest` — `test staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `test longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `test full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `test staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `test owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `test owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 primary assertion failure survives cleanup with FIFO removed`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor800 still runs the real writer and product assertions`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor2600 cannot launch after spending the original reserve`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 ready supervisor with insufficient reserve confirms no child`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launch delivery delay consumes the fixed Python endpoint`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 absent supervisor readiness terminates without fabricated writer receipts`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launched writer without readiness is cancelled and actually reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 supervisor readiness scheduled beyond endpoint is bounded before child launch`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 lost Port remains nonqualified and cannot hide the primary assertion`.
+
+| Exact C test name (StoreRepairTest) | Classification | Post-removal elapsed ms | Bounded lifecycle receipt |
+|---|---|---|---|
+|F5 helper budget cancels and reaps an over-budget real writer|budget_exceeded|2407|true|
+|F5 delayed supervisor800 still runs the real writer and product assertions|completed|2119|true|
+|F5 lost Port remains nonqualified and cannot hide the primary assertion|:terminal_unknown|3001|false — NONQUALIFIED, wait/reap UNKNOWN|
+|F5 delayed supervisor2600 cannot launch after spending the original reserve|readiness_deadline|2458|true|
+|F5 ready supervisor with insufficient reserve confirms no child|insufficient_reserve|2282|true|
+|F5 writer350 preserves product assertions and completes within one cleanup budget|completed|1668|true|
+|F5 own stalled key resource cannot precede the operation deadline|completed|1320|true|
+|F5 launched writer without readiness is cancelled and actually reaped|budget_exceeded|2407|true|
+|F5 supervisor readiness scheduled beyond endpoint is bounded before child launch|readiness_deadline|2457|true|
+|F5 intentional nonzero writer is classified and reaped|nonzero_exit|1315|true|
+|F5 absent supervisor readiness terminates without fabricated writer receipts|readiness_absent|2458|true|
+|F5 launch delivery delay consumes the fixed Python endpoint|insufficient_reserve|2231|true|
+|F5 primary assertion failure survives cleanup with FIFO removed|completed|1322|true|
+
+
+The helper's `qualified` field concerns only its bounded terminal receipt; it is
+not PR/runtime/release qualification. Seven real-child schedules recorded actual
+wait, five no-child schedules explicitly reported no child/reap, and deliberate
+Port loss remained NONQUALIFIED/UNKNOWN. Thus19/0 is not a blanket C PASS. The
+nonzero/budget rows are expected writer failures with observed cleanup, not
+successful writers. Independent review must judge the complete endpoint and
+lifecycle argument, not accept a test count.
+
+#### Five quality dispositions and equivalence
+
+| Prior025f finding | Authorized disposition | Fresh check |
+|---|---|---|
+|store636,146>120|C launch arguments moved into small fifo_start/options protocol|strict lint0|
+|store640,127>120|C helper map split into explicit fields|strict lint0|
+|oidc759,121>120|only equivalent multiline if/assert at current760|strict lint0|
+|store629 with_fifo_writer complexity14>9|small local private start/assert/result/finalize/wait helpers|strict lint0|
+|fixture167 delayed_token_endpoint complexity11>9|equivalent staged_accept/staged_handshake extraction|strict lint0|
+
+The C functional diff and B quality-only extraction diff are retained separately.
+An independent author-side static checker expands both B helpers and compares
+normalized quoted AST with025f: MATCH. Full OIDC AST also MATCH; Store/TokenVault
+assertion AST and bytes MATCH. This is style-equivalence evidence, not an
+independent review. The checker's first run had a Git relative-path error and
+exit1; corrected checker exit0 output
+`4fec2941621cdfedc1288d20cec76c046e8258f19ad26c65fe7a656924bfd5e6`.
+No lint ignores/thresholds/exclusions/concurrency/quality configuration changed.
+
+#### Actual gates, seals and wide cleanup HOLD
+
+| Gate | Result | Supervisor UTC start | Supervisor UTC end | Main exit / forced | Raw output SHA256 |
+|---|---|---|---|---|---|
+|format-final|PASS|2026-10-15T20:23:03.987729+00:00|2026-10-15T20:23:04.699589+00:00|0 / False|`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`|
+|lint-final|specs/strict lint0|2026-10-15T20:23:04.947437+00:00|2026-10-15T20:23:10.004689+00:00|0 / False|`ffdebfc4cdfea5d4fd3038e7302804a994ce06fef487779e4353bf78f1476011`|
+|scoped-final|19/0; expected Port-loss UNKNOWN included|2026-10-15T20:24:13.639997+00:00|2026-10-15T20:25:01.031933+00:00|0 / False|`4278cea4f5db1d7419e1ad1b6398b0532f6c29abb5d0e652ad38e5234e69179d`|
+|T1|98/0|2026-10-15T20:25:19.806269+00:00|2026-10-15T20:25:44.773948+00:00|0 / False|`3dbe7daadbbc4dc37e74254f47a9c2d8c32f69ea2a2abb5fbdabde1478d5eb6b`|
+|T2|511/0|2026-10-15T20:26:15.462909+00:00|2026-10-15T20:29:45.999955+00:00|0 / False|`b098acc2811c305d77cd9ba8aa873415b8f9ef4468189a4298f656f1895456da`|
+|T3|main0; 877/0,6 skips,100% coverage,Dialyzer0/0/0; CLEANUP_HOLD|2026-10-15T20:30:09.144095+00:00|2026-10-15T20:37:06.619230+00:00|0 / True|`ae8d2b03365ea27c79ed71dd147d7282f13c16f099d26f7d7e38de60085c6c39`|
+|T4-bootstrap|12/0|2026-10-15T20:38:50.878066+00:00|2026-10-15T20:38:50.981035+00:00|0 / False|`d5987f0d73b4533bcaa00cefadc1d12c2ec3cc6bf89a78c4641d38cd5b565320`|
+|T4-mcp|11/0|2026-10-15T20:38:51.245163+00:00|2026-10-15T20:38:51.450121+00:00|0 / False|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+
+UTC windows are enclosing supervisor measurements; T3 end includes outer
+containment, not a separately captured exact main-exit timestamp. All broad
+commands ran once in the required order on the same final executable bytes.
+T4 is independent Python validation after runtime. Exact actual argv:
+
+- `format-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "format", "--check-formatted"]`.
+- `lint-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "lint"]`.
+- `scoped-final`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["env", "MIX_ENV=test", "mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- `T1`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- `T2`, cwd `/workspace/work/pr99-bc-20261015T184022/source/elixir`: `["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- `T3`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["make", "-C", "elixir", "all"]`.
+- `T4-bootstrap`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- `T4-mcp`, cwd `/workspace/work/pr99-bc-20261015T184022/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+T3 make main passed every ordinary subgate, including877 tests/0 failures/6
+skips,100% coverage and Dialyzer errors0/skipped0/unnecessary0. However, two
+own live `sh` descendants survived the command and3s natural outer collection:
+PID34536/start668250 and34541/start668253, initially under own erl_child_setup
+PID32484, later adopted by own subreaper. Both were SIGKILL-contained and actually
+waited with status-9. No corresponding PID appears in the resource ledger or
+FIFO receipts; cause is UNKNOWN, no causal attribution to C or a frozen test is
+made. T3 is COMMAND_PASS / CLEANUP_HOLD, not an all-axis PASS. No repeated make,
+unrequested repair or dependent runtime gate followed. No foreign/old/PID1 signal.
+
+Initial255 actual Git blobs and checkout matched; baseline executable251
+`96873fae42d33b91bccc4921610138e53eb44a7ed22bb1feedd46a8c20956e3f`
+and whole255
+`d577d666de9ad4b4f2176ef2666cda2d85e84a7d1e8084e0bbc76907588ba92c`
+were recomputed from blobs, not transcribed. Final tested executable251:
+`3d77637fb9db761a3d29d1e21cb768aa086e73669b8850293fb781dd72cc4b49`.
+Pre-gate whole255:
+`61cbe44a9dd86c1c20353b48f40a14397f8c2691e5f4fef2cb10450ca342c692`.
+External runner/env/fixture inventory:
+`d009b96051e667bd5e6e3f974a45d8062f5e2bb4866813766b99783a03865ba8`.
+All verified unchanged after scoped/T1/T2/T3/T4; these documentation appends and
+their MANIFEST digests are later separate inputs. The earlier2c01 intermediate
+whole inventory predates the final delivery-control schedule, not a gate seal.
+
+Only the seven allowed paths change; all255 Git modes and84 product libs are
+frozen (libs also compared directly with7e6fb49), as are A/other suites, locks,
+mix/Makefile, migrations, quality/policy/CI and canonical documents. MANIFEST90
+names/order/digests, composition8, design49f4a2eda5c56b83b355f26aa69c92de4c84e549afad13b9c1c885dc9ea31c41
+and planf5285de9b65b40cacfa6b8a8ed57b15695807d894ef254e331f94941cc7acb9f
+remain pinned. Final diff/secret/scope/body checks and published tuple are recorded
+in the final handoff; no unrun check is represented here as completed.
+
+#### Environment, containment and limits
+
+Same installed Elixir1.19.5/OTP28.5/ERTS16.4/PG17.11, +S4:4, Python3.13.5,
+Rebar3.25.1; launcher chain/env.sh read only, never executed. Own fresh
+HOME/Mix/Hex/deps/build/XDG/core and project PLTs and0700 new evidence root.
+All45 lock archives passed inner/outer hash checks; fresh own dependency builds
+and own Hex2.5.3 bootstrap, no old/shared compiled copy or reinstall. Complete
+Unix-only55474/sn004_fixture/sn004_test/sn005_test/postgres fixture passed
+connectivity/ownership/DDL rollback/no public tables/key-root/actual BEAM env
+before any tests. DSM=mmap retained. Env frontend, ordinary child and nested
+make matched own selectors and excluded Git credentials.
+
+Preparation limits are explicit: initial read-only filesystem commands and a
+failed bootstrap (int argv TypeError, no child launched) preceded own supervision.
+Mix/erl/PG/Rebar hashes were read before builds; complete5-file toolchain readback,
+including elixir/beam, occurred20:27:35 after T1 and MATCHED prior pins. It is not
+claimed as a full fresh pre-probe seal. Standard make produced own ignored
+coverage HTML inside checkout; it was retained outside afterward. No retroactive
+claim that every generated evidence byte began outside checkout.
+
+Own PG stop0, actual direct postmaster wait0, status3; own synthetic PGDATA/key/
+tmp/socket contents removed, source/build/evidence/coverage retained. Runtime
+audit at2026-10-15T20:40:34.127156+00:00: 77 completed supervised command
+receipts/2950 recorded PID/start identities, remaining=[],
+identity_unknown=[], 639 recorded roots absent and
+1003 recorded listener ports not listening. HOME observed
+62885, mismatches0, unavailable211215
+UNKNOWN. Empty private directories can be recreated by later runner/body checks;
+terminal cleanup/readback follows publication. T3 forced containment remains a
+fact; absence after containment is not natural-cleanup or in-budget C proof.
+Sampling is not a total I/O/global process attestation. No old cache/HOME/PG/
+zombie/evidence cleanup or re-attestation.
+
+Historical run1 T1 98/14 FAILED; run2 T1 98/0,T2 496/3 FAILED,T3 NOT_RUN;
+diagnostic5invocations DIAGNOSTIC_INCOMPLETE. A_UNKNOWN, pre-JWKS1129 cause and
+historical C trigger UNKNOWN. Original R6/R6-TIME/N1/N2/R1–R5 source conclusions
+remain independent on unchanged product bytes. PROCESS_HOLD_PREPARED_CACHE /
+PRE_BYTES_UNKNOWN / HOME004 / initial visibility / old A148/B020/transport/cleanup
+UNKNOWN and previous costs/windows/errors remain. New T0=20:03:26Z15October,
+deadline00:03:26Z16October, included reserve23:33:26Z15October; cycles2/2,
+product0/extra agents0. No renewed prior B/C2/2 window or automatic extension.
+
+Next: separate independent review of the combined B/C test delta, preserved
+assertions and style equivalence, then independently authorized runtime
+qualification after accepted test delta. The author does not accept this work.
+Coordinator owns#95. Original specification/PR79/82/84/autonomy/multi-server
+requirements and release/mvp-1 remain unchanged. No Task5/native/trusted/live/
+Bandit/global release disposition, CI statuses/Actions/mentions/labels,
+merge/deploy/activation/production/DF Assistant changes. Auth disabled.
+NOT_ACCEPTED / NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.
+
+
+## PR99 B-SNAPSHOT-01 — post-return evidence, 2026-10-16
+
+**WIP_TEST_EVIDENCE_CANDIDATE / T3_CLEANUP_HOLD / NOT_ACCEPTED / DO_NOT_MERGE.**
+Denis authorized only B-SNAPSHOT-01, implemented by the continuing author, not the
+finished independent reviewer. Admission and full readback:
+https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6210426835 .
+Independent finding6208309902/verdict6208317048 supplies the source counterexample.
+Starting HEAD e5eda45f950c2da6c155cbab3d824dc446e4b50b,
+TREE afb76a8232c39090a7aa7bf15b441764a5a403a8,
+sole PARENT025f45f5400979f89dc1ea35cbd404741072a157,
+BASE097d64ada3138d49c6797001d02ab113c15ccb6e. Same existing draft PR99 and
+feat/sn005-current-access-logout-20261013 -> feat/sn005-browser-login-20261011.
+The published successor tuple and final documentary seal belong to the handoff.
+
+### Observation contract and preservation
+
+The earlier appendix's "Refusal snapshot", entered_at_refusal and
+NOT_EXERCISED_AT_REFUSAL descriptions are retained as history and superseded for
+this candidate. A real Oidc.exchange returns, the caller records returned_at,
+then a separate Agent operation returns ONE complete post_return_snapshot.
+Its at/events/counts are preserved unchanged, including events sampled after
+return. The active helper/logger now reports boundary=snapshot_after_return,
+returned_at, snapshot_at, original deadline, the full raw post_return_snapshot,
+and only OBSERVED_IN_POST_RETURN_SNAPSHOT or NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT.
+
+returned_at<=snapshot.at is asserted; no atomic return+snapshot or reconstruction
+of return-state is promised. SNI sample1521 after return1501 remains in snapshot1550
+and is observed IN THAT snapshot. A same-millisecond sample establishes no exact
+order. Missing SNI proves only missing observation: its timestamp can precede a
+pending Agent.update, so physical SNI before return is not excluded by absence.
+No new clock, RPC, barrier, timestamp filtering or synthetic TLS event was added.
+
+Both ordinary negatives and the controlled pre-dispatch gate use this actual
+evidence helper. EARLY_DEADLINE_NO_POST remains a deadline/no-POST check, separate
+from mandatory FULL_TLS_STAGE_CONTROL. History/counters/singletons/token0, final
+token0 and exact full first-snapshot prefix in final history remain intact.
+The existing assert_staged_history bytes are unchanged. A late raw token is
+retained by the formatter, accepted by that helper with expected token1, and
+rejected with expected token0 (actual assertion operands1 and0).
+
+All six existing B and thirteen C controls remain independent checks. Real
+1500/<1700,200/600/700/setup800, both real5000 positives, caller/worker/listener
+termination, natural cleanup, default2000/negative6000/accept5000/gate2500 and
+other POST650/<850/TLS/certificate/owner-down assertions are preserved. Scoped
+positives measured accept1/SNI1/POST1 and dispatch601/SNI-hold703ms for BOTH
+setup0 and setup800. Negatives retained token0 through separate final histories;
+the gated report explicitly had NOT_OBSERVED_IN_POST_RETURN_SNAPSHOT.
+These are new author executions, not reproduction or retrospective PASS of run2.
+
+### Deterministic representation RED/GREEN
+
+Synthetic temporal maps are unit evidence for the actual logging helper, not
+executed TLS exchanges. Six new cases cover late SNI1521/return1501/snapshot1550,
+pre-return SNI1499, same-ms SNI1501, absent SNI, late token, and invalid snapshot
+timestamp before return. Baseline selection was exactly one named unit case;
+candidate unit selection exactly six. Final metadata selection exactly25 follows.
+
+Baseline is an explicitly MODIFIED diagnostic copy of the exact e5eda45 OIDC
+blob, not a byte-untouched runtime baseline. It renames the module, extracts the
+EXACT old classification expression into a helper used by its actual owning
+logging path, wraps safe observation metadata and adds the same counterexample.
+The additional consistency assertion holds on this timeline. RED1/1 exit2 was
+the false temporal label itself: left entered_at_refusal, expected
+OBSERVED_IN_POST_RETURN_SNAPSHOT. Elixir also warned that those atoms are
+disjoint; no undefined-function/syntax/setup failure supplied the RED. Candidate
+unit6/0 and sealed scoped25/0 use the repaired helper in real logger paths.
+
+- Baseline PRE-RUN `evidence/original-oidc.exs` SHA256 `f15ed1398712a63bccd410949b5bd27423aab7635233691a2954a80f90062a1b`.
+- Baseline PRE-RUN `baseline_oidc_test.exs` SHA256 `00ea6a9335a62d31a50d3644d6d7a00fcaa06bccb205ffffd446f9634b4efaf2`.
+- Baseline PRE-RUN `evidence/baseline-overlay.diff` SHA256 `65fef3e860beee576ae0e5186d4afdd4ed90601164181c419b714779b356d66e`.
+- Baseline PRE-RUN `unit_cases.exs` SHA256 `e2e2b0f79fa2dc6a9d78ec00c3ccf2922a8db5d1a2cd18517ac9cbc669816abc`.
+- Baseline PRE-RUN `run.py` SHA256 `84170adbca8eb26a564b222b40b53438e2e55cbf9ed3361757eb22a0ff0fa49b`.
+
+Exact baseline overlay below is sufficient with the pinned e5eda45 Git blob to
+reconstruct the diagnostic file (LF, preserve its blank lines). Its resulting
+file hash is the baseline_oidc_test.exs value above. Run only b_snapshot_unit
+metadata, not file:line. The repaired same-case unit is in the published OIDC
+module. No overlay was copied wholesale into active tests/fixture/product.
+
+Exact raw diff is encoded below as a JSON array of LF-terminated lines.
+Concatenating json.loads(block) reconstructs the exact bytes/hash above. This
+transport preserves blank context lines without Markdown trailing whitespace.
+An initial literal diff fence failed documentary diff-check; its original
+append and failure receipt are retained, executable inputs unchanged.
+
+```json
+[
+  "--- e5eda45/oidc_test.exs\n",
+  "+++ diagnostic-baseline-overlay\n",
+  "@@ -1,4 +1,4 @@\n",
+  "-defmodule SymphonyControl.Auth.OidcTest do\n",
+  "+defmodule SymphonyControl.Auth.OidcSnapshotBaselineTest do\n",
+  "   use ExUnit.Case, async: false\n",
+  "   import ExUnit.CaptureLog\n",
+  "   alias SymphonyControl.Auth.{Oidc, OidcFixture}\n",
+  "@@ -722,8 +722,7 @@\n",
+  " \n",
+  "   defp assert_staged_negative(f, report) do\n",
+  "     assert_staged_history(report.early, 0, false)\n",
+  "-    sni = if Map.get(report.early.counts, :tls_handshake, 0) == 1, do: :entered_at_refusal, else: :NOT_EXERCISED_AT_REFUSAL\n",
+  "-    IO.puts(\"EARLY_DEADLINE_NO_POST \" <> inspect({sni, report.early}))\n",
+  "+    IO.puts(\"EARLY_DEADLINE_NO_POST \" <> inspect(staged_snapshot_evidence(report)))\n",
+  "     # A deadline may expire before accept. Preserve the listener's original\n",
+  "     # 5000ms bound and allow only bounded natural fixture cleanup afterwards.\n",
+  "     assert :ok == OidcFixture.await_staged_done(f, 6_000)\n",
+  "@@ -914,4 +913,34 @@\n",
+  "     assert {:error, :invalid_request} == Oidc.authorization_url(cfg, @expectations, deadline())\n",
+  "     assert OidcFixture.calls(f, :discovery) == 0\n",
+  "   end\n",
+  "+  defp staged_snapshot_evidence(report) do\n",
+  "+    snapshot = report.early\n",
+  "+    assert report.returned_at <= snapshot.at\n",
+  "+    sni = if Map.get(report.early.counts, :tls_handshake, 0) == 1, do: :entered_at_refusal, else: :NOT_EXERCISED_AT_REFUSAL\n",
+  "+    %{boundary: :snapshot_after_return, returned_at: report.returned_at,\n",
+  "+      snapshot_at: snapshot.at, deadline: report.deadline,\n",
+  "+      sni_observation: sni, post_return_snapshot: snapshot}\n",
+  "+  end\n",
+  "+  @tag :b_snapshot_unit\n",
+  "+  @tag :bc_harness\n",
+  "+  test \"unit evidence labels SNI sampled after return only at the post-return snapshot\" do\n",
+  "+    snapshot = unit_staged_snapshot(1_521)\n",
+  "+    report = %{returned_at: 1_501, deadline: 1_500, early: snapshot}\n",
+  "+    evidence = staged_snapshot_evidence(report)\n",
+  "+    assert evidence.sni_observation == :OBSERVED_IN_POST_RETURN_SNAPSHOT\n",
+  "+    assert evidence.boundary == :snapshot_after_return\n",
+  "+    assert evidence.returned_at == 1_501\n",
+  "+    assert evidence.snapshot_at == 1_550\n",
+  "+    assert evidence.deadline == 1_500\n",
+  "+    assert evidence.post_return_snapshot == snapshot\n",
+  "+  end\n",
+  "+\n",
+  "+\n",
+  "+  # Synthetic maps exercise the actual evidence formatter, not a TLS exchange.\n",
+  "+  defp unit_staged_snapshot(sni_at) do\n",
+  "+    events = [fixture_ready: 0, tls_accept: 800, handshake_dispatch: 1_400]\n",
+  "+    events = if sni_at, do: events ++ [tls_handshake: sni_at], else: events\n",
+  "+    %{at: 1_550, events: events, counts: Map.new(events, fn {name, _} -> {name, 1} end), handshake_result: nil}\n",
+  "+  end\n",
+  "+\n",
+  " end\n"
+]
+```
+
+### Exact scoped selection and final executable gates
+
+- `SymphonyControl.Auth.OidcTest` — `test staged connection dispatch and TLS handshake cannot produce a late POST`.
+- `SymphonyControl.Auth.OidcTest` — `test longer permitted window confirms staged endpoint can receive one real POST`.
+- `SymphonyControl.Auth.OidcTest` — `test full real staged TLS path remains viable after setup800`.
+- `SymphonyControl.Auth.OidcTest` — `test staged TLS fixture retains both delays after an adverse setup scheduling pause`.
+- `SymphonyControl.Auth.OidcTest` — `test owned fixture gate forces original deadline refusal before dispatch`.
+- `SymphonyControl.Auth.OidcTest` — `test owned staged gate closes its listener on owner loss`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence labels SNI sampled after return only at the post-return snapshot`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence observes pre-return SNI without reconstructing return state`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence gives same-millisecond SNI no at-return ordering claim`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence missing SNI means only not observed in the post-return snapshot`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence retains a late token that the real negative history assertion rejects`.
+- `SymphonyControl.Auth.OidcTest` — `test unit evidence rejects a snapshot timestamp before recorded return`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 own stalled key resource cannot precede the operation deadline`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 writer350 preserves product assertions and completes within one cleanup budget`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 intentional nonzero writer is classified and reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 helper budget cancels and reaps an over-budget real writer`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 primary assertion failure survives cleanup with FIFO removed`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor800 still runs the real writer and product assertions`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 delayed supervisor2600 cannot launch after spending the original reserve`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 ready supervisor with insufficient reserve confirms no child`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launch delivery delay consumes the fixed Python endpoint`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 absent supervisor readiness terminates without fabricated writer receipts`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 launched writer without readiness is cancelled and actually reaped`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 supervisor readiness scheduled beyond endpoint is bounded before child launch`.
+- `SymphonyControl.Auth.StoreRepairTest` — `test F5 lost Port remains nonqualified and cannot hide the primary assertion`.
+
+Fresh format/specs/strict lint0 precede the final seal and T1/T2. One initial new
+124>120 map line caused lint exit4; equivalent multiline layout fixed it in the
+same first correction cycle. No quality threshold, exception, ignore or profile
+changed. Correction cycles1/2, product0, extra agents0, profile changes0.
+
+| Invocation | UTC start | UTC end | Main exit / outer forced | Raw output SHA256 |
+|---|---|---|---|---|
+|baseline-red|2026-10-16T07:34:19.146215+00:00|2026-10-16T07:34:23.361394+00:00|2 / False|`aba51a250df5694b2266426da37a51ab4291fb0595112eecec6eaac3faf8c7ad`|
+|unit-green|2026-10-16T07:35:10.131816+00:00|2026-10-16T07:35:13.098324+00:00|0 / False|`2f7ead209172604fb8155f813eef8d16f57af51af4b20af1afcbbb8444e6f5fc`|
+|format-check-final|2026-10-16T07:37:28.306143+00:00|2026-10-16T07:37:29.126660+00:00|0 / False|`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`|
+|lint-final|2026-10-16T07:36:53.749831+00:00|2026-10-16T07:36:59.443560+00:00|0 / False|`c3e6f8263a4dbe70bd84d24125a1a7152aef1305f238c5d55e258c38a77f4f71`|
+|scoped-sealed|2026-10-16T07:39:14.796569+00:00|2026-10-16T07:40:02.537704+00:00|0 / False|`8a34c2725fa58b3353feed75daf6ac77c58e89783451a908caf797673dbddf77`|
+|T1|2026-10-16T07:40:16.434399+00:00|2026-10-16T07:40:41.648545+00:00|0 / False|`d3866a59856976302f62380b8754c3beef3666c61aa6a3250afd173c76dfafc3`|
+|T2|2026-10-16T07:40:59.616729+00:00|2026-10-16T07:44:30.545654+00:00|0 / False|`39ae9d61ab1311c207aa3bceb568b772504b329be3ab7560f1262eb3ec7e62ef`|
+|T3|2026-10-16T07:45:24.926579+00:00|2026-10-16T07:52:27.193670+00:00|0 / True|`9e621c34e1dcecaf478c310f8fef21d749d96f6e2a15048309ea93f228b28b8b`|
+|T4-bootstrap|2026-10-16T07:52:58.603135+00:00|2026-10-16T07:52:58.706441+00:00|0 / False|`d5987f0d73b4533bcaa00cefadc1d12c2ec3cc6bf89a78c4641d38cd5b565320`|
+|T4-mcp|2026-10-16T07:53:12.027208+00:00|2026-10-16T07:53:12.231160+00:00|0 / False|`d074525028084c3072f15bb6942ecfc3c1dd4affe14a1489e38c276565f1a0db`|
+
+Results: sealed scoped25/0; T1 98/0; T2 517/0. Ordinary make MAIN0:
+883tests/0failures/6 unchanged skips,100% configured coverage,Dialyzer0/0/0.
+Normal seed835548/max_cases8 retained. T3 overall remains CLEANUP_HOLD, described
+below. Independent Python checks after runtime:12/0 and11/0. T1 -> T2 -> T3 ran
+once, sequentially; no unchanged failed-suite retry or shell/C/product repair.
+
+Actual argv and cwd (under own run.py subreaper; no shared launcher):
+
+- baseline-red, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "/workspace/work/pr99-bsnapshot-20261016T072411/baseline_oidc_test.exs", "--only", "b_snapshot_unit", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- unit-green, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/oidc_test.exs", "--only", "b_snapshot_unit", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- scoped-sealed, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/oidc_test.exs", "test/symphony_control/auth/store_test.exs", "--only", "bc_harness", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T1, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth/authorizer_bindings_test.exs", "test/symphony_control/auth/access_test.exs", "test/symphony_control/standalone_http_test.exs", "--trace", "--seed", "143345", "--max-cases", "1"]`.
+- T2, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source/elixir`: `["mix", "test", "test/symphony_control/auth", "test/symphony_control/project_read_http_test.exs", "test/symphony_control/identity_test.exs", "test/symphony_control/standalone_http_test.exs", "test/symphony_elixir/control_boundary_test.exs", "test/symphony_elixir/control_environment_test.exs", "--trace", "--seed", "381068", "--max-cases", "1"]`.
+- T3, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["make", "-C", "elixir", "all"]`.
+- T4-bootstrap, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_bootstrap_snapshot.py", "-v"]`.
+- T4-mcp, cwd `/workspace/work/pr99-bsnapshot-20261016T072411/source`: `["python3", "-B", "-m", "unittest", "discover", "-s", "tests", "-p", "test_mcp_input_contracts.py", "-v"]`.
+
+Pre-gate executable/test/config251 SHA256 `16c8d6964821e26639e912115a928ce0ac688ffb0867a9b6a5758916326cb398`;
+pre-gate whole255 `4379823aea0fb7f8fad8a2cbcf79677a48bd350ebdd00bd384d1d07e96b41111`.
+External runner/env/tools/selected-cases/bootstrap/NIF inventory167 entries SHA256
+`a0a5d1ded90f6349ecbd7d90e60406f2a78eab80377e36a9456401d7a1570456`.
+Tracked executable seal and all167 external entries MATCH after runtime; later
+documentation/MANIFEST appends are a separate documentary seal, not pre-gate input.
+
+The external-seal assembler initially failed on a guessed /usr/local/bin/python3;
+the actual resolved path is /usr/bin/python3.13. An already-started scoped-final
+25/0 at07:38:05–07:38:53Z is retained as PREPARATORY, not the sealed gate. Corrected
+full seal at07:38:37Z preceded distinct scoped-sealed07:39:14Z and all broad gates.
+The tracked executable bytes did not change across that assembly error. Initial
+preflight lacked pg_read_all_settings for observing PGDATA; only the own synthetic
+role in the own cluster received it, before any tests. Initial rebar PATH probe
+exited127; the absolute pinned Rebar version probe passed. Failures are retained.
+
+### Environment, lifecycle and limits
+
+Fresh own same-branch clone; prior author/reviewer copies, caches, dirty/untracked
+and evidence are preserved. Real launcher chain/shared-reset env.sh read only.
+All six mix/elixir/erl/beam/postgres/rebar hashes were read before the first VM
+probe. Installed Elixir1.19.5/OTP28.5/ERTS16.4/PG17.11/Python3.13.5/Rebar3.25.1,
++S4:4 reused; no OS/toolchain/PG reinstall or global update. Own0700 evidence,
+HOME/Mix/Hex/deps/build/XDG/tmp and actual DEV core+project PLT paths verified.
+Own Hex2.5.3 bootstrap and45 source archives with exact inner/outer lock checks;
+no previous/shared/author compiled artifacts copied. PLTs built fresh by make.
+
+Before tests, actual runner/BEAM and nested make confirmed full SN004/SN005
+manifest: own Unix-only55474, sn004_fixture, separate sn004_test/sn005_test and
+postgres, ownership/settings/DDL rollback/no public product tables/private key
+root. Actual DSM=mmap retained. Env frontend/child/nested make and observed BEAM
+HOME matched own paths; Git credential HOME was confined to control-plane work.
+Sampling gaps remain UNKNOWN, not an automatic ISOLATION_PASS.
+
+Standard coverage output uses an own output-only elixir/cover symlink to external
+0700 coverage. A post-T2 static check correctly found that symlink untracked:
+the repository ignore matched directories, not symlinks. Only this declared
+output was added to own .git/info/exclude; the original exclude is retained.
+No tracked ignore/config/input or checker was weakened. Integrity then matched
+the same executable seal before T3; default make argv/profile stayed unchanged.
+
+New T3 owned sh PID15000/start1165011 and15005/start1165014 remained after main+3s.
+First observed07:48:56.950Z, first parent erl_child_setup11583/start1145054;
+last parent own subreaper11405. Safe argv digest for both:
+e770a6efc9127a9add795be42ce206fd0ed5fd3ec863bb215c334bc735784fb0.
+Owner identities were checked before SIGKILL at07:52:27.141/142Z; actual adopted
+waits both-9 at07:52:27.192Z. Cause UNKNOWN; no causal link to C is asserted.
+This new containment and historical T3_CLEANUP_HOLD stay separate from main0.
+No investigation or signals of the old two shells/foreign processes/PID1/zombies.
+
+Own PG ownership checked, fast-stop0, direct postmaster actual wait0, status3/no
+server. Before disposal,639 recorded roots were absent and999 recorded ports had
+no listener. All recorded identities then absent, identity_unknown=[], observed
+nonempty runtime HOME mismatches0; missing HOME samples remain UNKNOWN. Own
+PGDATA/empty keys/Mix tmp/socket were disposed, with empty private directories
+recreated by later runner calls; final terminal cleanup/readback belongs in
+handoff. Absence after containment is not natural cleanup or C wait/reap proof.
+C Port-loss remains expected NONQUALIFIED/terminal_unknown;25/0 is not blanket
+C acceptance. The accepted C source protocol, fixture and all product bytes/modes
+are frozen. Final scope/MANIFEST90/order/composition8/design-plan pins/secret/diff,
+commit-byte and actual PR-body checks are recorded with publication readbacks.
+
+T0 first recorded action2026-10-16T07:24:11Z; deadline11:24:11Z, included reserve
+10:54:11Z. Old B/C2/2,C/quality2/2, qualifications/diagnostic runs/windows remain
+consumed. Historical run2 FAILED, A_UNKNOWN, PROCESS_HOLD_PREPARED_CACHE /
+PRE_BYTES_UNKNOWN / HOME004 and prior source conclusions remain independent.
+No auth activation, Task5/native/trusted/live/Bandit/global release/Actions/status/
+labels/mentions/merge/deploy/production/DF Assistant changes. Auth disabled.
+Next: independent B-SNAPSHOT/preservation source review on the exact successor,
+then separately authorized runtime qualification; no author acceptance.
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

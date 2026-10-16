@@ -10,14 +10,32 @@ defmodule SymphonyControl.AuthDbFixture do
   alias SymphonyControl.Repo
   alias SymphonyControl.Repo.Migrations.{CreateControlAuth, CreateProjects}
 
+  defmodule OperationFaultClock do
+    use GenServer
+    def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: SymphonyControl.Auth.Clock)
+    @impl true
+    def init(opts), do: {:ok, opts}
+    @impl true
+    def handle_call(:now, {caller, _}, opts) do
+      {:current_stacktrace, stack} = Process.info(caller, :current_stacktrace)
+      frames = Enum.reject(stack, fn {module, _, _, _} -> module in [:gen, GenServer, SymphonyControl.Auth.Clock] end)
+      target = Keyword.fetch!(opts, :module)
+
+      case frames do
+        [{^target, _, _, _} | _] -> {:stop, :normal, opts}
+        _ -> {:reply, SymphonyControl.AuthDbFixture.sample_clock(opts[:agent]), opts}
+      end
+    end
+  end
+
   # The fresh-clock source belongs to this fixture/VM, never to runtime config.
   defmodule SnapshotClock do
     use GenServer
     def start_link(agent), do: GenServer.start_link(__MODULE__, agent, name: SymphonyControl.Auth.Clock)
     @impl true
-    def init(agent), do: {:ok, %{agent: agent, hold: nil, sample_patch: %{}}}
+    def init(agent), do: {:ok, %{agent: agent, hold: nil, sample_patch: %{}, hits: 0}}
     @impl true
-    def handle_call({:hold, target, owner, ref}, _from, state), do: {:reply, :ok, %{state | hold: {target, owner, ref}}}
+    def handle_call({:hold, target, owner, ref}, _from, state), do: {:reply, :ok, %{state | hold: {target, owner, ref}, hits: 0}}
 
     def handle_call({:sample_patch, patch}, _from, state), do: {:reply, :ok, %{state | sample_patch: patch}}
 
@@ -26,22 +44,66 @@ defmodule SymphonyControl.AuthDbFixture do
       sample = state.agent |> SymphonyControl.AuthDbFixture.sample_clock() |> Map.put(:native_clock, self()) |> Map.merge(state.sample_patch)
       measured = System.monotonic_time()
 
-      case state.hold do
-        {^caller, owner, ref} ->
-          send(owner, {:clock_reply_held, ref, from, self()})
-          send(owner, {:clock_sample_measured, ref, from, self(), sample, measured})
+      matched = hold_match?(state.hold, caller)
+      hits = state.hits + if(matched, do: 1, else: 0)
+      state = %{state | hits: hits}
 
-          receive do
-            {:release_clock, ^ref} -> :ok
-          after
-            1800 -> :ok
-          end
+      sample = project_held_sample(state.hold, hits, sample)
+
+      case state.hold do
+        {target, owner, ref} when matched ->
+          hold_selected(target, hits, owner, ref, from, sample, measured)
 
         _ ->
           :ok
       end
 
       {:reply, sample, state}
+    end
+
+    defp hold_selected(target, hits, owner, ref, from, sample, measured) do
+      if hold_hit?(target, hits) do
+        if is_tuple(target) and tuple_size(target) == 5, do: Process.send_after(self(), {:release_clock, ref}, 100)
+        hold_reply(owner, ref, from, sample, measured)
+      end
+    end
+
+    defp hold_match?({caller, _, _}, caller), do: true
+
+    defp hold_match?({{:stack, module, function, _nth}, _, _}, caller) do
+      {:current_stacktrace, stack} = Process.info(caller, :current_stacktrace)
+      Enum.any?(stack, fn {m, f, _, _} -> m == module and f == function end)
+    end
+
+    defp hold_match?({{:stack, module, function, nth, _expiry}, owner, ref}, caller), do: hold_match?({{:stack, module, function, nth}, owner, ref}, caller)
+    defp hold_match?(_, _), do: false
+    defp hold_hit?({:stack, _, _, nth}, hits), do: hits == nth
+    defp hold_hit?({:stack, _, _, nth, _}, hits), do: hits == nth
+    defp hold_hit?(_, _hits), do: true
+
+    defp project_held_sample({{:stack, _, _, nth, expiry}, _, _}, nth, sample) do
+      delta = expiry - 20 - sample.utc_ms
+
+      %{
+        sample
+        | utc_ms: sample.utc_ms + delta,
+          monotonic_ms: sample.monotonic_ms + delta,
+          native_anchor: System.monotonic_time()
+      }
+    end
+
+    defp project_held_sample(_, _, sample), do: sample
+
+    defp hold_reply(owner, ref, from, sample, measured) do
+      producer = self()
+      send(owner, {:clock_reply_held, ref, from, producer})
+      send(owner, {:clock_sample_measured, ref, from, producer, sample, measured})
+
+      receive do
+        {:release_clock, ^ref} -> send(owner, {:clock_reply_released, ref, System.monotonic_time()})
+      after
+        1800 -> :ok
+      end
     end
   end
 
@@ -270,11 +332,52 @@ defmodule SymphonyControl.AuthDbFixture do
         :ok
 
       System.monotonic_time(:millisecond) >= deadline ->
-        raise "owned fixture barrier timed out"
+        # The predicate may have changed while this process waited between
+        # its sample and the deadline read. Preserve condition-first polling;
+        # this never changes a production request or lifetime deadline.
+        if condition.(), do: :ok, else: raise("owned fixture barrier timed out")
 
       true ->
         Process.sleep(2)
         await_until!(condition, deadline)
     end
+  end
+
+  defmodule IdentityReadAuthorizer do
+    @moduledoc false
+    alias SymphonyControl.Auth.Authorizer
+
+    def authorize(actor, action) do
+      with :ok <- Authorizer.authorize(actor, action) do
+        {owner, ref} = Application.fetch_env!(:symphony_elixir, :owned_identity_read_barrier)
+        send(owner, {:identity_read_held, ref, self(), self()})
+
+        receive do
+          {:release_identity, ^ref} -> :ok
+        after
+          1800 -> {:error, :dependency_unavailable}
+        end
+      end
+    end
+  end
+
+  def hold_identity_read!(_f) do
+    # The real RuntimeIdentity.read waits after production authorization and
+    # before its snapshot. This trusted fixture binding works under coverage
+    # without loading/replacing any covered production bytecode.
+    ref = make_ref()
+    keys = [:runtime_identity_authorizer, :owned_identity_read_barrier]
+    prior = for key <- keys, do: {key, Application.fetch_env(:symphony_elixir, key)}
+    Application.put_env(:symphony_elixir, :owned_identity_read_barrier, {self(), ref})
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, IdentityReadAuthorizer)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      Enum.each(prior, fn
+        {key, :error} -> Application.delete_env(:symphony_elixir, key)
+        {key, {:ok, value}} -> Application.put_env(:symphony_elixir, key, value)
+      end)
+    end)
+
+    ref
   end
 end

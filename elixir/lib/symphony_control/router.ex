@@ -8,7 +8,7 @@ defmodule SymphonyControl.Router do
 
   use Plug.Router
 
-  alias SymphonyControl.Auth.{Authenticate, Config, Controller, HttpBody, Routes}
+  alias SymphonyControl.Auth.{Access, Authenticate, Authorizer, Config, Controller, HttpBody, RequestContext, Routes}
   alias SymphonyControl.ProjectReadController
   alias SymphonyElixirWeb.ControlHealthController
 
@@ -30,16 +30,40 @@ defmodule SymphonyControl.Router do
 
   @impl true
   def call(conn, opts) do
-    cfg = trusted_config(Keyword.get(opts, :auth))
-    conn = conn |> put_resp_header("cache-control", "no-store") |> put_private(:control_auth, cfg) |> Authenticate.call(Authenticate.init([]))
-    route = Map.get(auth_paths(cfg), conn.request_path)
+    deadline = RequestContext.deadline()
+    previous = Process.put({Authorizer, :deadline}, deadline)
+    private_keys = [{Access, :validity}, {SymphonyControl.Auth.Eligibility, :receipt}]
+    prior_private = for key <- private_keys, do: {key, Process.delete(key)}
+    conn = put_private(conn, :control_deadline, deadline)
+    conn = register_before_send(conn, &final_private_response/1)
 
-    cond do
-      conn.halted -> conn
-      is_nil(route) -> super(conn, opts)
-      true -> auth_route(conn, route)
+    try do
+      cfg = trusted_config(Keyword.get(opts, :auth))
+      conn = conn |> put_resp_header("cache-control", "no-store") |> put_private(:control_auth, cfg) |> Authenticate.call(Authenticate.init([]))
+      route = Map.get(auth_paths(cfg), conn.request_path)
+
+      cond do
+        conn.halted -> conn
+        is_nil(route) -> super(conn, opts)
+        true -> auth_route(conn, route)
+      end
+    after
+      if previous, do: Process.put({Authorizer, :deadline}, previous), else: Process.delete({Authorizer, :deadline})
+      Enum.each(prior_private, fn {key, value} -> if value, do: Process.put(key, value), else: Process.delete(key) end)
     end
   end
+
+  defp final_private_response(%{status: status, assigns: %{current_actor: actor}, private: %{control_auth: %Config{} = cfg, control_deadline: deadline}} = conn)
+       when status in 200..299 and not is_nil(actor) do
+    if Access.deliverable?(cfg, actor, deadline) do
+      conn
+    else
+      {status, code} = if RequestContext.timely?(deadline), do: {403, "forbidden"}, else: {503, "dependency_unavailable"}
+      %{conn | status: status, resp_body: Jason.encode!(%{error: code})}
+    end
+  end
+
+  defp final_private_response(conn), do: conn
 
   defp trusted_config(%Config{} = cfg) do
     with false <- Application.get_env(:symphony_elixir, :control_auth_status) == :invalid,

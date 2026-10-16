@@ -1,6 +1,41 @@
+## PR99 freshness-contract stage — saved, mandatory gates blocked
+
+Owner-approved49999ms interpretation: observation must still be <50000ms at the
+actual final decision. Exact49999/50000/50001 product-predicate tests, measured
+real HTTPS49000 cache hit/no renewal and held49999 crossing denial are retained.
+Canonical design/plan are unchanged; this is explicit owner-approved test scope.
+Admission: https://github.com/pupkinson/SymphonyNext/issues/33#issuecomment-6153858886
+
+Current combined148/0; exact related446/1 (unchanged login-begin positive refusal,
+cause UNKNOWN). Standard make NOT_RUN while related is RED; no current full
+coverage/Dialyzer or all-gates claim. Code/source/patch/evidence saved, NO_NEW_HEAD.
+Authdisabled/activationfalse; independent review NOT_RUN, findings still OPEN.
+See docs/engineering/authentik-project-access.md for exact inputs, first failures,
+budget lineage and cleanup limits. All preceding report text is retained as history.
+
+---
+
+> PR99 integration continuation: mandatory gates remain **NOT GREEN**; no new HEAD was published. Exact back-channel status regressions, raw key metadata and initial Repo handoff controls are retained. Current failures, UNKNOWN standard-make interruption and cleanup limits are in [the engineering report](docs/engineering/authentik-project-access.md). Auth activation remains false; independent review is NOT_RUN. Previous reports below remain dated history.
+
+> Task4 T4-R1–R6 repair candidate: auth stays disabled; mandatory gates and independent verdict are pending.
+> Local session/credential bounds now accompany current Store reads through final protected response and callback cookie decisions.
+> Signed logout retains exact millisecond/native bounds inside the existing atomic transaction; invalid handler requests use400.
+> Cache capacity includes in-flight reservations, and a lifecycle owner preserves prior authorizers across Access restarts.
+> LOGIN still returns to `/`; post-logout keeps the separate exact operator HTTPS URI, including non-root paths.
+> See [the current repair evidence and limitations](docs/engineering/authentik-project-access.md).
+
 # Symphony Next — пакет ТЗ и задач v0.5
 
 Цель: самостоятельно размещённый на Coolify многопроектный оркестратор автономной разработки, с Authentik, собственным трекером, несколькими агентами/моделями, мобильным управлением и ChatGPT/MCP. Существующий DF Assistant не меняется.
+
+## Task4: current access and logout — source only
+
+Task4 adds current local project/platform permissions, a bounded IdP-observation
+cache, session-bound CSRF and local/RP/signed back-channel logout. Owned real HTTPS
+and PostgreSQL fixtures exercise login, permitted reads and revocation. Production
+activation remains false; installed Authentik semantics, browser/two-tab revocation,
+UID/ingress isolation and trusted/native release gates belong to Task5.
+See [the engineering report](docs/engineering/authentik-project-access.md).
 
 ## Состав
 - SPECIFICATION.md — полная согласованная редакция требований, включая голосовые решения об автономном release и диагностике.
@@ -161,3 +196,135 @@ Task4 eligibility/logout и Task5 реальный Authentik/HTTPS/browser, prod
 independent exact-HEAD review и trusted/native/live acceptance остаются отдельными gates.
 Это не полный SN005 и не выпуск. Предыдущие отчёты выше сохранены как история.
 Сценарий, команды и ограничения: [Task3 engineering report](docs/engineering/authentik-project-access.md).
+
+
+## Task4 R6/N1: non-destructive effective authorizer (2026-10-14)
+
+The two Application environment authorizer values remain operator/default
+configuration. Managed authentication keeps its active generation and writer
+inside AuthorizerBindings; Projects and RuntimeIdentity select their effective
+authorizer through its bounded resolver. Install, Access restart, release and
+component shutdown do not overwrite either base value. Direct trusted put/delete
+changes the base value, which becomes effective after confirmed managed release;
+it does not grant new managed authority while the binding is active.
+
+Unknown or failed managed lookup denies. A lifecycle sentinel identifies the
+component, not a permission; unexpected component loss remains closed until
+explicit new lifecycle startup. Actor/session/current membership checks and
+production activation remain unchanged. Explicit legacy fixture callbacks retain
+their base-authorizer behavior.
+
+The owner-authorized causal baseline demonstrated the old lookup/write loss
+(6 failures); scoped new lifecycle controls passed16/0 before this candidate's
+final suites. Full results and exact publication are recorded in owning #33.
+This is an author candidate pending independent source review and runtime
+qualification, not Task5 admission or release approval. Historical A148/1 and
+B020 remain failed with unresolved causes. The existing specification, PR79/82/84,
+autonomy within its contract and multi-server task addressing remain in force.
+
+## R6/N1 continuation: identity-barrier fixture compatibility (2026-10-14)
+
+The owner approved a test-only adaptation of the two runtime-identity lifetime
+regressions to separate operator defaults from managed authorizer selection.
+These trusted fixtures retain Task4 and pass the exact external capture
+`Eligibility.confirm/4`; the binding owner is deliberately inactive. The real
+HTTPS observer, current local grants, receipt, Validity and final HTTP guard stay
+in use. The existing wrapper delegates real authorization before holding the
+snapshot. This lifetime coverage is separate from unchanged managed N1/R6 tests.
+
+Prior exact-input related evidence was reused as compatibility RED, not a new
+security failure. Scoped controls passed24/0; full continuation qualification
+and any later result-only documentation seal are recorded in owning #33.
+Production source is byte-frozen to158529de. Historical A148/1 and B020 remain
+unresolved; independent review and release/Task5 gates remain separate.
+
+Continuation result-only seal: full owning T1 67/1 exit2 (new frozen standalone
+transport failure, HTTP status not obtained); exact related T2 465/0 exit0.
+T3 NOT_RUN_T1_RED; broader lint retains10 frozen remarks. Bootstrap12/MCP11 and
+static/body checks are separate author evidence. SOURCE_SNAPSHOT_ONLY,
+INDEPENDENT_REVIEW_PENDING; no release or historical failure closure.
+
+
+2026-10-15 — T4-N2/P1 + STYLE author candidate: effective authorizer decisions
+carry a unique lifecycle revision through raw selection and callback acceptance
+in Projects/RuntimeIdentity. Callbacks keep their original request process and
+HTTP deadline; lookup250ms remains a separate delivery bound. Operator defaults,
+legacy/graceful lifecycle, current grants and protected identity controls remain.
+Fresh final T1 92/0, T2 490/0, ordinary make856/0/6 unchanged skips with100%
+coverage/Dialyzer0 errors, strict lint and Python12/11 passed. First make failed
+coverage99.82%; cycle2 removed duplicate inner callback catches, retaining the
+original consumer error boundaries. First failures and historical results remain.
+Prepared-cache isolation was breached during early setup; pre-bytes and some old
+exit/reap observations remain UNKNOWN. Author GREEN does not erase that hold.
+Independent review of the new exact HEAD is required. NOT_ACCEPTED_FOR_TASK5 /
+NOT_RELEASE_APPROVAL / DO_NOT_MERGE. Full causal matrix, style-only equivalence,
+input/output seals and limits are appended to docs/engineering/authentik-project-access.md.
+
+
+2026-10-15 — R6-TIME author candidate adds a fresh closing native-time check after
+complete binding-state validation. Selection retains its original lookup limit;
+callback acceptance retains only the original HTTP deadline, with nil context
+unchanged. Descriptor/lifecycle/defaults and both consumers are byte-preserved.
+Actual direct RuntimeIdentity/Projects causal controls: old4 semantic RED plus4
+positive controls; fixed8/0. Standard native regressions run without the one-off
+observer. Fresh T1 98/0,T2 496/0,ordinary make862/0/6 with100% coverage and
+Dialyzer0,strict lint,T4 Python12/11 passed. Full causal times/diff/source/limits
+and first failures are appended to docs/engineering/authentik-project-access.md.
+Prior prepared-cache process hold and UNKNOWN remain; current preparation004
+also had inherited HOME despite own cache paths, then corrected/rechecked.
+This is not independent acceptance or Task5/release approval. DO_NOT_MERGE.
+
+### PR99: B/C test-harness candidate, 2026-10-15
+
+Denis explicitly authorized a prospective split of the staged TLS test contract:
+original1500ms deadline/no late POST and independent full real TLS5000ms controls,
+including setup800. FIFO helper cleanup now uses real Python readiness, one3000ms
+cleanup budget and explicit child wait/reap. Product code remains unchanged.
+Author results: scoped11/0, T1 98/0, T2 503/0, Python12/0 and11/0.
+Ordinary make FAILED at five new Credo findings; coverage/Dialyzer NOT_RUN.
+This is WIP / NOT_ACCEPTED / DO_NOT_MERGE; independent B/C review is required.
+[Contract mapping and evidence](docs/engineering/authentik-project-access.md).
+Historical run2 remains FAILED, A503 remains UNKNOWN; auth remains disabled.
+
+PR99 corrective source audit (2026-10-15): C's pre-ready remaining-budget sample
+can become stale while waiting for Python startup. The observed matrix passed,
+but cleanup<=3000 is NOT_ESTABLISHED for delayed ready. A docs-only correction
+records this open risk; two code cycles are exhausted. See engineering appendix.
+
+
+### PR99 C/quality — 2026-10-15T20:03:26Z
+
+Owner-authorized test-only follow-up to025f45f: one immutable3000ms FIFO helper
+endpoint covers real supervisor readiness, launch delivery, child cancellation/
+wait, Port terminal receipts and final FIFO removal. Eight added C controls join
+the old5 C/6 B cases. B changes are only equivalent helper extraction/line wrap;
+Store/TokenVault assertions and every product byte remain frozen. Five known
+Credo findings are cleared (fresh strict lint0).
+
+Observed: scoped19/0, T1 98/0, T2 511/0; standard make main0 with877/0,6 skips,
+100% coverage,Dialyzer0/0/0; Python12/0 and11/0. **T3 CLEANUP_HOLD:** outer
+supervisor SIGKILL-contained and waited two own residual shells; cause UNKNOWN.
+The deliberate C Port-loss case is NONQUALIFIED/terminal_unknown at3001ms,
+not a successful in-budget writer/reap. No blanket C acceptance from test count.
+
+Tested executable seal `3d77637fb9db761a3d29d1e21cb768aa086e73669b8850293fb781dd72cc4b49`. Detailed protocol, delayed-supervisor RED,
+matrix, exact argv/UTC/exits/hashes and limits are appended to
+[engineering evidence](docs/engineering/authentik-project-access.md).
+A_UNKNOWN/historical run2 FAILED and prior process/cache/source conclusions
+remain. Independent combined B/C/style review and later separate runtime
+qualification required. Auth disabled;
+NOT_ACCEPTED / NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.
+
+
+### PR99 B-SNAPSHOT-01 checkpoint — 2026-10-16
+
+Staged TLS evidence now explicitly describes the complete post-return snapshot;
+no state at refusal is reconstructed from counts or millisecond timestamps.
+Semantic old-label RED1/1, new unit6/0, sealed scoped25/0, T1 98/0, T2 517/0;
+ordinary make MAIN0/883tests/0failures/6skips/100%coverage/Dialyzer0, but
+T3_CLEANUP_HOLD (two new own sh required SIGKILL/actual wait-9, cause UNKNOWN).
+Post-runtime Python12/0+11/0. Product, fixture, C, A and quality inputs frozen.
+Full timeline/overlay/argv/seals/limits in the engineering appendix. Independent
+review and separate runtime qualification remain required. Historical A_UNKNOWN,
+run2 FAILED/process-cache/HOME004 holds remain. Auth disabled; NOT_ACCEPTED /
+NOT_ACCEPTED_FOR_TASK5 / NOT_RELEASE_APPROVAL / DO_NOT_MERGE.

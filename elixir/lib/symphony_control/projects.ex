@@ -14,6 +14,7 @@ defmodule SymphonyControl.Projects do
   """
 
   alias Ecto.Changeset
+  alias SymphonyControl.Auth.AuthorizerBindings
   alias SymphonyControl.{Error, Project, Repo}
 
   @db_options [timeout: 500, queue: false, log: false]
@@ -119,12 +120,8 @@ defmodule SymphonyControl.Projects do
   defp valid_text?(_value), do: false
 
   defp authorize(actor, action, scope) do
-    authorizer = Application.get_env(:symphony_elixir, :project_authorizer)
-
-    with module when is_atom(module) and not is_nil(module) <- authorizer,
-         :ok <- module.authorize(actor, action, scope) do
-      :ok
-    else
+    case AuthorizerBindings.authorize(:project_authorizer, [actor, action, scope]) do
+      :ok -> :ok
       _denied -> error(:forbidden)
     end
   rescue

@@ -3,7 +3,7 @@ defmodule SymphonyControl.StandaloneHttpTest do
 
   alias __MODULE__.OperatorAuthorizer
   alias SymphonyControl.Auth.{Access, Clock, Config, OidcFixture, RateLimiter}
-  alias SymphonyControl.{AuthHttpFixture, Health, Repo}
+  alias SymphonyControl.{AuthDbFixture, AuthHttpFixture, Health, Repo}
 
   setup_all do
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
@@ -49,10 +49,97 @@ defmodule SymphonyControl.StandaloneHttpTest do
     assert %{rows: [[nil]]} = Repo.query!("SELECT to_regclass('schema_migrations')", [])
   end
 
+  @tag :continuation_readiness
+  test "standalone startup waits for an actual initial connection before returning" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    owner = self()
+    ref = make_ref()
+
+    callback = fn _connection ->
+      send(owner, {:connection_held, ref, self()})
+
+      receive do
+        {:release_connection, ^ref} -> :ok
+      after
+        1000 -> :ok
+      end
+    end
+
+    starter =
+      Task.async(fn ->
+        {:ok, supervisor} = SymphonyControl.Application.start_link(enabled: true, repo: Keyword.put(f.repo, :after_connect, callback), http: [port: 0])
+        send(owner, {:standalone_started, ref, supervisor})
+
+        receive do
+          {:stop_owned_startup, ^ref} -> Supervisor.stop(supervisor)
+        after
+          2000 -> Supervisor.stop(supervisor)
+        end
+      end)
+
+    held =
+      for _ <- 1..4 do
+        assert_receive {:connection_held, ^ref, connection}, 1000
+        connection
+      end
+
+    try do
+      refute_receive {:standalone_started, ^ref, _supervisor}, 50
+      Enum.each(held, &send(&1, {:release_connection, ref}))
+      assert_receive {:standalone_started, ^ref, supervisor}, 1000
+      assert Process.alive?(supervisor)
+      assert Health.readiness() == %{ready: true, database: true, schema: true}
+    after
+      Enum.each(held, &send(&1, {:release_connection, ref}))
+      send(starter.pid, {:stop_owned_startup, ref})
+      Task.await(starter, 2000)
+    end
+  end
+
   test "default standalone startup remains Repo-only" do
     start_control(http: nil)
     assert Health.live?()
     assert [{Repo, _, :supervisor, _}] = Supervisor.which_children(SymphonyControl.Application)
+    current = Process.whereis(SymphonyControl.Application)
+    assert {:error, {:already_started, ^current}} = SymphonyControl.Application.start_link(enabled: true)
+    assert Process.whereis(SymphonyControl.Application) == current
+  end
+
+  test "initial missing connection remains bounded live and unready" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    options = Keyword.put(f.repo, :socket_dir, f.repo[:socket_dir] <> "-owned-missing")
+    started = System.monotonic_time(:millisecond)
+    start_supervised!({SymphonyControl.Application, enabled: true, repo: options, http: [port: 0]})
+    assert System.monotonic_time(:millisecond) - started < 1000
+    assert Health.live?()
+    assert Health.readiness() == %{ready: false, database: false, schema: false}
+    assert request(port(), "/auth/login").status == 403
+    identity_started = System.monotonic_time(:millisecond)
+
+    try do
+      assert request(port(), "/api/v1/control/identity").status == 403
+    rescue
+      error in Req.TransportError ->
+        reason = if error.reason in [:closed, :timeout, :econnrefused, :econnreset, :enetunreach, :nxdomain], do: error.reason, else: :UNKNOWN
+        elapsed = System.monotonic_time(:millisecond) - identity_started
+        IO.puts("T1_MISSING_DB error_class=Req.TransportError reason=#{reason} elapsed_ms=#{elapsed} status=NOT_OBTAINED client_stage=request_call listener_stage=NOT_OBSERVED")
+        reraise error, __STACKTRACE__
+    end
+  end
+
+  test "missing canonical Repo during the initial probe cannot crash the startup owner" do
+    f = AuthDbFixture.start!()
+    stop_supervised!(SymphonyControl.Application)
+    options = Keyword.put(f.repo, :name, :owned_noncanonical_repo)
+    start_supervised!({SymphonyControl.Application, enabled: true, repo: options, http: [port: 0]})
+    assert is_pid(Process.whereis(:owned_noncanonical_repo))
+    assert Process.whereis(Repo) == nil
+    assert Health.live?()
+    assert Health.readiness() == %{ready: false, database: false, schema: false}
+    assert request(port(), "/auth/login").status == 403
+    assert request(port(), "/api/v1/control/identity").status == 403
   end
 
   test "only explicit server auth opts start auth workers after Repo; env config cannot activate" do
@@ -85,7 +172,8 @@ defmodule SymphonyControl.StandaloneHttpTest do
     end
 
     start_control(auth: [config: cfg, eligibility_confirm: confirm])
-    assert length(Supervisor.which_children(SymphonyControl.Application)) == 5
+    assert length(Supervisor.which_children(SymphonyControl.Application)) == 7
+    assert is_pid(Process.whereis(SymphonyControl.Auth.Eligibility))
     assert is_pid(Process.whereis(Clock))
     assert is_pid(Process.whereis(Access))
     assert is_pid(Process.whereis(RateLimiter))
@@ -255,6 +343,138 @@ defmodule SymphonyControl.StandaloneHttpTest do
     refute Process.alive?(restarted)
     assert Process.whereis(Repo) == nil
     assert {:error, :econnrefused} = :gen_tcp.connect({127, 0, 0, 1}, bound_port, [], 500)
+  end
+
+  @tag :n1_lifecycle
+  test "production supervisor binding lifetime preserves raw missing nil and explicit defaults" do
+    alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+    keys = [:project_authorizer, :runtime_identity_authorizer]
+    saved = for key <- keys, do: {key, Application.fetch_env(:symphony_elixir, key)}
+
+    on_exit(fn ->
+      Enum.each(saved, fn
+        {key, :error} -> Application.delete_env(:symphony_elixir, key)
+        {key, {:ok, value}} -> Application.put_env(:symphony_elixir, key, value)
+      end)
+    end)
+
+    provider = OidcFixture.start!()
+    cfg = OidcFixture.config(provider)
+
+    for base <- [:error, {:ok, nil}, {:ok, OperatorAuthorizer}] do
+      Enum.each(keys, fn key ->
+        case base do
+          :error -> Application.delete_env(:symphony_elixir, key)
+          {:ok, value} -> Application.put_env(:symphony_elixir, key, value)
+        end
+      end)
+
+      start_control(auth: [config: cfg])
+      binding = :sys.get_state(AuthorizerBindings)
+      assert binding.owner == Process.whereis(SymphonyControl.Application)
+
+      Enum.each(keys, fn key ->
+        assert Application.fetch_env(:symphony_elixir, key) == base
+        assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+      end)
+
+      for _ <- 1..2 do
+        old = Process.whereis(Access)
+        Process.exit(old, :kill)
+        AuthDbFixture.await!(fn -> is_pid(Process.whereis(Access)) and Process.whereis(Access) != old end)
+        assert Access.configuration(RequestContext.deadline()) == {:ok, cfg}
+        current = :sys.get_state(AuthorizerBindings)
+        assert current.owner == binding.owner
+        assert current.generation == binding.generation
+
+        Enum.each(keys, fn key ->
+          assert Application.fetch_env(:symphony_elixir, key) == base
+          assert AuthorizerBindings.resolve(key) == {:ok, Authorizer}
+        end)
+
+        assert request(port(), "/api/v1/control/identity").status == 403
+      end
+
+      stop_supervised!(SymphonyControl.Application)
+
+      Enum.each(keys, fn key ->
+        assert Application.fetch_env(:symphony_elixir, key) == base
+
+        assert AuthorizerBindings.resolve(key) ==
+                 {:ok,
+                  case(base,
+                    do: (
+                      :error -> nil
+                      {:ok, value} -> value
+                    )
+                  )}
+      end)
+    end
+  end
+
+  @tag :n2
+  test "N2 owning supervisor graceful Access retirement and restart fence the inactive reply" do
+    alias SymphonyControl.Auth.{Authorizer, AuthorizerBindings, RequestContext}
+    alias SymphonyControl.RuntimeIdentity
+    provider = OidcFixture.start!()
+    cfg = OidcFixture.config(provider)
+    Application.put_env(:symphony_elixir, :runtime_identity_authorizer, OperatorAuthorizer)
+    start_control(auth: [config: cfg])
+    helper = Process.whereis(AuthorizerBindings)
+    active = :sys.get_state(helper)
+    assert active.owner == Process.whereis(SymphonyControl.Application)
+    assert active.writer == Process.whereis(Access)
+    assert :ok = Supervisor.terminate_child(SymphonyControl.Application, Access)
+    inactive = :sys.get_state(helper)
+    assert inactive.phase == :inactive
+    refute inactive.revision == active.revision
+    assert {:ok, _} = RuntimeIdentity.read(:operator)
+    :ok = :sys.suspend(helper)
+    started = System.monotonic_time(:millisecond)
+
+    caller =
+      Task.async(fn ->
+        Process.put({Authorizer, :deadline}, RequestContext.deadline())
+        RuntimeIdentity.read(:operator)
+      end)
+
+    AuthDbFixture.await!(
+      fn ->
+        {:messages, messages} = Process.info(helper, :messages)
+        Enum.any?(messages, &match?({:"$gen_call", _, {:resolve, _}}, &1))
+      end,
+      100
+    )
+
+    :erlang.suspend_process(caller.pid)
+    :ok = :sys.resume(helper)
+
+    try do
+      AuthDbFixture.await!(
+        fn ->
+          {:messages, messages} = Process.info(caller.pid, :messages)
+          Enum.any?(messages, &match?({_, {:ok, :base, _}}, &1))
+        end,
+        100
+      )
+
+      assert {:ok, access} = Supervisor.restart_child(SymphonyControl.Application, Access)
+      assert Access.configuration(RequestContext.deadline()) == {:ok, cfg}
+      current = :sys.get_state(helper)
+      assert Process.whereis(AuthorizerBindings) == helper
+      assert current.incarnation == active.incarnation
+      assert current.writer == access
+      refute current.generation == active.generation
+      refute current.revision == inactive.revision
+      :erlang.resume_process(caller.pid)
+      assert Task.await(caller, 1000) == {:error, :forbidden}
+      assert System.monotonic_time(:millisecond) - started < 250
+      assert AuthorizerBindings.resolve(:runtime_identity_authorizer) == {:ok, Authorizer}
+      assert RuntimeIdentity.read(:operator) == {:error, :forbidden}
+      assert Application.fetch_env(:symphony_elixir, :runtime_identity_authorizer) == {:ok, OperatorAuthorizer}
+    after
+      :sys.resume(helper)
+    end
   end
 
   defp start_control(opts \\ []) do

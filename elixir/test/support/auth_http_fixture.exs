@@ -1,7 +1,7 @@
 defmodule SymphonyControl.AuthHttpFixture do
   @moduledoc false
   require ExUnit.Assertions
-  alias SymphonyControl.Auth.{Access, Clock, OidcFixture, RateLimiter, Store}
+  alias SymphonyControl.Auth.{Access, AuthorizerBindings, Clock, Eligibility, OidcFixture, RateLimiter, Store}
   alias SymphonyControl.{AuthDbFixture, Repo, Router}
 
   defmodule LoginClock do
@@ -85,6 +85,7 @@ defmodule SymphonyControl.AuthHttpFixture do
     port = port!()
     origin = "https://localhost:#{port}"
     cfg = config(provider, db, origin, opts)
+    Agent.update(provider.state, &%{&1 | opts: Keyword.put(&1.opts, :rp_post_logout_uri, cfg.post_logout_uri)})
     db = %{db | config: cfg}
     install_authorizers(cfg, opts)
     clock = AuthDbFixture.clock(db)
@@ -145,15 +146,54 @@ defmodule SymphonyControl.AuthHttpFixture do
   defp start_auth(cfg, provider, opts) do
     confirm = fn config, actor, clock, deadline -> wire_confirm(provider, config, actor, clock, deadline, opts) end
 
-    access_opts =
-      if Keyword.get(opts, :default_access) do
-        [config: cfg]
-      else
-        [config: cfg, eligibility_confirm: Keyword.get(opts, :eligibility_confirm, confirm)]
-      end
+    access_opts = access_options(cfg, confirm, opts)
+
+    if Keyword.get(opts, :task4) do
+      observer = fn config, material, deadline -> observe(provider, config, material, deadline) end
+      binding = %{version: "synthetic-wire-v1", evidence: provider.observation_evidence}
+      ExUnit.Callbacks.start_supervised!({Eligibility, config: cfg, observer: observer, observation_binding: binding})
+    end
+
+    if Keyword.has_key?(access_opts, :eligibility_confirm),
+      do: ExUnit.Callbacks.start_supervised!({AuthorizerBindings, managed: false})
 
     if Code.ensure_loaded?(Access), do: ExUnit.Callbacks.start_supervised!({Access, access_opts})
     if Code.ensure_loaded?(RateLimiter), do: ExUnit.Callbacks.start_supervised!({RateLimiter, []})
+  end
+
+  defp access_options(cfg, confirm, opts) do
+    cond do
+      Keyword.get(opts, :task4) == true and Keyword.has_key?(opts, :eligibility_confirm) ->
+        callback = Keyword.fetch!(opts, :eligibility_confirm)
+        if callback != (&Eligibility.confirm/4), do: raise(ArgumentError, "invalid_task4_fixture_confirmation")
+        [config: cfg, eligibility_confirm: callback]
+
+      Keyword.get(opts, :default_access, false) or Keyword.get(opts, :task4, false) ->
+        [config: cfg]
+
+      true ->
+        [config: cfg, eligibility_confirm: Keyword.get(opts, :eligibility_confirm, confirm)]
+    end
+  end
+
+  def observe(provider, cfg, material, deadline) do
+    headers = [
+      {"authorization", "Bearer " <> material.tokens.access.token},
+      {"x-fixture-subject", material.actor.subject},
+      {"x-fixture-sid", Jason.encode!(material.sid)},
+      {"x-fixture-resource", cfg.resource_id}
+    ]
+
+    response =
+      Req.get!(provider.origin <> "/eligibility",
+        headers: headers,
+        retry: false,
+        redirect: false,
+        receive_timeout: max(deadline - System.monotonic_time(:millisecond), 1),
+        connect_options: [timeout: max(deadline - System.monotonic_time(:millisecond), 1), transport_opts: [cacerts: [provider.ca]]]
+      )
+
+    if response.status == 200, do: {:ok, response.body}, else: {:error, :forbidden}
   end
 
   defp wire_confirm(provider, cfg, actor, clock, deadline, opts) do
@@ -189,18 +229,37 @@ defmodule SymphonyControl.AuthHttpFixture do
   @spec login!(map(), keyword()) :: map()
   def login!(f, opts \\ []) do
     begin = get(f, "/auth/login", opts)
-    ExUnit.Assertions.assert(begin.status == 303, "GET login must return committed-flow redirect")
+
+    ExUnit.Assertions.assert(
+      begin.status == 303,
+      if begin.status == 303 do
+        "GET login must return committed-flow redirect"
+      else
+        reason =
+          case begin.body do
+            %{"error" => reason} when reason in ["invalid_request", "forbidden", "dependency_unavailable", "rate_limited", "unknown_outcome"] -> reason
+            %{"error" => nil} -> "absent"
+            %{"error" => _} -> "unknown"
+            %{} -> "absent"
+            value when value in [nil, ""] -> "absent"
+            _ -> "unknown"
+          end
+
+        "GET login must return committed-flow redirect; status=#{begin.status} error=#{reason}"
+      end
+    )
+
     location = hd(Req.Response.get_header(begin, "location"))
     authorization = Req.get!(location, request_options(f))
     callback = hd(Req.Response.get_header(authorization, "location")) |> URI.parse()
-    flow = %{cookie: cookie(begin, "__Host-symphony-browser"), params: URI.decode_query(callback.query), response: begin}
+    flow = %{cookie: cookie(begin, "__Host-symphony-browser"), params: URI.decode_query(callback.query), response: begin, provider_cookie: cookie(authorization, "__Host-fixture-op")}
 
     if Keyword.get(opts, :phase) == :begin do
       flow
     else
       response = callback(f, flow: flow)
       ExUnit.Assertions.assert(response.status == 303, "callback must confirm local session")
-      %{cookie: cookie(response, "__Host-symphony-control"), response: response}
+      %{cookie: cookie(response, "__Host-symphony-control"), response: response, provider_cookie: flow.provider_cookie}
     end
   end
 

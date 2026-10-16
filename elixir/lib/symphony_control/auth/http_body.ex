@@ -8,13 +8,21 @@ defmodule SymphonyControl.Auth.HttpBody do
 
   @spec read(Plug.Conn.t(), integer()) :: {:ok, Plug.Conn.t()} | {:error, atom(), Plug.Conn.t()}
   def read(conn, deadline) do
+    case read_payload(conn, deadline) do
+      {:ok, _body, latest} -> {:ok, latest}
+      failure -> failure
+    end
+  end
+
+  @spec read_payload(Plug.Conn.t(), integer()) :: {:ok, binary(), Plug.Conn.t()} | {:error, atom(), Plug.Conn.t()}
+  def read_payload(conn, deadline) do
     # HTTP2 has a different drain/send-window contract. Bandit's existing
     # pipeline resets it without entering the body reader or response sender.
     require_http1!(conn)
 
     if protocol(conn) in [:"HTTP/1.0", :"HTTP/1.1"] do
       case framing(conn) do
-        {:ok, length} -> read_remaining(conn, length, 0, deadline)
+        {:ok, length} -> read_remaining(conn, length, 0, [], deadline)
         :error -> {:error, :invalid_request, close(conn)}
       end
     else
@@ -62,28 +70,28 @@ defmodule SymphonyControl.Auth.HttpBody do
     end
   end
 
-  defp read_remaining(conn, expected, received, deadline) do
+  defp read_remaining(conn, expected, received, chunks, deadline) do
     budget = RequestContext.remaining(deadline)
 
     if budget > 0 do
       # Matching length/read_length makes each CL read one bounded recv.
       size = min(max(expected - received, 1), 1024)
-      read_chunk(conn, expected, received, deadline, size, min(budget, 500))
+      read_chunk(conn, expected, received, chunks, deadline, size, min(budget, 500))
     else
       {:error, :dependency_unavailable, close(conn)}
     end
   end
 
-  defp read_chunk(conn, expected, received, deadline, size, timeout) do
+  defp read_chunk(conn, expected, received, chunks, deadline, size, timeout) do
     case read_body(conn, length: size, read_length: size, read_timeout: timeout) do
       {:ok, body, latest} ->
-        complete(latest, expected, received + byte_size(body), deadline)
+        complete(latest, expected, received + byte_size(body), [body | chunks], deadline)
 
       {:more, body, latest} ->
         total = received + byte_size(body)
 
         if total < expected and total <= @limit and byte_size(body) > 0 do
-          read_remaining(latest, expected, total, deadline)
+          read_remaining(latest, expected, total, [body | chunks], deadline)
         else
           {:error, :invalid_request, close(latest)}
         end
@@ -95,9 +103,9 @@ defmodule SymphonyControl.Auth.HttpBody do
     _, _ -> {:error, :dependency_unavailable, close(conn)}
   end
 
-  defp complete(latest, expected, total, deadline) do
+  defp complete(latest, expected, total, chunks, deadline) do
     if total == expected and total <= @limit and RequestContext.timely?(deadline),
-      do: {:ok, latest},
+      do: {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary(), latest},
       else: {:error, :invalid_request, close(latest)}
   end
 end

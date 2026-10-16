@@ -14,7 +14,7 @@ defmodule SymphonyControl.Auth.Authenticate do
     conn = assign(conn, :current_actor, nil)
 
     if protected?(conn) do
-      authenticate(conn, conn.private[:control_auth], RequestContext.deadline())
+      authenticate(conn, conn.private[:control_auth], conn.private[:control_deadline] || RequestContext.deadline())
     else
       conn
     end
