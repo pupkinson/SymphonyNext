@@ -1,5 +1,37 @@
 # GH102 update and rollback contract
 
+## GH60 receipt refresh — current correction, 16 October 2026
+
+Owner24h extension6222244874 retains1/3used candidates and2remaining, same
+writer/branch/PR103. New window16Oct18:34:56UTC to17Oct18:34:56UTC;
+source cutoff17Oct18:04:56UTC, final30min handoff. Previous windows/cycles,
+reviews, archives and nativeHOLDs remain history; no install/pilot admission.
+
+The existing writer replaces a comment receipt after each unique-comment GET,
+then reads labels. An interruption can preserve an older confirmed label receipt.
+Both confirmations must follow their own immutable comment intent; they need
+not follow one another. The updater now checks this partial order for mtime
+AND ctime. It retains individual same-FD/nonfuture/single-link/device checks,
+DELETE-intent-before-label, label-after-retained-hold and strictly newer comment
+reconciliation after a hold. Unknown/missing/stale proofs still HOLD.
+
+All301prior tests plus15new tests PASS (316total/0skips); prepared7REDs are
+permanent, plus a historical Review refresh and negative borrowed-label/pending
+DELETE/hold boundaries. Native real-writer16fixtures reproduce16oldHOLDs and
+16newPASSes with0second-invocation POST/DELETE; API doubles/device2065, not
+runtime2050 or agents. Full evidence and limits:
+[evidence/gh102-delivery-refresh.md](evidence/gh102-delivery-refresh.md).
+
+Packaging requires five explicit exact-HEAD PASS conditions: receipt_refresh,
+native_clock_domain,4285700019,4281361556,4281361568. No older review qualifies
+this correction. Build a NEW archive/private root stage; keep e92b75bf and all
+earlier packets/stages unchanged. Existing systemd identity, four-file7fa0ee
+predecessor, state-preserving admission/drain/rollback and disabled policy stay
+mandatory. New owner full-journal/native check may still HOLD at later gates;
+source tests do not attest their convergence. No source-stage installation.
+Earlier total intent->comment->label ordering descriptions below are history;
+this section supersedes only that inter-confirmation ordering assumption.
+
 ## Native clock-domain repair — 16 October 2026
 
 Owner admission6210951994 adds3candidates in the same writer/branch/PR103;

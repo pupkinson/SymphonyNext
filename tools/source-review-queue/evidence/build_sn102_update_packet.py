@@ -35,7 +35,7 @@ def build(source, output, previous, inputs):
     assert review['head'] == head and review['tree'] == tree
     assert review['independent'] is True and review['state'] == 'completed'
     assert review['result'] == 'no_major_findings'
-    assert review['conditions'] == {'native_clock_domain': 'PASS', '4285700019': 'PASS',
+    assert review['conditions'] == {'receipt_refresh': 'PASS', 'native_clock_domain': 'PASS', '4285700019': 'PASS',
                                     '4281361556': 'PASS', '4281361568': 'PASS'}
     assert re.fullmatch(r'https://github\.com/pupkinson/SymphonyNext/pull/103#issuecomment-[0-9]+', review['url'])
     assert sha((inputs / 'independent-review.md').read_bytes()) == review['report_sha256']
@@ -68,7 +68,7 @@ def build(source, output, previous, inputs):
                     updater_sha256=sha((packet / 'update_queue.py').read_bytes()), review=review)
     save(packet / 'manifest.json', manifest)
     for name in ('UPDATE.md', 'evidence/gh102-notification-journals.md',
-                 'evidence/gh102-clock-domains.md'):
+                 'evidence/gh102-clock-domains.md', 'evidence/gh102-delivery-refresh.md'):
         shutil.copyfile(base / name, packet / Path(name).name)
     shutil.copytree(inputs, packet / 'qualification')
     static = packet / 'qualification/predecessor'
@@ -109,7 +109,7 @@ def build(source, output, previous, inputs):
     (packet / 'ROOT-PACKAGE-STATUS.md').write_text(
         '# Source reviewed; NOT INSTALLED\n\n'
         + f'HEAD `{head}`, TREE `{tree}`.\n\n'
-        + 'Independent exact-head report and explicit three-P1 verdicts are in qualification.\n'
+        + 'Independent exact-head report and all five explicit PASS conditions are in qualification.\n'
         + 'Only the exact four-file7fa0ee predecessor is supported. Disabled executor policy.\n'
         + 'Offline actual-byte check/apply/repeat/rollback/repeat passed with a systemd double.\n'
         + 'This is not a native transition, native rollback, live pilot or owner install admission.\n'

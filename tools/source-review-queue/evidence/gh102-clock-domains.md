@@ -1,5 +1,10 @@
 # GH102 native clock-domain repair — 16 October 2026
 
+Historical clock-stage evidence below is preserved. The later GH60 correction
+replaces total intent->comment->label file order with intent-before-both;
+individual coherence, application clocks and strict post-hold proof stay intact.
+Current contract: [gh102-delivery-refresh.md](gh102-delivery-refresh.md).
+
 Admission6210951994: same writer6185510750, branch feat/sn102-executor-profile-20261015,
 base efa75ed8674534d28be9a0b318a7d40108fe6658. New3candidates,0handed at
 preparation. Start07:57:45UTC/source cutoff09:27:45/handoff09:57:45UTC.

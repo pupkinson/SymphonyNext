@@ -430,8 +430,13 @@ class Updater:
 
         for _value, metadata in records:
             coherent(metadata)
-        require(intended.st_mtime_ns <= received.st_mtime_ns <= retired.st_mtime_ns
-                and intended.st_ctime_ns <= received.st_ctime_ns <= retired.st_ctime_ns
+        # A later unique-comment GET replaces received before reading labels.
+        # Interruption there preserves an older, independently confirmed label.
+        # Both proofs must follow this intent; neither must follow the other.
+        require(intended.st_mtime_ns <= received.st_mtime_ns
+                and intended.st_mtime_ns <= retired.st_mtime_ns
+                and intended.st_ctime_ns <= received.st_ctime_ns
+                and intended.st_ctime_ns <= retired.st_ctime_ns
                 and confirmed_at <= wall_now,
                 'NOTIFICATION_FILE_CHRONOLOGY')
         label_intent = directory / 'label-remove-intent.json'

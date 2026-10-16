@@ -1,5 +1,10 @@
 # Notification contract audit BEFORE patch — P1 4285700019
 
+Current GH60 correction: [gh102-delivery-refresh.md](gh102-delivery-refresh.md).
+The inventory/schemas below remain; total intent->comment->label file ordering
+is superseded by intent-before-both confirmations, with unchanged individual
+coherence, DELETE-intent ordering and strict retained-hold reconciliation.
+
 Source: `15ec685e51492f24816e18a2771a0b38f582fe57`; predecessor queue SHA256 `7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1`. Same writer, owner admission [6199784094](https://github.com/pupkinson/SymphonyNext/issues/102#issuecomment-6199784094). No queue/execution contract change.
 
 Let J=`jobs/GH-N`; A=`J/attempts/G`; D is either J (legacy/linked source review) or A/notifications/S (developer). All JSON records are UTF-8 objects, written by existing queue save/once; no explicit schema version is present. The table specifies their actual field schema, not a new journal format.
