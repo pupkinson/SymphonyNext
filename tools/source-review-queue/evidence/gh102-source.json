@@ -1,0 +1,230 @@
+{
+  "schema": "snq-source-evidence/v1",
+  "issue": 102,
+  "base": "60e4a6d4b9054dfdb5d55e0f2b76a9fc0b10e506",
+  "status": "AUTHOR_TESTED_REAL_REPOSITORY_AND_UPDATER__INDEPENDENT_RECHECK_PENDING__NOT_INSTALLED__LIVE_NOT_RUN",
+  "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+  "python": "3.12.14",
+  "logs": {
+    "sn102-real-repository-red.log": {
+      "sha256": "ed916dddb94354752ab650dea36c60031bc376649002f35617f615999b31074f"
+    },
+    "sn102-real-repository-green.log": {
+      "sha256": "afe759283363767f7444fcee12b3ffaf6096c095a6c6b4b29537c9e9c6ba840e"
+    },
+    "sn102-updater-red.log": {
+      "sha256": "4aac0eecc338b0320cce146b7186a12ec3f7bff28ba7fb3a18fd5668c41252b6"
+    },
+    "sn102-updater-boundary-red.log": {
+      "sha256": "e22435ce4d2b85d16bfd5221fda5501916f3602548dd03680708c964631464a3"
+    },
+    "sn102-repair2-complete.log": {
+      "sha256": "336dd016c57134e5e22a4f21f4cac9c3d7ac1a0a34a091d3a212d6299879bd64",
+      "tests": 220,
+      "failures": 0,
+      "errors": 0,
+      "exit_code": 0
+    }
+  },
+  "source_sha256": {
+    "tools/source-review-queue/candidate/execution.py": "2a4e8c8675e2a1fbd3cb28c7e289a5b33b4a633d77994512279428f57d12e0db",
+    "tools/source-review-queue/candidate/queue.py": "509681d08751e373102e0ff159ef0213545ef1b2c4162f043ee4fe7fc4144a27",
+    "tools/source-review-queue/tests/test_queue_context.py": "3faf0c4126d320aa5439742fc7d21be8faf4015ca0b777e8d58a23b9784e6fb2",
+    "tools/source-review-queue/tests/test_queue_development_limits.py": "34338c1bb0e5d3adc4cdcbbca03477bd6843b6d2210e0e66d242a4e406ea442c",
+    "tools/source-review-queue/tests/test_queue_eof_ordering.py": "f662629c996cdda5b7a3c0c7fb72e985e5573e4cd80a04b381d80ba2af03f36a",
+    "tools/source-review-queue/tests/test_queue_executor.py": "2c98ba05358786075079530ee7ea0a1e7f978af167b87b891c59bcfda14219c6",
+    "tools/source-review-queue/tests/test_queue_executor_lifecycle.py": "7d1fe6fc20202e22c91df856655190521e0aaba3c6e8ed9c55c2cca89bdc3398",
+    "tools/source-review-queue/tests/test_queue_gate.py": "97bd82711de516dec748accbeee90c7bf8ca857164d2470505a1623f5137e8fa",
+    "tools/source-review-queue/tests/test_queue_negative.py": "f6bbc430af87a4fac0abb8f8038f8cdee262cc005c79a827f77156fa820def97",
+    "tools/source-review-queue/tests/test_queue_profiles.py": "2c7b2dd123582e00ff95039a1b12711cb22f3c0c94ac7e3e4bf2c230fc36acb5",
+    "tools/source-review-queue/tests/test_queue_prompt_integrity.py": "54010ec66b8ff105b28aa956b862e77614df97766ae2212518e9a6ba155e62ab",
+    "tools/source-review-queue/tests/test_queue_proxy.py": "6b719f882359ba37e68ec9cba2cd245df9233e113740789701cb886841007681",
+    "tools/source-review-queue/tests/test_queue_real_repository.py": "f17b5fd582db6d457ad090ed1d740708cecd68d628fc533792a177f7c2f9168b",
+    "tools/source-review-queue/tests/test_queue_review_findings.py": "f0ba50b915421f00661e162e0cd05a482d4612cdde98583637210c09cbd1ef06",
+    "tools/source-review-queue/tests/test_queue_schema_downgrade.py": "13afaedab2ac631a7649eaccee6c221a65469fa0dc09dc43a7622b9c5f5dbc81",
+    "tools/source-review-queue/tests/test_queue_updater.py": "12c4c6fb94978ebf142e337d3cdc5b9a065b0bb45cc3ce2813c20dc3898e344d",
+    "tools/source-review-queue/update_queue.py": "84c56bb9d7f1ec30c0522db713ca59bc34e3bd312740432adfa99d4b6ad30000"
+  },
+  "grammar_3_10": "PASS",
+  "old_guard_asts_unchanged": 20,
+  "installed": "EXACT_PREDECESSOR_KNOWN_NOT_UPDATED",
+  "live_pilot": "NOT_RUN_EXISTING_ISSUES_104_105",
+  "real_model_calls_by_runner": 0,
+  "local_bwrap_probe": "FAILED_NETLINK_ROUTE_OPERATION_NOT_PERMITTED",
+  "external_boundaries": "GitHub/model fixtures; command runner fixture explicitly marks TEST_DOUBLE_NOT_NATIVE",
+  "server_errors": [
+    "Connection timed out",
+    "-32603 Internal error"
+  ],
+  "previous_candidate": {
+    "head": "eb74c89b9af19de2869fc6b8ab3f855ea44774e4",
+    "tree": "5d612cecea2b975ff8c0e1f1df233bb96e857988",
+    "source_sha256": {
+      "tools/source-review-queue/candidate/execution.py": "94050cf28b510f8dc5dcd3b657c42d865e59a4b0c2e3b54a9fcfa2308c8d8ef9",
+      "tools/source-review-queue/candidate/queue.py": "bae1ae20b782da54b8740ba001ecb2a613f46466ec98f3c5ffc363c0ea8ac601",
+      "tools/source-review-queue/tests/test_queue_context.py": "3faf0c4126d320aa5439742fc7d21be8faf4015ca0b777e8d58a23b9784e6fb2",
+      "tools/source-review-queue/tests/test_queue_development_limits.py": "34338c1bb0e5d3adc4cdcbbca03477bd6843b6d2210e0e66d242a4e406ea442c",
+      "tools/source-review-queue/tests/test_queue_eof_ordering.py": "f662629c996cdda5b7a3c0c7fb72e985e5573e4cd80a04b381d80ba2af03f36a",
+      "tools/source-review-queue/tests/test_queue_executor.py": "2c98ba05358786075079530ee7ea0a1e7f978af167b87b891c59bcfda14219c6",
+      "tools/source-review-queue/tests/test_queue_executor_lifecycle.py": "40c38bc8b484103d339eae5f041268a7bc60615d050578878ebf5e9ef60ad87f",
+      "tools/source-review-queue/tests/test_queue_gate.py": "97bd82711de516dec748accbeee90c7bf8ca857164d2470505a1623f5137e8fa",
+      "tools/source-review-queue/tests/test_queue_negative.py": "f6bbc430af87a4fac0abb8f8038f8cdee262cc005c79a827f77156fa820def97",
+      "tools/source-review-queue/tests/test_queue_profiles.py": "2c7b2dd123582e00ff95039a1b12711cb22f3c0c94ac7e3e4bf2c230fc36acb5",
+      "tools/source-review-queue/tests/test_queue_prompt_integrity.py": "54010ec66b8ff105b28aa956b862e77614df97766ae2212518e9a6ba155e62ab",
+      "tools/source-review-queue/tests/test_queue_proxy.py": "6b719f882359ba37e68ec9cba2cd245df9233e113740789701cb886841007681",
+      "tools/source-review-queue/tests/test_queue_review_findings.py": "f0ba50b915421f00661e162e0cd05a482d4612cdde98583637210c09cbd1ef06",
+      "tools/source-review-queue/tests/test_queue_schema_downgrade.py": "13afaedab2ac631a7649eaccee6c221a65469fa0dc09dc43a7622b9c5f5dbc81"
+    },
+    "tests": 194
+  },
+  "repair_cycle": 2,
+  "independent_review": {
+    "state": "pending_on_new_commit",
+    "superseded_head": "e6fa3d22396fb078895ca76ff32c6614aa38c3f0",
+    "finding": "https://github.com/pupkinson/SymphonyNext/pull/103#issuecomment-6188390402",
+    "server_readiness": "https://github.com/pupkinson/SymphonyNext/issues/102#issuecomment-6188369467"
+  },
+  "server_metadata": {
+    "host": "1c-db",
+    "rdc_uid": 997,
+    "allowed_directories": [
+      "/srv/rdc-workspace",
+      "/opt/symphony-next-queue-v1"
+    ],
+    "service_pid": 854,
+    "service_active": true,
+    "dashboard_counts": {
+      "running": 0,
+      "blocked": 0,
+      "retrying": 0
+    },
+    "installed_predecessor_queue_sha256": "7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1",
+    "owner_bwrap_prerequisite": "six checks PASS per comment6188369467; not repeated",
+    "service_update": "NOT_RUN",
+    "live_rollback": "NOT_RUN"
+  },
+  "previous_repair_1": {
+    "status": "AUTHOR_REPAIRED_NOT_INDEPENDENTLY_ACCEPTED",
+    "logs": [
+      {
+        "name": "sn102-baseline.log",
+        "exit_code": 0,
+        "tests": 143,
+        "sha256": "3bb3f178d15aee25ef225ec2245b3092b55dcdc4a9d6c92ef8eaf7396cdcee9f"
+      },
+      {
+        "name": "sn102-red.log",
+        "exit_code": 1,
+        "tests": 23,
+        "sha256": "8b4501b4cf5555e6c401a70914d79cca522b06c7571289e00cfaf5afafc9c08f"
+      },
+      {
+        "name": "sn102-source-final.log",
+        "exit_code": 0,
+        "tests": 194,
+        "sha256": "eb1a8df1306f9490e3d34b497ec612e9a96ecd8f80b24e4cd3f6fb8010ebb37b"
+      },
+      {
+        "name": "sn102-review-p1-red.log",
+        "exit_code": 1,
+        "tests": 29,
+        "sha256": "da78adc109c312eeeaf6b0e521a65ee78b91ca8f8f7916a7ef5f6c5d5e9212aa"
+      },
+      {
+        "name": "sn102-review-repair1-final.log",
+        "exit_code": 0,
+        "tests": 198,
+        "sha256": "8f22cc2d6c1c4040312a0946529fb3176b7a81b8526c30bc1dfd74e02109ce79"
+      }
+    ],
+    "source_sha256": {
+      "tools/source-review-queue/candidate/execution.py": "2baae4e8f2362867cdc839b91221361bb8e55ffc5546d77753849cb6a3488cd6",
+      "tools/source-review-queue/candidate/queue.py": "d8fd7531770aedc12c239d8005c28b17279674c9fe6e5549ae807d94077d5c7b",
+      "tools/source-review-queue/tests/test_queue_context.py": "3faf0c4126d320aa5439742fc7d21be8faf4015ca0b777e8d58a23b9784e6fb2",
+      "tools/source-review-queue/tests/test_queue_development_limits.py": "34338c1bb0e5d3adc4cdcbbca03477bd6843b6d2210e0e66d242a4e406ea442c",
+      "tools/source-review-queue/tests/test_queue_eof_ordering.py": "f662629c996cdda5b7a3c0c7fb72e985e5573e4cd80a04b381d80ba2af03f36a",
+      "tools/source-review-queue/tests/test_queue_executor.py": "2c98ba05358786075079530ee7ea0a1e7f978af167b87b891c59bcfda14219c6",
+      "tools/source-review-queue/tests/test_queue_executor_lifecycle.py": "8921114b6861322c024c0704ed19f7979df07558eda1e3165e0c7fc86f5c007b",
+      "tools/source-review-queue/tests/test_queue_gate.py": "97bd82711de516dec748accbeee90c7bf8ca857164d2470505a1623f5137e8fa",
+      "tools/source-review-queue/tests/test_queue_negative.py": "f6bbc430af87a4fac0abb8f8038f8cdee262cc005c79a827f77156fa820def97",
+      "tools/source-review-queue/tests/test_queue_profiles.py": "2c7b2dd123582e00ff95039a1b12711cb22f3c0c94ac7e3e4bf2c230fc36acb5",
+      "tools/source-review-queue/tests/test_queue_prompt_integrity.py": "54010ec66b8ff105b28aa956b862e77614df97766ae2212518e9a6ba155e62ab",
+      "tools/source-review-queue/tests/test_queue_proxy.py": "6b719f882359ba37e68ec9cba2cd245df9233e113740789701cb886841007681",
+      "tools/source-review-queue/tests/test_queue_review_findings.py": "f0ba50b915421f00661e162e0cd05a482d4612cdde98583637210c09cbd1ef06",
+      "tools/source-review-queue/tests/test_queue_schema_downgrade.py": "13afaedab2ac631a7649eaccee6c221a65469fa0dc09dc43a7622b9c5f5dbc81"
+    },
+    "repair_cycle": 1,
+    "independent_review": {
+      "head": "eb74c89b9af19de2869fc6b8ab3f855ea44774e4",
+      "status": "COMPLETED_CHANGES_REQUIRED",
+      "finding_ids": [
+        4279834028,
+        4279834037,
+        4279834044
+      ],
+      "repair": "three regression cases RED to GREEN; authoritative branch mismatch control added"
+    },
+    "server_metadata": {
+      "host": "1c-db",
+      "uid": 997,
+      "allowedDirectories": [
+        "/srv/rdc-workspace"
+      ],
+      "service_active": "active/running/enabled",
+      "MainPID": 854,
+      "NRestarts": 0,
+      "installed_code_hash": "UNKNOWN_OUTSIDE_ALLOWED_SCOPE"
+    }
+  },
+  "real_repository": {
+    "head": "e6fa3d22396fb078895ca76ff32c6614aa38c3f0",
+    "tree": "0a3a664ce14246ba6373fb6af172c8da186e99eb",
+    "files": 199,
+    "bytes": 33232573,
+    "complete_materialization": true,
+    "omissions": [],
+    "all_untouched_git_objects_preserved_by_publication_delta": true,
+    "remote_http": "local Git-object adapter; raw HTTP boundary separately mocked",
+    "models": 0,
+    "remote_writes": 0
+  },
+  "predecessor_qualification": {
+    "schema": "snq-predecessor-qualification/v1",
+    "predecessor_queue_sha256": "7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1",
+    "predecessor_retired_and_developer_roots_skipped": true,
+    "candidate_developer_reconciliation_before_legacy_skip": true,
+    "state_bytes_unchanged": true,
+    "original_guard_asts_unchanged": [
+      "review_profile",
+      "checked_profile",
+      "validate_profile_runtime",
+      "load_job_profile",
+      "load_prepared_profile",
+      "verify_profile_receipt",
+      "codex_args",
+      "permission_settings",
+      "sandbox",
+      "Gate",
+      "source_packet",
+      "build_review_sources",
+      "SourceReader",
+      "load_prompt_context",
+      "checked_prompt_bytes",
+      "verify_prompt_receipt",
+      "reserve",
+      "claim",
+      "verify_source_receipt",
+      "load_prepared_limits"
+    ],
+    "service_or_model_calls": 0,
+    "scope": "actual predecessor code on owned temporary journals; not live update/rollback"
+  },
+  "updater": {
+    "source": "tools/source-review-queue/update_queue.py",
+    "offline_service_boundary": "TEST_DOUBLE_NOT_NATIVE",
+    "predecessor_static_backup": true,
+    "state_restore": false,
+    "executor_policy": "disabled",
+    "actual_root_apply": "NOT_RUN"
+  }
+}

@@ -17,6 +17,7 @@ import difflib
 import fcntl
 import hashlib
 import http.client
+import importlib.util
 import json
 import math
 import os
@@ -537,12 +538,13 @@ class Gate:
                 and self.state['turn_status']=='completed' and HEAD in self.report and len(self.report)>50
                 and (self.source_reader is None or self.source_reader.complete()))
 
-def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=None,source_reader=None,profile=None,prompt_context=None):
+def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=None,source_reader=None,profile=None,prompt_context=None,execution=None):
     """A bounded transparent stdio gate. It does not issue its own model requests."""
     limit=limit_value('WALL') if limit is None else limit
     run_dir=RUN if run_dir is None else Path(run_dir)
     once(run_dir/'model-session.claim',b'One Symphony-managed model session only.\n')
-    gate=Gate(source_reader=source_reader,profile=profile);p=None;selector=selectors.DefaultSelector();buffers={};end=time.monotonic()+limit
+    gate=Gate(source_reader=source_reader,profile=profile) if execution is None else execution.gate()
+    p=None;selector=selectors.DefaultSelector();buffers={};end=time.monotonic()+limit
     code='PROXY_NOT_STARTED';eof={'client':False,'server':False}
     def checkpoint():
         gate.state['transport_eof']=dict(eof)
@@ -550,13 +552,17 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=None,source_re
         if gate.report:save(run_dir/'review.json',{'head':HEAD,'text':gate.report,'tests':'NOT_RUN'})
     try:
         if run_dir==RUN:
-            prompt_context=load_prompt_context(STATE) if prompt_context is None else prompt_context
-            checked_prompt_bytes(STATE,prompt_context)
+            if execution is None:
+                prompt_context=load_prompt_context(STATE) if prompt_context is None else prompt_context
+                checked_prompt_bytes(STATE,prompt_context)
+            else:
+                prompt_context=execution.prompt_context();execution.prompt_bytes()
         p=subprocess.Popen(argv,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
                            cwd=SPACE if run_dir==RUN else run_dir,env=env,bufsize=0,start_new_session=True)
         selector.register(input_fd,selectors.EVENT_READ,'client');selector.register(p.stdout,selectors.EVENT_READ,'server')
         buffers={'client':b'','server':b''};checkpoint()
         while time.monotonic()<end:
+            if execution is not None:execution.check()
             events=selector.select(min(1,max(0,end-time.monotonic())))
             for key,_ in events:
                 side=key.data;fd=key.fd
@@ -576,7 +582,7 @@ def proxy(argv,input_fd=0,output_fd=1,run_dir=None,env=None,limit=None,source_re
                         value=gate.client(value)
                         bound_turn=value.get('method')=='turn/start' and run_dir==RUN
                         if bound_turn:
-                            raw=checked_prompt_bytes(STATE,prompt_context)
+                            raw=checked_prompt_bytes(STATE,prompt_context) if execution is None else execution.prompt_bytes()
                             value['params']['input']=[{'type':'text','text':raw.decode('utf-8')}]
                         frame=wire_json(value)+b'\n'
                         checkpoint()
@@ -784,6 +790,30 @@ def decode(raw):
     except (ValueError,TypeError):raise Hold('INVALID_JSON') from None
 
 
+class _QueueRuntime:
+    def __getattr__(self,key):return globals()[key]
+
+
+_EXECUTION_MODULE=None
+
+
+def execution_adapter():
+    # Explicit sibling load also works under python -I. Never search an agent
+    # workspace or import issue-provided code. Installation pins this file too.
+    global _EXECUTION_MODULE
+    if _EXECUTION_MODULE is None:
+        path=Path(__file__).resolve().with_name('execution.py')
+        if path.parent==INSTALL:
+            metadata=decode(read(INSTALL/'installed.json'))
+            require(metadata.get('execution_schema')=='snq-execution-install/v1'
+                    and metadata.get('execution_sha256')==sha(read(path,300000)),
+                    'EXECUTION_INSTALLATION_UNVERIFIED')
+        spec=importlib.util.spec_from_file_location('snq_execution',path)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        _EXECUTION_MODULE=module
+    return _EXECUTION_MODULE.Adapter(_QueueRuntime())
+
+
 def parse_task(row):
     require(isinstance(row,dict) and row.get('state')=='open' and 'pull_request' not in row,'TASK_NOT_OPEN_ISSUE')
     require(row.get('user',{}).get('login')==OWNER,'TASK_AUTHOR_NOT_OWNER')
@@ -794,6 +824,9 @@ def parse_task(row):
     require(len(matches)==1,'EXACTLY_ONE_TASK_MANIFEST_REQUIRED')
     manifest=decode(matches[0])
     require(isinstance(manifest,dict), 'TASK_FIELDS')
+    if manifest.get('schema')=='snq-develop/v1':
+        execution_adapter().admit(row,manifest)
+        return manifest
     fields={'schema','pr','head_sha','base_sha','tree_sha','include_mix_reference'}
     if manifest.get('schema')=='snq-review/v2':
         require(set(manifest)==fields|{'context_sources'},'TASK_FIELDS')
@@ -822,6 +855,8 @@ class Api:
         require(isinstance(token,str) and token.strip() and '\n' not in token,'GITHUB_AUTH_MISSING')
         self.token=token;self.number=number
     def allowed(self,method,path,body):
+        scope=getattr(self,'execution_scope',None)
+        if scope is not None and scope(method,path,body):return True
         if method=='GET':
             return (path in ('',QUEUE) or bool(re.fullmatch(r'/issues/[1-9][0-9]*(?:/comments\?per_page=100)?',path))
                 or bool(re.fullmatch(r'/pulls/[1-9][0-9]*(?:/files\?per_page=100)?',path))
@@ -846,6 +881,26 @@ class Api:
             raise Hold('API_READ_TRANSPORT' if method=='GET' else 'WRITE_OUTCOME_UNKNOWN') from None
         finally:c.close()
     def get(self,path):return self.request('GET',path)
+
+    def blob_bytes(self,oid,size):
+        """Bounded developer-only raw Git blob; reviewer JSON caps stay intact."""
+        require(callable(getattr(self,'execution_scope',None)),'API_SCOPE_DENIED')
+        require(isinstance(oid,str) and re.fullmatch('[a-f0-9]{40}',oid)
+                and type(size) is int and 0<=size<=33554432,'RAW_BLOB_LIMIT')
+        path='/git/blobs/'+oid
+        require(self.allowed('GET',path,None),'API_SCOPE_DENIED')
+        c=http.client.HTTPSConnection('api.github.com',timeout=18)
+        try:
+            c.request('GET','/repos/'+REPO+path,headers={
+                'Authorization':'Bearer '+self.token,'User-Agent':'SymphonyNext-Persistent-Queue-v1',
+                'Accept':'application/vnd.github.raw+json'})
+            r=c.getresponse()
+            require(r.status==200,'API_HTTP_'+str(r.status))
+            raw=r.read(size+1)
+            require(len(raw)==size and git_blob_sha(raw)==oid,'BLOB_HASH_OR_SIZE')
+            return raw
+        except (OSError,http.client.HTTPException):raise Hold('API_READ_TRANSPORT') from None
+        finally:c.close()
 
 
 def job_number(path):
@@ -903,6 +958,13 @@ def bind_job(number,manifest):
     global STATE,RUN,SPACE,HEAD,BASE,TREE
     STATE=job_dir(number);RUN=STATE/'run';SPACE=QROOT/'workspaces'/f'GH-{number}'
     HEAD=manifest['head_sha'];BASE=manifest['base_sha'];TREE=manifest['tree_sha']
+
+
+def bind_developer(number,generation,manifest):
+    global STATE,RUN,SPACE
+    bind_job(number,manifest)
+    STATE=STATE/'attempts'/str(generation);RUN=STATE/'run'
+    SPACE=SPACE/f'developer-g{generation}'
 
 
 # ---- Opt-in immutable paged source reviews (snq-review/v2). ----
@@ -1321,6 +1383,16 @@ def task_signature(row):return sha(json.dumps({'title':row.get('title'),'body':r
 
 
 def prepare_task(number,api):
+    # New schema only. The original review preparation/claim path below is
+    # otherwise unchanged, including all legacy prompt/profile guards.
+    row=api.get(f'/issues/{number}')
+    matches=re.findall(r'^```symphony-next\s*\n(.*?)\n```\s*$',row.get('body') or '',re.M|re.S)
+    manifest=None
+    if len(matches)==1:
+        try:manifest=decode(matches[0])
+        except Hold:pass
+    if isinstance(manifest,dict) and manifest.get('schema')=='snq-develop/v1':
+        return execution_adapter().prepare(number,api,row=row)
     with limits_scope(DEVELOPMENT_LIMITS):return _prepare_task(number,api)
 
 
@@ -1415,10 +1487,22 @@ def deliver(api,number,directory,body):
 def finish_task(number,api):
     directory=job_dir(number)
     if not directory.exists():return
+    if (directory/'execution.json').exists():return execution_adapter().finish(number,api)
     task=decode(read(directory/'task.json')) if (directory/'task.json').exists() else {}
     profile=task.get('limits_profile',LEGACY_LIMITS)
     if profile not in (LEGACY_LIMITS,DEVELOPMENT_LIMITS):profile=LEGACY_LIMITS
-    with limits_scope(profile):return _finish_task(number,api)
+    with limits_scope(profile):
+        result=_finish_task(number,api)
+        link=QROOT/'review-links'/f'GH-{number}.json'
+        if link.exists():
+            marker=directory/'linked-review-applied.json'
+            binding={'source_result_sha256':sha(wire_json(result)),
+                     'link_sha256':sha(read(link))}
+            if marker.exists():require(decode(read(marker))==binding,'REVIEW_HANDOFF_CHANGED')
+            else:
+                execution_adapter().review_finished(number,result,api)
+                once(marker,wire_json(binding))
+        return result
 
 
 def _finish_task(number,api):
@@ -1599,6 +1683,15 @@ def recover_jobs():
     for directory in sorted((QROOT/'jobs').glob('GH-*')):
         require(not directory.is_symlink(),'JOURNAL_LINK')
         number=int(directory.name[3:])
+        if (directory/'execution.json').exists():
+            try:execution_adapter().finish(number,Api(os.environ.get('GITHUB_TOKEN'),number))
+            except Hold as exc:print('SNQ developer recovery hold GH-'+str(number)+': '+str(exc),flush=True)
+            continue
+        if ((QROOT/'review-links'/f'GH-{number}.json').exists()
+                and not (directory/'linked-review-applied.json').exists()):
+            try:finish_task(number,Api(os.environ.get('GITHUB_TOKEN'),number))
+            except Hold as exc:print('SNQ linked review recovery hold GH-'+str(number)+': '+str(exc),flush=True)
+            continue
         if (directory/'label-removed.json').exists():continue
         try:finish_task(number,Api(os.environ.get('GITHUB_TOKEN'),number))
         except Hold as exc:print('SNQ recovery hold GH-'+str(number)+': '+str(exc),flush=True)
@@ -1771,13 +1864,18 @@ def main():
         api=Api(os.environ.get('GITHUB_TOKEN'),number)
         try:prepare_task(number,api)
         except Exception:
-            try:finish_task(number,api)
-            except Exception:pass
+            # A duplicate developer poll must never finalize a running owner.
+            # Its preparation error is retained for after_run/startup recovery.
+            if not (job_dir(number)/'execution.json').exists():
+                try:finish_task(number,api)
+                except Exception:pass
             raise
         return 0
     if mode=='_after':
         finish_task(number,Api(os.environ.get('GITHUB_TOKEN'),number));return 0
     directory=job_dir(number)
+    if (directory/'execution.json').exists():
+        return execution_adapter().agent(number,Api(os.environ.get('GITHUB_TOKEN'),number))
     require((directory/'ready').is_file() and not (directory/'final.json').exists(),'TASK_NOT_READY')
     task=decode(read(directory/'task.json'));bind_job(number,task['manifest'])
     profile=load_prepared_profile(directory,task);validate_profile_runtime(profile)

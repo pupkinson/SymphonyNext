@@ -1,0 +1,75 @@
+{
+  "schema": "snq-gh102-updater-p1-extra2/v1",
+  "issue": 102,
+  "pr": 103,
+  "admission": "https://github.com/pupkinson/SymphonyNext/issues/102#issuecomment-6196086808",
+  "branch": "feat/sn102-executor-profile-20261015",
+  "source_parent": "d7fd13485b5c0ed12a9103a2f54de33be16f4664",
+  "original_source_base": "7020615d150b9df7ec9572ec06173c67aa93a308",
+  "source_start": "2026-10-15T15:41:29Z",
+  "source_cutoff": "2026-10-15T19:11:29Z",
+  "handoff_deadline": "2026-10-15T19:41:29Z",
+  "extra_repair_cycles_used": 2,
+  "extra_repair_cycles_limit": 2,
+  "old_repair_cycles_used": 2,
+  "intermediate_review": {
+    "head": "d7fd13485b5c0ed12a9103a2f54de33be16f4664",
+    "url": "https://github.com/pupkinson/SymphonyNext/pull/103#issuecomment-6196846036",
+    "result": "completed_generic_no_major_findings; no explicit two-P1 attestation"
+  },
+  "review_deadline": "2026-10-15T17:45:00Z",
+  "final_exact_head_review": "PENDING_PUBLICATION; no self acceptance",
+  "intermediate_server_suite": {
+    "head": "d7fd13485b5c0ed12a9103a2f54de33be16f4664",
+    "tests": 239,
+    "errors": 1,
+    "exit_code": 1,
+    "sha256": "3fb1664cb38be5242b358832f5f28359329939a4f634a627f608fcdbaf2f08f9",
+    "reason": "Fixture called root-only setgroups/setuid while already ordinary rdc997. Production demotion/capability checks retained; fixed fixture ACK invokes the real predecessor under its existing unprivileged credentials."
+  },
+  "changes": [
+    "Fix ordinary-user real predecessor admission fixture without raising privilege.",
+    "Compare canonical JSON to distinguish true from generation1 in final/accepted artifact.",
+    "Require known SHA/number/admission outbox receipt shapes; unknown nonempty outcome remains blocked.",
+    "Pin actual service UID/GID995 and test credentials/capability rejection and root demotion order.",
+    "Surface subprocess timeout/launch refusal as CLI HOLD without changing recovery semantics."
+  ],
+  "tests": {
+    "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+    "count": 244,
+    "original_regressions_retained": 220,
+    "exit_code": 0,
+    "skips": 0,
+    "log": "sn102-extra2-complete.log",
+    "sha256": "745b187d94a9578293c782262b7ceccdd77421f0fa84b84311a7188775e014d0"
+  },
+  "edge_red": {
+    "log": "sn102-extra2-edges-red.log",
+    "sha256": "5923e91949d69e7f1f48d8e17eee8e1d844ee26e8f2b72fc0ecb999ebccf5011",
+    "exit_code": 1,
+    "failures": 3
+  },
+  "source_sha256": {
+    "tools/source-review-queue/update_queue.py": "490f4f500b287031eb119695230a79b0bf2afec35834fc39f2a1ea6db5b9c96d",
+    "tools/source-review-queue/UPDATE.md": "cbf21101645a1acfb9b9b25c30cde09bec9ebe986123ee290fc5aecd8f79c4f3",
+    "tools/source-review-queue/tests/test_queue_updater.py": "9b67dc6dba75d715506e72c61d20e7f9597dd775189a488977f7db54b967103c",
+    "tools/source-review-queue/tests/test_queue_updater_admission.py": "96cf372686095021040fc5e1b148b7e2c0817e3190712b85c8f27f173a413384",
+    "tools/source-review-queue/tests/test_queue_updater_findings.py": "254784c669e648582b32556b280ea16e78de18b18e3a963436945c591cf8e4b9",
+    "tools/source-review-queue/tests/test_queue_updater_reviews.py": "00407a32f4f604c7880b5006dc3bebfd14b5e153c5ed66a8f5828b89a8fd009a"
+  },
+  "server_final_qualification": "PENDING; no failed/interrupted transmission is bypassed",
+  "installed": "UNCHANGED7fa0ee/PID854; NOT_INSTALLED",
+  "root_apply": "NOT_RUN",
+  "live_pilot": "NOT_RUN",
+  "new_profile_tasks": 0,
+  "real_model_turns": 0,
+  "preserved": [
+    "all old attempts/results/budgets",
+    "blocked702 archiveSHA4e1d5f99",
+    "queue.py and execution.py bytes",
+    "original220 regression cases",
+    "actual repository/video and immutable objects",
+    "SPECIFICATIONv0.5/composition/PR79/82/84",
+    "#104/#105 unlaunched"
+  ]
+}

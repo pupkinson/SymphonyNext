@@ -1,0 +1,82 @@
+{
+  "schema": "snq-gh102-updater-p1-extra/v1",
+  "issue": 102,
+  "pr": 103,
+  "owner": "Denis",
+  "admission": "https://github.com/pupkinson/SymphonyNext/issues/102#issuecomment-6196086808",
+  "writer": "original admission6185510750; duplicate writer released6185521912",
+  "source_parent": "7020615d150b9df7ec9572ec06173c67aa93a308",
+  "branch": "feat/sn102-executor-profile-20261015",
+  "start": "2026-10-15T15:41:29Z",
+  "source_cutoff": "2026-10-15T19:11:29Z",
+  "handoff_deadline": "2026-10-15T19:41:29Z",
+  "extra_repair_cycles_used": 1,
+  "extra_repair_cycles_limit": 2,
+  "old_repair_cycles_used": 2,
+  "review": {
+    "previous_id": 5531017643,
+    "findings": [
+      4281361568,
+      4281361556
+    ],
+    "new_exact_head": "PENDING_PUBLICATION_AND_INDEPENDENT_REVIEW",
+    "window_seconds": 5400
+  },
+  "changes": {
+    "intake": "Real permission barrier at actual predecessor atomic jobs/GH-* mkdir;0500 parent denies new claims, existing children drain; UID/GID/capability checks and unprivileged EACCES acknowledgement; gate held through confirmed stop; durable phase receipt and safe interrupted rollback.",
+    "rollback": "Every linked source final/application hash, exact issue/generation/HEAD/base candidate, canonical acceptance/final and latest accepted artifact must converge; review-links sealed; no journal mutation or deletion."
+  },
+  "command": "python3 -B -m unittest discover -s tools/source-review-queue/tests -v",
+  "tests": 239,
+  "original_regressions_retained": 220,
+  "skips": 0,
+  "logs": {
+    "red": {
+      "file": "sn102-extra-p1-red.log",
+      "sha256": "11129edbf774aab5fa63ada5ab1b552711cfee3420e444f2bc43fc9f4fa0de7b",
+      "exit_code": 1,
+      "tail": [
+        "----------------------------------------------------------------------",
+        "Ran 2 tests in 0.036s",
+        "",
+        "FAILED (failures=2)"
+      ]
+    },
+    "green": {
+      "file": "sn102-extra-complete.log",
+      "sha256": "8d26d598997746432d473959ddf8d12ecda7c2827ebceae27551aecec68dad5e",
+      "exit_code": 0,
+      "tail": [
+        "----------------------------------------------------------------------",
+        "Ran 239 tests in 8.960s",
+        "",
+        "OK"
+      ]
+    }
+  },
+  "real_predecessor_queue_sha256": "7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1",
+  "real_kernel_test": "Exact installed predecessor on owned temp directories, all child caps dropped; no simulated filesystem permission result; existing claim finishes while new prepare_task denied before API/model.",
+  "real_repository": "Original pinned199-file/33232573-byte actual Git composition test and unchanged blob/mode publication regression retained with no omissions; exact newly published tree qualification follows publication.",
+  "source_sha256": {
+    "tools/source-review-queue/update_queue.py": "9d0f6457b1b76b3c9cf35585a93070fc324327146a7cf7086d071ba571c6bda8",
+    "tools/source-review-queue/UPDATE.md": "e554393938204c863ae647fd7c23aef7c83a3dcd470a1ead93b18d1050901e04",
+    "tools/source-review-queue/evidence/predecessor/queue.py": "7fa0ee5624132253e487cf8093af5b1bd90fe5680c682d9672114cdbeccd33d1",
+    "tools/source-review-queue/tests/test_queue_updater.py": "9b67dc6dba75d715506e72c61d20e7f9597dd775189a488977f7db54b967103c",
+    "tools/source-review-queue/tests/test_queue_updater_admission.py": "826f1f7c0d49fda1b651c49ed530c696464bfa114e5b30c0b590ea440fb956f3",
+    "tools/source-review-queue/tests/test_queue_updater_findings.py": "254784c669e648582b32556b280ea16e78de18b18e3a963436945c591cf8e4b9",
+    "tools/source-review-queue/tests/test_queue_updater_reviews.py": "75fab454c2cd7fb8291d803e6e14ef88995e3c0945414958cebf9d182348ad8f"
+  },
+  "preserved": {
+    "whole_queue_ast_unchanged": true,
+    "execution_py_unchanged": true,
+    "specification_v05_and_composition_pins": true,
+    "previous_attempts_and_budgets": true,
+    "blocked_archive_sha256": "4e1d5f99f8a348b14f1308c620eef42a9005c38d615db5a6c91403931fa2aaff"
+  },
+  "service_transition": "NOT_RUN",
+  "installation": "NOT_RUN",
+  "live_pilot": "NOT_RUN",
+  "new_profile_tasks": 0,
+  "real_model_turns": 0,
+  "boundaries": "Systemd/GitHub/model fixtures are not a live pilot. Root package remains inadmissible until explicit independent acceptance of exact published HEAD. No prerequisite reinstallation, privilege change or production/PR99/main/release mutation."
+}
